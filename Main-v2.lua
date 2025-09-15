@@ -1,7 +1,7 @@
 local Icons = {
-    ["lucide"] = loadstring(game:HttpGetAsync("https://raw.githubusercontent.com/Footagesus/Icons/refs/heads/main/lucide/dist/Icons.lua"))(),
+    ["lucide"] = loadstring(game:HttpGetAsync("https://raw.githubusercontent.com/iqoksz95-debug/general/refs/heads/main/icons.lua"))(),
     ["craft"] = loadstring(game:HttpGetAsync("https://raw.githubusercontent.com/iqoksz95-debug/general/refs/heads/main/icons2.lua"))(),
-    ["geist"] = loadstring(game:HttpGetAsync("https://raw.githubusercontent.com/Footagesus/Icons/refs/heads/main/geist/dist/Icons.lua"))(),
+    ["geist"] = loadstring(game:HttpGetAsync("https://raw.githubusercontent.com/iqoksz95-debug/general/refs/heads/main/icons3.lua"))(),
 }
 
 
