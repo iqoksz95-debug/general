@@ -169,6 +169,12 @@ j.UpdateLang(p,r)
 return p
 end
 
+local WindUI_TransparencySiblingProp={
+BackgroundColor3="BackgroundTransparency",
+ImageColor3="ImageTransparency",
+TextColor3="TextTransparency",
+Color="Transparency",
+}
 function j.UpdateTheme(l,m)
 local function ApplyTheme(p)
 for r,u in pairs(p.Properties or{})do
@@ -178,6 +184,21 @@ if not m then
 p.Object[r]=Color3.fromHex(v)
 else
 j.Tween(p.Object,0.08,{[r]=Color3.fromHex(v)}):Play()
+end
+end
+
+local WindUI_transProp=WindUI_TransparencySiblingProp[r]
+if WindUI_transProp then
+local WindUI_transVal=j.Theme and j.Theme[u.."Transparency"]
+if typeof(WindUI_transVal)=="number" then
+local WindUI_ok=pcall(function()return p.Object[WindUI_transProp]end)
+if WindUI_ok then
+if not m then
+p.Object[WindUI_transProp]=WindUI_transVal
+else
+j.Tween(p.Object,0.08,{[WindUI_transProp]=WindUI_transVal}):Play()
+end
+end
 end
 end
 end
@@ -9417,16 +9438,39 @@ end)
 if WindUI_BG_ok and WindUI_BG_result then return WindUI_BG_result end
 return ""
 end
+local function WindUI_BG_GetOverlay()
+local WindUI_BG_holder=ao.UIElements.Main.Background
+local WindUI_BG_img=WindUI_BG_holder:FindFirstChild("WindUI_BackgroundPhoto")
+if not WindUI_BG_img then
+WindUI_BG_img=Instance.new("ImageLabel")
+WindUI_BG_img.Name="WindUI_BackgroundPhoto"
+WindUI_BG_img.BackgroundTransparency=1
+WindUI_BG_img.ImageTransparency=1
+WindUI_BG_img.ScaleType=Enum.ScaleType.Crop
+WindUI_BG_img.Size=UDim2.new(1,0,1,0)
+WindUI_BG_img.ZIndex=0
+WindUI_BG_img.Parent=WindUI_BG_holder
+end
+return WindUI_BG_img
+end
 function ao.SetBackgroundImage(j,l)
+local WindUI_BG_img=WindUI_BG_GetOverlay()
 if l==nil or l=="" then
-ao.UIElements.Main.Background.ImageLabel.Image=""
+WindUI_BG_img.Image=""
 return
 end
-ao.UIElements.Main.Background.ImageLabel.Image=WindUI_BG_ResolveAsset(l)
+WindUI_BG_img.Image=WindUI_BG_ResolveAsset(l)
 end
 function ao.SetBackgroundImageTransparency(j,l)
-ao.UIElements.Main.Background.ImageLabel.ImageTransparency=l
+WindUI_BG_GetOverlay().ImageTransparency=l
 ao.BackgroundImageTransparency=l
+end
+
+-- Separate, independent control for the translucent "category" panel (the panel that
+-- holds the sidebar/tab content, MainBar.Background) — has nothing to do with the photo
+-- background above, on purpose, so the two sliders never affect each other.
+function ao.SetCategoryTransparency(j,l)
+ao.UIElements.MainBar.Background.ImageTransparency=l
 end
 
 local j
