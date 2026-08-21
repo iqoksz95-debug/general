@@ -169,11 +169,28 @@ j.UpdateLang(p,r)
 return p
 end
 
+-- Which property actually carries transparency for a given ThemeTag PROPERTY (not role).
 local WindUI_TransparencySiblingProp={
 BackgroundColor3="BackgroundTransparency",
 ImageColor3="ImageTransparency",
 TextColor3="TextTransparency",
 Color="Transparency",
+}
+-- Same handful of roles (Background/Accent/Dialog/Outline/Text/Placeholder/Button/Icon)
+-- get reused across DIFFERENT property types for color (e.g. the "Text" role also tints
+-- some icons and a few backgrounds, on purpose, for contrast). Transparency doesn't
+-- transfer the same way — a transparency chosen for the Text COLOR must never leak onto
+-- some unrelated background that merely happens to reuse the "Text" role. This whitelists
+-- exactly which property type each role is allowed to drive transparency on.
+local WindUI_TransparencyRoleProp={
+Text="TextColor3",
+Placeholder="TextColor3",
+Icon="ImageColor3",
+Outline="Color",
+Background="BackgroundColor3",
+Dialog="BackgroundColor3",
+Button="BackgroundColor3",
+Accent="BackgroundColor3",
 }
 function j.UpdateTheme(l,m)
 local function ApplyTheme(p)
@@ -188,7 +205,7 @@ end
 end
 
 local WindUI_transProp=WindUI_TransparencySiblingProp[r]
-if WindUI_transProp and type(u)=="string" then
+if WindUI_transProp and type(u)=="string" and WindUI_TransparencyRoleProp[u]==r then
 pcall(function()
 -- Always resolve to a concrete value (default: fully opaque) instead of skipping when
 -- the active theme doesn't define one — otherwise a transparency picked while "Custom"
@@ -9484,13 +9501,6 @@ end
 function ao.SetBackgroundImageTransparency(j,l)
 WindUI_BG_GetOverlay().ImageTransparency=l
 ao.BackgroundImageTransparency=l
-end
-
--- Separate, independent control for the translucent "category" panel (the panel that
--- holds the sidebar/tab content, MainBar.Background) — has nothing to do with the photo
--- background above, on purpose, so the two sliders never affect each other.
-function ao.SetCategoryTransparency(j,l)
-ao.UIElements.MainBar.Background.ImageTransparency=l
 end
 
 local j
