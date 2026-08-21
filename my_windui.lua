@@ -188,18 +188,17 @@ end
 end
 
 local WindUI_transProp=WindUI_TransparencySiblingProp[r]
-if WindUI_transProp then
+if WindUI_transProp and type(u)=="string" then
+pcall(function()
 local WindUI_transVal=j.Theme and j.Theme[u.."Transparency"]
 if typeof(WindUI_transVal)=="number" then
-local WindUI_ok=pcall(function()return p.Object[WindUI_transProp]end)
-if WindUI_ok then
 if not m then
 p.Object[WindUI_transProp]=WindUI_transVal
 else
 j.Tween(p.Object,0.08,{[WindUI_transProp]=WindUI_transVal}):Play()
 end
 end
-end
+end)
 end
 end
 end
@@ -9438,6 +9437,10 @@ end)
 if WindUI_BG_ok and WindUI_BG_result then return WindUI_BG_result end
 return ""
 end
+local function WindUI_BG_SyncCorner(WindUI_BG_holder,WindUI_BG_corner)
+local WindUI_BG_radius=(WindUI_BG_holder.SliceScale or 0.0625)*256
+WindUI_BG_corner.CornerRadius=UDim.new(0,WindUI_BG_radius)
+end
 local function WindUI_BG_GetOverlay()
 local WindUI_BG_holder=ao.UIElements.Main.Background
 local WindUI_BG_img=WindUI_BG_holder:FindFirstChild("WindUI_BackgroundPhoto")
@@ -9449,6 +9452,18 @@ WindUI_BG_img.ImageTransparency=1
 WindUI_BG_img.ScaleType=Enum.ScaleType.Crop
 WindUI_BG_img.Size=UDim2.new(1,0,1,0)
 WindUI_BG_img.ZIndex=0
+
+local WindUI_BG_corner=Instance.new("UICorner")
+WindUI_BG_corner.Parent=WindUI_BG_img
+WindUI_BG_SyncCorner(WindUI_BG_holder,WindUI_BG_corner)
+
+-- Keeps the photo's rounded corners matching the main background's corner radius
+-- (the "Degree Angles" slider) live, no matter when/how it changes, without needing
+-- anything on the script side.
+WindUI_BG_holder:GetPropertyChangedSignal("SliceScale"):Connect(function()
+WindUI_BG_SyncCorner(WindUI_BG_holder,WindUI_BG_corner)
+end)
+
 WindUI_BG_img.Parent=WindUI_BG_holder
 end
 return WindUI_BG_img
@@ -10520,5 +10535,3 @@ return ay
 end
 
 return aa
-
--- dddd
