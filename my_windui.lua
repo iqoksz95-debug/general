@@ -9477,6 +9477,9 @@ aC.ImageTransparency=1
 aC.ScaleType=Enum.ScaleType.Crop
 aC.Size=UDim2.new(1,0,1,0)
 aC.ZIndex=0
+-- Keeps any offset/duplicated child layers (blur, darken) from ever poking out past the
+-- photo's own bounds, no matter how far the blur slider pushes them.
+aC.ClipsDescendants=true
 
 local WindUI_BG_corner=Instance.new("UICorner")
 WindUI_BG_corner.Parent=aC
@@ -9504,11 +9507,14 @@ end)
 WindUI_BG_dark.Parent=aC
 ao.UIElements.WindUI_BackgroundDarken=WindUI_BG_dark
 
--- Blur approximation (Background Photo Blur) — Roblox has no real blur filter for a
--- GUI image, so this stacks a few soft, offset, low-opacity copies of the same photo
--- on top of each other; spreading the offset further makes it read as blurrier.
+-- Blur approximation (Background Photo Blur) — Roblox has no real blur filter for a GUI
+-- image, so this stacks several faint, radially-offset copies of the same photo instead
+-- of one strong 4-way one: more layers at lower opacity each blend into a soft haze
+-- rather than reading as distinct duplicated copies, and the layers never resize (only
+-- shift a few pixels), so they can't spill past the photo's own edges — ClipsDescendants
+-- above catches anything that would anyway.
 local WindUI_BG_blurLayers={}
-for WindUI_BG_i=1,4 do
+for WindUI_BG_i=1,8 do
 local WindUI_BG_layer=Instance.new("ImageLabel")
 WindUI_BG_layer.Name="WindUI_BackgroundBlurLayer"..WindUI_BG_i
 WindUI_BG_layer.BackgroundTransparency=1
@@ -9548,22 +9554,31 @@ WindUI_BG_img.WindUI_BackgroundDarken.BackgroundTransparency=1-l
 end
 end
 -- Background Photo Blur slider — 0 = off (all layers hidden), higher = more spread/softer.
+-- Layers only ever SHIFT position, never resize, and the parent clips them — so unlike
+-- before, nothing can spill out past the photo's own edges at any slider value.
 function ao.SetBackgroundBlur(j,l)
 WindUI_BG_EnsurePhoto()
 local WindUI_BG_layers=ao.UIElements.WindUI_BackgroundBlurLayers
 if not WindUI_BG_layers then return end
-local WindUI_BG_offsets={
+
+local WindUI_BG_offset=(tonumber(l)or 0)*0.4
+
+if WindUI_BG_offset<=0 then
+for _,WindUI_BG_layer in ipairs(WindUI_BG_layers)do
+WindUI_BG_layer.ImageTransparency=1
+end
+return
+end
+
+local WindUI_BG_dirs={
 Vector2.new(1,0),Vector2.new(-1,0),Vector2.new(0,1),Vector2.new(0,-1),
+Vector2.new(0.7,0.7),Vector2.new(-0.7,0.7),Vector2.new(0.7,-0.7),Vector2.new(-0.7,-0.7),
 }
 for WindUI_BG_i,WindUI_BG_layer in ipairs(WindUI_BG_layers)do
-local WindUI_BG_dir=WindUI_BG_offsets[WindUI_BG_i]or Vector2.new(0,0)
-if l<=0 then
-WindUI_BG_layer.ImageTransparency=1
-else
-WindUI_BG_layer.Position=UDim2.new(0,WindUI_BG_dir.X*l,0,WindUI_BG_dir.Y*l)
-WindUI_BG_layer.Size=UDim2.new(1,math.abs(WindUI_BG_dir.X*l)*2,1,math.abs(WindUI_BG_dir.Y*l)*2)
-WindUI_BG_layer.ImageTransparency=0.72
-end
+local WindUI_BG_dir=WindUI_BG_dirs[WindUI_BG_i]or Vector2.new(0,0)
+WindUI_BG_layer.Size=UDim2.new(1,0,1,0)
+WindUI_BG_layer.Position=UDim2.new(0,WindUI_BG_dir.X*WindUI_BG_offset,0,WindUI_BG_dir.Y*WindUI_BG_offset)
+WindUI_BG_layer.ImageTransparency=0.87
 end
 end
 
@@ -9591,16 +9606,17 @@ ax.Size=UDim2.new(1,l*2,1,l*2)
 ax.Position=UDim2.new(0,-l,0,-l)
 end
 
--- Hover Scale: any GuiObject under the window gently scales up on MouseEnter and back
--- down on MouseLeave, via a UIScale child so no Size math has to be touched directly.
--- Hooks everything currently on screen plus anything added later (DescendantAdded).
+-- Hover Scale: only small icon-sized visuals (switch knobs, checkmarks, dropdown arrows,
+-- slider thumbs, button icons, ...) grow on MouseEnter and shrink back on MouseLeave —
+-- never row/panel backgrounds (Frame) or text (TextLabel/TextButton), and the growth
+-- itself is a third of what it was (1.05 -> 1+0.05/3).
 ao.HoverScaleEnabled=false
 function ao.SetHoverScaleEnabled(j,l)
 ao.HoverScaleEnabled=l
 if l and not ao.HoverScaleHooked then
 ao.HoverScaleHooked=true
 local function WindUI_HS_Hook(WindUI_HS_obj)
-if not WindUI_HS_obj:IsA("GuiObject")then return end
+if not(WindUI_HS_obj:IsA("ImageLabel")or WindUI_HS_obj:IsA("ImageButton"))then return end
 local WindUI_HS_ok,WindUI_HS_already=pcall(function()return WindUI_HS_obj:GetAttribute("WindUI_HS_Hooked")end)
 if WindUI_HS_ok and WindUI_HS_already then return end
 pcall(function()WindUI_HS_obj:SetAttribute("WindUI_HS_Hooked",true)end)
@@ -9611,7 +9627,12 @@ WindUI_HS_scale.Parent=WindUI_HS_obj
 end
 WindUI_HS_obj.MouseEnter:Connect(function()
 if not ao.HoverScaleEnabled then return end
-ah(WindUI_HS_scale,0.12,{Scale=1.05},Enum.EasingStyle.Quad,Enum.EasingDirection.Out):Play()
+-- Checked here (not at hook time) so AbsoluteSize is guaranteed to already be laid
+-- out — large background/photo squircles (also ImageLabels under the hood) are
+-- excluded this way, only small fixed-size icons/indicators pass.
+local WindUI_HS_size=WindUI_HS_obj.AbsoluteSize
+if WindUI_HS_size.X>40 or WindUI_HS_size.Y>40 then return end
+ah(WindUI_HS_scale,0.12,{Scale=1+0.05/3},Enum.EasingStyle.Quad,Enum.EasingDirection.Out):Play()
 end)
 WindUI_HS_obj.MouseLeave:Connect(function()
 ah(WindUI_HS_scale,0.12,{Scale=1},Enum.EasingStyle.Quad,Enum.EasingDirection.Out):Play()
@@ -9626,15 +9647,45 @@ end
 
 -- Rainbow Outline / Size Outline: a brand-new, dedicated UIStroke around the main
 -- background ONLY — every other outline/stroke elsewhere in the UI is untouched by these.
+-- Only ever visible while Rainbow Outline is switched on; Size Outline just sets how
+-- thick it'll be once it is.
 local WindUI_Outline_Stroke
+local WindUI_Outline_Gradient
 local function WindUI_Outline_Ensure()
 if not WindUI_Outline_Stroke then
+local WindUI_Outline_holder=ao.UIElements.Main.Background
+
+-- UIStroke follows its parent's UICorner for rounded corners — the squircle image
+-- itself has no such Instance (it's a 9-slice image, not a real UICorner), which is
+-- why the outline was square before. Give it one, synced the same way the photo's is.
+if not WindUI_Outline_holder:FindFirstChildOfClass("UICorner")then
+local WindUI_Outline_holderCorner=Instance.new("UICorner")
+WindUI_Outline_holderCorner.Parent=WindUI_Outline_holder
+WindUI_BG_SyncCorner(WindUI_Outline_holder,WindUI_Outline_holderCorner)
+WindUI_Outline_holder:GetPropertyChangedSignal("SliceScale"):Connect(function()
+WindUI_BG_SyncCorner(WindUI_Outline_holder,WindUI_Outline_holderCorner)
+end)
+end
+
 WindUI_Outline_Stroke=Instance.new("UIStroke")
 WindUI_Outline_Stroke.Name="WindUI_MainOutline"
 WindUI_Outline_Stroke.Thickness=1
 WindUI_Outline_Stroke.ApplyStrokeMode=Enum.ApplyStrokeMode.Border
-WindUI_Outline_Stroke.Color=Color3.fromRGB(150,150,150)
-WindUI_Outline_Stroke.Parent=ao.UIElements.Main.Background
+WindUI_Outline_Stroke.Color=Color3.fromRGB(255,255,255)
+WindUI_Outline_Stroke.Enabled=false
+WindUI_Outline_Stroke.Parent=WindUI_Outline_holder
+
+-- Rainbow WAVE: a scrolling multi-stop rainbow gradient around the stroke, instead of
+-- the whole outline just uniformly shifting hue all at once.
+local WindUI_Outline_keypoints={}
+for WindUI_Outline_i=0,10 do
+local WindUI_Outline_t=WindUI_Outline_i/10
+table.insert(WindUI_Outline_keypoints,ColorSequenceKeypoint.new(WindUI_Outline_t,Color3.fromHSV(WindUI_Outline_t,1,1)))
+end
+WindUI_Outline_Gradient=Instance.new("UIGradient")
+WindUI_Outline_Gradient.Color=ColorSequence.new(WindUI_Outline_keypoints)
+WindUI_Outline_Gradient.Enabled=false
+WindUI_Outline_Gradient.Parent=WindUI_Outline_Stroke
 end
 return WindUI_Outline_Stroke
 end
@@ -9645,11 +9696,11 @@ function ao.SetRainbowOutline(j,l)
 local WindUI_Outline_stroke=WindUI_Outline_Ensure()
 ao.RainbowOutlineEnabled=l
 if l then
+WindUI_Outline_stroke.Enabled=true
+WindUI_Outline_Gradient.Enabled=true
 if not ao.RainbowOutlineConn then
-local WindUI_Outline_hue=0
 ao.RainbowOutlineConn=game:GetService("RunService").RenderStepped:Connect(function(WindUI_Outline_dt)
-WindUI_Outline_hue=(WindUI_Outline_hue+WindUI_Outline_dt*0.25)%1
-WindUI_Outline_stroke.Color=Color3.fromHSV(WindUI_Outline_hue,1,1)
+WindUI_Outline_Gradient.Offset=Vector2.new((WindUI_Outline_Gradient.Offset.X+WindUI_Outline_dt*0.35)%1,0)
 end)
 end
 else
@@ -9657,7 +9708,8 @@ if ao.RainbowOutlineConn then
 ao.RainbowOutlineConn:Disconnect()
 ao.RainbowOutlineConn=nil
 end
-WindUI_Outline_stroke.Color=Color3.fromRGB(150,150,150)
+WindUI_Outline_Gradient.Enabled=false
+WindUI_Outline_stroke.Enabled=false
 end
 end
 
