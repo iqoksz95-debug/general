@@ -190,13 +190,18 @@ end
 local WindUI_transProp=WindUI_TransparencySiblingProp[r]
 if WindUI_transProp and type(u)=="string" then
 pcall(function()
+-- Always resolve to a concrete value (default: fully opaque) instead of skipping when
+-- the active theme doesn't define one — otherwise a transparency picked while "Custom"
+-- was active stays stuck on the object forever after switching to Dark/Light/etc, which
+-- looked like Custom's colors "bleeding" into other themes.
 local WindUI_transVal=j.Theme and j.Theme[u.."Transparency"]
-if typeof(WindUI_transVal)=="number" then
+if typeof(WindUI_transVal)~="number" then
+WindUI_transVal=0
+end
 if not m then
 p.Object[WindUI_transProp]=WindUI_transVal
 else
 j.Tween(p.Object,0.08,{[WindUI_transProp]=WindUI_transVal}):Play()
-end
 end
 end)
 end
