@@ -9463,44 +9463,257 @@ local function WindUI_BG_SyncCorner(WindUI_BG_holder,WindUI_BG_corner)
 local WindUI_BG_radius=(WindUI_BG_holder.SliceScale or 0.0625)*256
 WindUI_BG_corner.CornerRadius=UDim.new(0,WindUI_BG_radius)
 end
-local function WindUI_BG_GetOverlay()
-local WindUI_BG_holder=ao.UIElements.Main.Background
-local WindUI_BG_img=WindUI_BG_holder:FindFirstChild("WindUI_BackgroundPhoto")
-if not WindUI_BG_img then
-WindUI_BG_img=Instance.new("ImageLabel")
-WindUI_BG_img.Name="WindUI_BackgroundPhoto"
-WindUI_BG_img.BackgroundTransparency=1
-WindUI_BG_img.ImageTransparency=1
-WindUI_BG_img.ScaleType=Enum.ScaleType.Crop
-WindUI_BG_img.Size=UDim2.new(1,0,1,0)
-WindUI_BG_img.ZIndex=0
+
+-- IMPORTANT: this reuses the SAME "aC" upvalue the library's own Open()/Close() already
+-- animate (they only skip it because aC stays nil unless a Background was passed at
+-- CreateWindow time). Assigning our photo to aC means it automatically gets the exact
+-- same fade-in/fade-out as the rest of the window — no separate animation code needed.
+local function WindUI_BG_EnsurePhoto()
+if not aC then
+aC=Instance.new("ImageLabel")
+aC.Name="WindUI_BackgroundPhoto"
+aC.BackgroundTransparency=1
+aC.ImageTransparency=1
+aC.ScaleType=Enum.ScaleType.Crop
+aC.Size=UDim2.new(1,0,1,0)
+aC.ZIndex=0
 
 local WindUI_BG_corner=Instance.new("UICorner")
-WindUI_BG_corner.Parent=WindUI_BG_img
-WindUI_BG_SyncCorner(WindUI_BG_holder,WindUI_BG_corner)
-
--- Keeps the photo's rounded corners matching the main background's corner radius
--- (the "Degree Angles" slider) live, no matter when/how it changes, without needing
--- anything on the script side.
-WindUI_BG_holder:GetPropertyChangedSignal("SliceScale"):Connect(function()
-WindUI_BG_SyncCorner(WindUI_BG_holder,WindUI_BG_corner)
+WindUI_BG_corner.Parent=aC
+WindUI_BG_SyncCorner(ao.UIElements.Main.Background,WindUI_BG_corner)
+ao.UIElements.Main.Background:GetPropertyChangedSignal("SliceScale"):Connect(function()
+WindUI_BG_SyncCorner(ao.UIElements.Main.Background,WindUI_BG_corner)
 end)
 
-WindUI_BG_img.Parent=WindUI_BG_holder
+-- Darkening overlay (Background Photo Opacity) — a plain black frame on top of the
+-- photo, independent of the photo's own transparency, so dimming never fights with
+-- Background Transparency.
+local WindUI_BG_dark=Instance.new("Frame")
+WindUI_BG_dark.Name="WindUI_BackgroundDarken"
+WindUI_BG_dark.BackgroundColor3=Color3.new(0,0,0)
+WindUI_BG_dark.BackgroundTransparency=1
+WindUI_BG_dark.BorderSizePixel=0
+WindUI_BG_dark.Size=UDim2.new(1,0,1,0)
+WindUI_BG_dark.ZIndex=1
+local WindUI_BG_darkCorner=Instance.new("UICorner")
+WindUI_BG_darkCorner.Parent=WindUI_BG_dark
+WindUI_BG_SyncCorner(ao.UIElements.Main.Background,WindUI_BG_darkCorner)
+ao.UIElements.Main.Background:GetPropertyChangedSignal("SliceScale"):Connect(function()
+WindUI_BG_SyncCorner(ao.UIElements.Main.Background,WindUI_BG_darkCorner)
+end)
+WindUI_BG_dark.Parent=aC
+ao.UIElements.WindUI_BackgroundDarken=WindUI_BG_dark
+
+-- Blur approximation (Background Photo Blur) — Roblox has no real blur filter for a
+-- GUI image, so this stacks a few soft, offset, low-opacity copies of the same photo
+-- on top of each other; spreading the offset further makes it read as blurrier.
+local WindUI_BG_blurLayers={}
+for WindUI_BG_i=1,4 do
+local WindUI_BG_layer=Instance.new("ImageLabel")
+WindUI_BG_layer.Name="WindUI_BackgroundBlurLayer"..WindUI_BG_i
+WindUI_BG_layer.BackgroundTransparency=1
+WindUI_BG_layer.ImageTransparency=1
+WindUI_BG_layer.ScaleType=Enum.ScaleType.Crop
+WindUI_BG_layer.Size=UDim2.new(1,0,1,0)
+WindUI_BG_layer.ZIndex=0
+WindUI_BG_layer.Parent=aC
+table.insert(WindUI_BG_blurLayers,WindUI_BG_layer)
 end
-return WindUI_BG_img
+ao.UIElements.WindUI_BackgroundBlurLayers=WindUI_BG_blurLayers
+
+aC.Parent=ao.UIElements.Main.Background
 end
+return aC
+end
+
 function ao.SetBackgroundImage(j,l)
-local WindUI_BG_img=WindUI_BG_GetOverlay()
-if l==nil or l=="" then
-WindUI_BG_img.Image=""
-return
+local WindUI_BG_img=WindUI_BG_EnsurePhoto()
+local WindUI_BG_asset=(l==nil or l=="")and""or WindUI_BG_ResolveAsset(l)
+WindUI_BG_img.Image=WindUI_BG_asset
+if ao.UIElements.WindUI_BackgroundBlurLayers then
+for _,WindUI_BG_layer in ipairs(ao.UIElements.WindUI_BackgroundBlurLayers)do
+WindUI_BG_layer.Image=WindUI_BG_asset
 end
-WindUI_BG_img.Image=WindUI_BG_ResolveAsset(l)
+end
 end
 function ao.SetBackgroundImageTransparency(j,l)
-WindUI_BG_GetOverlay().ImageTransparency=l
+WindUI_BG_EnsurePhoto().ImageTransparency=l
 ao.BackgroundImageTransparency=l
+end
+-- Background Photo Opacity slider — 0 = no darkening, 1 = fully black.
+function ao.SetBackgroundDarkness(j,l)
+local WindUI_BG_img=WindUI_BG_EnsurePhoto()
+if WindUI_BG_img:FindFirstChild("WindUI_BackgroundDarken")then
+WindUI_BG_img.WindUI_BackgroundDarken.BackgroundTransparency=1-l
+end
+end
+-- Background Photo Blur slider — 0 = off (all layers hidden), higher = more spread/softer.
+function ao.SetBackgroundBlur(j,l)
+WindUI_BG_EnsurePhoto()
+local WindUI_BG_layers=ao.UIElements.WindUI_BackgroundBlurLayers
+if not WindUI_BG_layers then return end
+local WindUI_BG_offsets={
+Vector2.new(1,0),Vector2.new(-1,0),Vector2.new(0,1),Vector2.new(0,-1),
+}
+for WindUI_BG_i,WindUI_BG_layer in ipairs(WindUI_BG_layers)do
+local WindUI_BG_dir=WindUI_BG_offsets[WindUI_BG_i]or Vector2.new(0,0)
+if l<=0 then
+WindUI_BG_layer.ImageTransparency=1
+else
+WindUI_BG_layer.Position=UDim2.new(0,WindUI_BG_dir.X*l,0,WindUI_BG_dir.Y*l)
+WindUI_BG_layer.Size=UDim2.new(1,math.abs(WindUI_BG_dir.X*l)*2,1,math.abs(WindUI_BG_dir.Y*l)*2)
+WindUI_BG_layer.ImageTransparency=0.72
+end
+end
+end
+
+-- Glow / Drop Shadow: reuses the library's own existing soft shadow image around the
+-- window (the "ax" ImageLabel Open()/Close() already fade in/out) instead of creating a
+-- second competing shadow — SetGlowEnabled/Transparency/Size all just drive that same one.
+ao.GlowEnabled=true
+ao.GlowTransparency=.7
+function ao.SetGlowEnabled(j,l)
+ao.GlowEnabled=l
+if l then
+ah(ax,0.2,{ImageTransparency=ao.GlowTransparency},Enum.EasingStyle.Quint,Enum.EasingDirection.Out):Play()
+else
+ah(ax,0.2,{ImageTransparency=1},Enum.EasingStyle.Quint,Enum.EasingDirection.Out):Play()
+end
+end
+function ao.SetGlowTransparency(j,l)
+ao.GlowTransparency=l
+if ao.GlowEnabled then
+ax.ImageTransparency=l
+end
+end
+function ao.SetGlowSize(j,l)
+ax.Size=UDim2.new(1,l*2,1,l*2)
+ax.Position=UDim2.new(0,-l,0,-l)
+end
+
+-- Hover Scale: any GuiObject under the window gently scales up on MouseEnter and back
+-- down on MouseLeave, via a UIScale child so no Size math has to be touched directly.
+-- Hooks everything currently on screen plus anything added later (DescendantAdded).
+ao.HoverScaleEnabled=false
+function ao.SetHoverScaleEnabled(j,l)
+ao.HoverScaleEnabled=l
+if l and not ao.HoverScaleHooked then
+ao.HoverScaleHooked=true
+local function WindUI_HS_Hook(WindUI_HS_obj)
+if not WindUI_HS_obj:IsA("GuiObject")then return end
+local WindUI_HS_ok,WindUI_HS_already=pcall(function()return WindUI_HS_obj:GetAttribute("WindUI_HS_Hooked")end)
+if WindUI_HS_ok and WindUI_HS_already then return end
+pcall(function()WindUI_HS_obj:SetAttribute("WindUI_HS_Hooked",true)end)
+local WindUI_HS_scale=WindUI_HS_obj:FindFirstChildOfClass("UIScale")
+if not WindUI_HS_scale then
+WindUI_HS_scale=Instance.new("UIScale")
+WindUI_HS_scale.Parent=WindUI_HS_obj
+end
+WindUI_HS_obj.MouseEnter:Connect(function()
+if not ao.HoverScaleEnabled then return end
+ah(WindUI_HS_scale,0.12,{Scale=1.05},Enum.EasingStyle.Quad,Enum.EasingDirection.Out):Play()
+end)
+WindUI_HS_obj.MouseLeave:Connect(function()
+ah(WindUI_HS_scale,0.12,{Scale=1},Enum.EasingStyle.Quad,Enum.EasingDirection.Out):Play()
+end)
+end
+for _,WindUI_HS_d in ipairs(ao.UIElements.Main:GetDescendants())do
+WindUI_HS_Hook(WindUI_HS_d)
+end
+ao.UIElements.Main.DescendantAdded:Connect(WindUI_HS_Hook)
+end
+end
+
+-- Rainbow Outline / Size Outline: a brand-new, dedicated UIStroke around the main
+-- background ONLY — every other outline/stroke elsewhere in the UI is untouched by these.
+local WindUI_Outline_Stroke
+local function WindUI_Outline_Ensure()
+if not WindUI_Outline_Stroke then
+WindUI_Outline_Stroke=Instance.new("UIStroke")
+WindUI_Outline_Stroke.Name="WindUI_MainOutline"
+WindUI_Outline_Stroke.Thickness=1
+WindUI_Outline_Stroke.ApplyStrokeMode=Enum.ApplyStrokeMode.Border
+WindUI_Outline_Stroke.Color=Color3.fromRGB(150,150,150)
+WindUI_Outline_Stroke.Parent=ao.UIElements.Main.Background
+end
+return WindUI_Outline_Stroke
+end
+function ao.SetOutlineSize(j,l)
+WindUI_Outline_Ensure().Thickness=l
+end
+function ao.SetRainbowOutline(j,l)
+local WindUI_Outline_stroke=WindUI_Outline_Ensure()
+ao.RainbowOutlineEnabled=l
+if l then
+if not ao.RainbowOutlineConn then
+local WindUI_Outline_hue=0
+ao.RainbowOutlineConn=game:GetService("RunService").RenderStepped:Connect(function(WindUI_Outline_dt)
+WindUI_Outline_hue=(WindUI_Outline_hue+WindUI_Outline_dt*0.25)%1
+WindUI_Outline_stroke.Color=Color3.fromHSV(WindUI_Outline_hue,1,1)
+end)
+end
+else
+if ao.RainbowOutlineConn then
+ao.RainbowOutlineConn:Disconnect()
+ao.RainbowOutlineConn=nil
+end
+WindUI_Outline_stroke.Color=Color3.fromRGB(150,150,150)
+end
+end
+
+-- Custom cursor: hides the real system cursor and draws our own image following the
+-- mouse every frame — same technique as other UI libraries use, since Roblox's native
+-- cursor customization is unreliable across executors. Reuses WindUI_BG_ResolveAsset so
+-- the cursor image can be any URL too, not just rbxassetid://.
+local WindUI_Cursor_Gui
+local WindUI_Cursor_Image
+local WindUI_Cursor_Conn
+local function WindUI_Cursor_Ensure()
+if not WindUI_Cursor_Gui then
+WindUI_Cursor_Gui=Instance.new("ScreenGui")
+WindUI_Cursor_Gui.Name="WindUI_Cursor"
+WindUI_Cursor_Gui.IgnoreGuiInset=true
+WindUI_Cursor_Gui.ResetOnSpawn=false
+WindUI_Cursor_Gui.DisplayOrder=2147483647
+local WindUI_Cursor_parented=pcall(function()
+WindUI_Cursor_Gui.Parent=game:GetService("CoreGui")
+end)
+if not WindUI_Cursor_parented or not WindUI_Cursor_Gui.Parent then
+WindUI_Cursor_Gui.Parent=game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
+end
+
+WindUI_Cursor_Image=Instance.new("ImageLabel")
+WindUI_Cursor_Image.Name="Cursor"
+WindUI_Cursor_Image.BackgroundTransparency=1
+WindUI_Cursor_Image.Size=UDim2.fromOffset(24,24)
+WindUI_Cursor_Image.ZIndex=2147483647
+WindUI_Cursor_Image.Visible=false
+WindUI_Cursor_Image.Parent=WindUI_Cursor_Gui
+end
+return WindUI_Cursor_Image
+end
+function ao.SetCursorImage(j,l)
+WindUI_Cursor_Ensure().Image=WindUI_BG_ResolveAsset(l)
+end
+function ao.SetCursorEnabled(j,l)
+local WindUI_Cursor_img=WindUI_Cursor_Ensure()
+if l then
+game:GetService("UserInputService").MouseIconEnabled=false
+WindUI_Cursor_img.Visible=true
+if not WindUI_Cursor_Conn then
+WindUI_Cursor_Conn=game:GetService("RunService").RenderStepped:Connect(function()
+local WindUI_Cursor_pos=game:GetService("UserInputService"):GetMouseLocation()
+WindUI_Cursor_img.Position=UDim2.fromOffset(WindUI_Cursor_pos.X,WindUI_Cursor_pos.Y)
+end)
+end
+else
+game:GetService("UserInputService").MouseIconEnabled=true
+WindUI_Cursor_img.Visible=false
+if WindUI_Cursor_Conn then
+WindUI_Cursor_Conn:Disconnect()
+WindUI_Cursor_Conn=nil
+end
+end
 end
 
 local j
@@ -9630,7 +9843,7 @@ ImageTransparency=aC:IsA"ImageLabel"and 0 or nil,
 end
 
 
-ah(ax,0.25,{ImageTransparency=.7},Enum.EasingStyle.Quint,Enum.EasingDirection.Out):Play()
+ah(ax,0.25,{ImageTransparency=(ao.GlowEnabled~=false)and(ao.GlowTransparency or .7)or 1},Enum.EasingStyle.Quint,Enum.EasingDirection.Out):Play()
 if UIStroke then
 ah(UIStroke,0.25,{Transparency=.8},Enum.EasingStyle.Quint,Enum.EasingDirection.Out):Play()
 end
