@@ -444,10 +444,13 @@ end
 
 local function update(H)
 local J=H.Position-C
-j.Tween(p,0.02,{Position=UDim2.new(
+local WindUI_smooth=p:GetAttribute("WindUI_SmoothDragging")
+local WindUI_dur=WindUI_smooth and 0.18 or 0.02
+local WindUI_style=WindUI_smooth and Enum.EasingStyle.Quad or Enum.EasingStyle.Linear
+j.Tween(p,WindUI_dur,{Position=UDim2.new(
 F.X.Scale,F.X.Offset+J.X,
 F.Y.Scale,F.Y.Offset+J.Y
-)}):Play()
+)},WindUI_style,Enum.EasingDirection.Out):Play()
 end
 
 for H,J in pairs(r)do
@@ -4632,11 +4635,13 @@ ak,
 })
 
 function ai.Set(am,an,ao)
+local WindUI_knobDur=_G.WindUI_AnimatedToggles and 0.35 or 0.1
+local WindUI_knobStyle=_G.WindUI_AnimatedToggles and Enum.EasingStyle.Back or Enum.EasingStyle.Quint
 if an then
-ad(al.Frame,0.1,{
+ad(al.Frame,WindUI_knobDur,{
 Position=UDim2.new(1,-22,0.5,0),
 
-},Enum.EasingStyle.Quint,Enum.EasingDirection.Out):Play()
+},WindUI_knobStyle,Enum.EasingDirection.Out):Play()
 ad(al.Layer,0.1,{
 ImageTransparency=0,
 }):Play()
@@ -4650,10 +4655,10 @@ ImageTransparency=0,
 }):Play()
 end
 else
-ad(al.Frame,0.1,{
+ad(al.Frame,WindUI_knobDur,{
 Position=UDim2.new(0,4,0.5,0),
 Size=UDim2.new(0,18,0,18),
-},Enum.EasingStyle.Quint,Enum.EasingDirection.Out):Play()
+},WindUI_knobStyle,Enum.EasingDirection.Out):Play()
 ad(al.Layer,0.1,{
 ImageTransparency=1,
 }):Play()
@@ -9333,6 +9338,13 @@ end
 end
 )
 
+-- Smooth UI Dragging: an inertia feel (the window eases toward the cursor instead of
+-- snapping to it) driven by a plain Attribute on Main, which is what af.Drag's update()
+-- reads each move — no changes needed to af.Drag's signature at all.
+function ao.SetSmoothDragging(j,l)
+ao.UIElements.Main:SetAttribute("WindUI_SmoothDragging",l)
+end
+
 if not aB and ao.Background and typeof(ao.Background)=="table"then
 
 local i=ag"UIGradient"
@@ -9475,11 +9487,15 @@ aC.Name="WindUI_BackgroundPhoto"
 aC.BackgroundTransparency=1
 aC.ImageTransparency=1
 aC.ScaleType=Enum.ScaleType.Crop
-aC.Size=UDim2.new(1,0,1,0)
+-- Slightly oversized vs. its parent (10px overscan each side) so the Parallax
+-- Background Shift slider has room to nudge it around without ever revealing an edge.
+aC.Size=UDim2.new(1,20,1,20)
+aC.Position=UDim2.new(0,-10,0,-10)
 aC.ZIndex=0
--- Keeps any offset/duplicated child layers (blur, darken) from ever poking out past the
--- photo's own bounds, no matter how far the blur slider pushes them.
+-- Keeps any offset/duplicated child layers (blur, darken, vignette) from ever poking out
+-- past the photo's own bounds, no matter how far their sliders push them.
 aC.ClipsDescendants=true
+ao.UIElements.Main.Background.ClipsDescendants=true
 
 local WindUI_BG_corner=Instance.new("UICorner")
 WindUI_BG_corner.Parent=aC
@@ -9580,6 +9596,74 @@ WindUI_BG_layer.Size=UDim2.new(1,0,1,0)
 WindUI_BG_layer.Position=UDim2.new(0,WindUI_BG_dir.X*WindUI_BG_offset,0,WindUI_BG_dir.Y*WindUI_BG_offset)
 WindUI_BG_layer.ImageTransparency=0.87
 end
+end
+
+-- Animated Toggle Switches: a single shared flag every Toggle's internal switch (module
+-- a.B) reads each time it animates — no per-toggle wiring needed anywhere.
+function ao.SetAnimatedToggles(j,l)
+_G.WindUI_AnimatedToggles=l
+end
+
+-- Parallax Background Shift: the photo nudges opposite... actually toward the cursor's
+-- offset from window-center, within the 10px overscan budget baked into its Size/Position
+-- above, so it can never reveal an edge no matter the slider value.
+local WindUI_Parallax_Conn
+function ao.SetParallaxAmount(j,l)
+ao.ParallaxAmount=tonumber(l)or 0
+WindUI_BG_EnsurePhoto()
+
+if ao.ParallaxAmount>0 and not WindUI_Parallax_Conn then
+WindUI_Parallax_Conn=game:GetService("RunService").RenderStepped:Connect(function()
+if not ao.ParallaxAmount or ao.ParallaxAmount<=0 then return end
+local WindUI_Px_mouse=game:GetService("UserInputService"):GetMouseLocation()
+local WindUI_Px_center=ao.UIElements.Main.AbsolutePosition+ao.UIElements.Main.AbsoluteSize/2
+local WindUI_Px_delta=WindUI_Px_mouse-WindUI_Px_center
+local WindUI_Px_max=10
+local WindUI_Px_x=math.clamp((WindUI_Px_delta.X/400)*(ao.ParallaxAmount/100)*WindUI_Px_max,-WindUI_Px_max,WindUI_Px_max)
+local WindUI_Px_y=math.clamp((WindUI_Px_delta.Y/400)*(ao.ParallaxAmount/100)*WindUI_Px_max,-WindUI_Px_max,WindUI_Px_max)
+aC.Position=UDim2.new(0,-10+WindUI_Px_x,0,-10+WindUI_Px_y)
+end)
+elseif ao.ParallaxAmount<=0 and WindUI_Parallax_Conn then
+WindUI_Parallax_Conn:Disconnect()
+WindUI_Parallax_Conn=nil
+aC.Position=UDim2.new(0,-10,0,-10)
+end
+end
+
+-- Vignette Effect: two overlapping linear gradients (horizontal + vertical) darkening
+-- toward the edges — Roblox's UIGradient has no true radial mode, so corners end up
+-- darkened by both at once while the center stays clear, which reads as a vignette.
+function ao.SetVignette(j,l)
+local WindUI_Vig_img=WindUI_BG_EnsurePhoto()
+local WindUI_Vig_amount=tonumber(l)or 0
+
+if not WindUI_Vig_img:FindFirstChild("WindUI_Vignette_H")then
+local WindUI_Vig_h=Instance.new("Frame")
+WindUI_Vig_h.Name="WindUI_Vignette_H"
+WindUI_Vig_h.BackgroundColor3=Color3.new(0,0,0)
+WindUI_Vig_h.BorderSizePixel=0
+WindUI_Vig_h.Size=UDim2.new(1,0,1,0)
+WindUI_Vig_h.ZIndex=2
+local WindUI_Vig_hGrad=Instance.new("UIGradient")
+WindUI_Vig_hGrad.Rotation=0
+WindUI_Vig_hGrad.Color=ColorSequence.new(Color3.new(0,0,0))
+WindUI_Vig_hGrad.Parent=WindUI_Vig_h
+WindUI_Vig_h.Parent=WindUI_Vig_img
+
+local WindUI_Vig_v=WindUI_Vig_h:Clone()
+WindUI_Vig_v.Name="WindUI_Vignette_V"
+WindUI_Vig_v.UIGradient.Rotation=90
+WindUI_Vig_v.Parent=WindUI_Vig_img
+end
+
+local WindUI_Vig_edge=1-(WindUI_Vig_amount*0.75)
+local WindUI_Vig_seq=NumberSequence.new({
+NumberSequenceKeypoint.new(0,WindUI_Vig_edge),
+NumberSequenceKeypoint.new(0.5,1),
+NumberSequenceKeypoint.new(1,WindUI_Vig_edge),
+})
+WindUI_Vig_img.WindUI_Vignette_H.UIGradient.Transparency=WindUI_Vig_seq
+WindUI_Vig_img.WindUI_Vignette_V.UIGradient.Transparency=WindUI_Vig_seq
 end
 
 -- Glow / Drop Shadow: reuses the library's own existing soft shadow image around the
