@@ -9527,9 +9527,15 @@ aC:GetPropertyChangedSignal("ImageTransparency"):Connect(function()
 WindUI_BG_photo.ImageTransparency=aC.ImageTransparency
 end)
 
--- Darkening overlay (Background Photo Opacity) — a plain black frame on top of the
--- photo, independent of the photo's own transparency, so dimming never fights with
--- Background Transparency.
+-- Darkening overlay (Background Photo Opacity), Blur layers, and Vignette (added later
+-- via SetVignette) are all parented to aC directly — NOT to WindUI_BG_photo above —
+-- and (darken/vignette) get their own UICorner synced the same way aC's is. This is
+-- deliberate: WindUI_BG_photo moves/resizes (for Parallax), and anything parented to a
+-- moving+resizing layer while ALSO trying to carry its own matching rounding will drift
+-- out of alignment with the window's real, fixed corner the moment it shifts — which is
+-- exactly the corner-artifact bug from before. Parenting to the fixed aC instead makes
+-- that impossible: their rounding is calculated against the same never-moving reference
+-- aC's own is, every time.
 local WindUI_BG_dark=Instance.new("Frame")
 WindUI_BG_dark.Name="WindUI_BackgroundDarken"
 WindUI_BG_dark.BackgroundColor3=Color3.new(0,0,0)
@@ -9537,14 +9543,22 @@ WindUI_BG_dark.BackgroundTransparency=1
 WindUI_BG_dark.BorderSizePixel=0
 WindUI_BG_dark.Size=UDim2.new(1,0,1,0)
 WindUI_BG_dark.ZIndex=1
-WindUI_BG_dark.Parent=WindUI_BG_photo
+local WindUI_BG_darkCorner=Instance.new("UICorner")
+WindUI_BG_darkCorner.Parent=WindUI_BG_dark
+WindUI_BG_SyncCorner(ao.UIElements.Main.Background,WindUI_BG_darkCorner)
+ao.UIElements.Main.Background:GetPropertyChangedSignal("SliceScale"):Connect(function()
+WindUI_BG_SyncCorner(ao.UIElements.Main.Background,WindUI_BG_darkCorner)
+end)
+WindUI_BG_dark.Parent=aC
 ao.UIElements.WindUI_BackgroundDarken=WindUI_BG_dark
 
 -- Blur approximation (Background Photo Blur) — Roblox has no real blur filter for a GUI
 -- image, so this stacks several faint, radially-offset copies of the same photo instead
--- of one strong 4-way one: more layers at lower opacity each blend into a soft haze
--- rather than reading as distinct duplicated copies. They only ever shift a few pixels
--- (never resize), and aC's clipping catches anything that would spill out regardless.
+-- of one strong 4-way one. Unlike the main photo, these stay at aC's EXACT size (no
+-- overscan) and only ever nudge position by a few px — no room to need their own
+-- rounding: any sliver that peeks past aC's fixed edge at max offset is just a few
+-- percent of a semi-transparent duplicate, not worth the complexity of syncing 8
+-- separate corners.
 local WindUI_BG_blurLayers={}
 for WindUI_BG_i=1,8 do
 local WindUI_BG_layer=Instance.new("ImageLabel")
@@ -9554,7 +9568,7 @@ WindUI_BG_layer.ImageTransparency=1
 WindUI_BG_layer.ScaleType=Enum.ScaleType.Crop
 WindUI_BG_layer.Size=UDim2.new(1,0,1,0)
 WindUI_BG_layer.ZIndex=0
-WindUI_BG_layer.Parent=WindUI_BG_photo
+WindUI_BG_layer.Parent=aC
 table.insert(WindUI_BG_blurLayers,WindUI_BG_layer)
 end
 ao.UIElements.WindUI_BackgroundBlurLayers=WindUI_BG_blurLayers
@@ -9581,9 +9595,9 @@ ao.BackgroundImageTransparency=l
 end
 -- Background Photo Opacity slider — 0 = no darkening, 1 = fully black.
 function ao.SetBackgroundDarkness(j,l)
-local WindUI_BG_img=WindUI_BG_EnsurePhoto()
-if WindUI_BG_img:FindFirstChild("WindUI_BackgroundDarken")then
-WindUI_BG_img.WindUI_BackgroundDarken.BackgroundTransparency=1-l
+WindUI_BG_EnsurePhoto()
+if aC:FindFirstChild("WindUI_BackgroundDarken")then
+aC.WindUI_BackgroundDarken.BackgroundTransparency=1-l
 end
 end
 -- Background Photo Blur slider — 0 = off (all layers hidden), higher = more spread/softer.
@@ -9651,27 +9665,48 @@ end
 -- Vignette Effect: two overlapping linear gradients (horizontal + vertical) darkening
 -- toward the edges — Roblox's UIGradient has no true radial mode, so corners end up
 -- darkened by both at once while the center stays clear, which reads as a vignette.
+-- Parented to aC (fixed) with its own corner sync, same reasoning as the darkening
+-- overlay above.
 function ao.SetVignette(j,l)
-local WindUI_Vig_img=WindUI_BG_EnsurePhoto()
+WindUI_BG_EnsurePhoto()
 local WindUI_Vig_amount=tonumber(l)or 0
 
-if not WindUI_Vig_img:FindFirstChild("WindUI_Vignette_H")then
+if not aC:FindFirstChild("WindUI_Vignette_H")then
 local WindUI_Vig_h=Instance.new("Frame")
 WindUI_Vig_h.Name="WindUI_Vignette_H"
 WindUI_Vig_h.BackgroundColor3=Color3.new(0,0,0)
 WindUI_Vig_h.BorderSizePixel=0
 WindUI_Vig_h.Size=UDim2.new(1,0,1,0)
 WindUI_Vig_h.ZIndex=2
+local WindUI_Vig_hCorner=Instance.new("UICorner")
+WindUI_Vig_hCorner.Parent=WindUI_Vig_h
+WindUI_BG_SyncCorner(ao.UIElements.Main.Background,WindUI_Vig_hCorner)
+ao.UIElements.Main.Background:GetPropertyChangedSignal("SliceScale"):Connect(function()
+WindUI_BG_SyncCorner(ao.UIElements.Main.Background,WindUI_Vig_hCorner)
+end)
 local WindUI_Vig_hGrad=Instance.new("UIGradient")
 WindUI_Vig_hGrad.Rotation=0
 WindUI_Vig_hGrad.Color=ColorSequence.new(Color3.new(0,0,0))
 WindUI_Vig_hGrad.Parent=WindUI_Vig_h
-WindUI_Vig_h.Parent=WindUI_Vig_img
+WindUI_Vig_h.Parent=aC
 
-local WindUI_Vig_v=WindUI_Vig_h:Clone()
+local WindUI_Vig_v=Instance.new("Frame")
 WindUI_Vig_v.Name="WindUI_Vignette_V"
-WindUI_Vig_v.UIGradient.Rotation=90
-WindUI_Vig_v.Parent=WindUI_Vig_img
+WindUI_Vig_v.BackgroundColor3=Color3.new(0,0,0)
+WindUI_Vig_v.BorderSizePixel=0
+WindUI_Vig_v.Size=UDim2.new(1,0,1,0)
+WindUI_Vig_v.ZIndex=2
+local WindUI_Vig_vCorner=Instance.new("UICorner")
+WindUI_Vig_vCorner.Parent=WindUI_Vig_v
+WindUI_BG_SyncCorner(ao.UIElements.Main.Background,WindUI_Vig_vCorner)
+ao.UIElements.Main.Background:GetPropertyChangedSignal("SliceScale"):Connect(function()
+WindUI_BG_SyncCorner(ao.UIElements.Main.Background,WindUI_Vig_vCorner)
+end)
+local WindUI_Vig_vGrad=Instance.new("UIGradient")
+WindUI_Vig_vGrad.Rotation=90
+WindUI_Vig_vGrad.Color=ColorSequence.new(Color3.new(0,0,0))
+WindUI_Vig_vGrad.Parent=WindUI_Vig_v
+WindUI_Vig_v.Parent=aC
 end
 
 local WindUI_Vig_edge=1-(WindUI_Vig_amount*0.75)
@@ -9680,8 +9715,8 @@ NumberSequenceKeypoint.new(0,WindUI_Vig_edge),
 NumberSequenceKeypoint.new(0.5,1),
 NumberSequenceKeypoint.new(1,WindUI_Vig_edge),
 })
-WindUI_Vig_img.WindUI_Vignette_H.UIGradient.Transparency=WindUI_Vig_seq
-WindUI_Vig_img.WindUI_Vignette_V.UIGradient.Transparency=WindUI_Vig_seq
+aC.WindUI_Vignette_H.UIGradient.Transparency=WindUI_Vig_seq
+aC.WindUI_Vignette_V.UIGradient.Transparency=WindUI_Vig_seq
 end
 
 -- Glow / Drop Shadow: reuses the library's own existing soft shadow image around the
