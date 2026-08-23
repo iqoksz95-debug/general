@@ -9480,20 +9480,25 @@ end
 -- animate (they only skip it because aC stays nil unless a Background was passed at
 -- CreateWindow time). Assigning our photo to aC means it automatically gets the exact
 -- same fade-in/fade-out as the rest of the window — no separate animation code needed.
+-- aC ("shell"): ALWAYS exactly matches its parent (never resized/repositioned) so its
+-- own UICorner stays perfectly aligned with the window's real rounded edge. It's kept as
+-- an empty ImageLabel purely because the library's existing Open()/Close() animation code
+-- checks aC:IsA("ImageLabel") and tweens aC.ImageTransparency to fade the background in/out
+-- — this was actually the root cause of the corner artifact bug: the photo itself used to
+-- BE aC, oversized+shifted for Parallax, which dragged its own rounding out of alignment
+-- with the (unmoving) window edge. Now the real, pannable photo lives on a child instead,
+-- inside aC's fixed, correctly-clipped, correctly-rounded bounds, and mirrors aC's
+-- transparency so the open/close fade still works exactly as before.
 local function WindUI_BG_EnsurePhoto()
 if not aC then
 aC=Instance.new("ImageLabel")
 aC.Name="WindUI_BackgroundPhoto"
 aC.BackgroundTransparency=1
 aC.ImageTransparency=1
-aC.ScaleType=Enum.ScaleType.Crop
--- Slightly oversized vs. its parent (10px overscan each side) so the Parallax
--- Background Shift slider has room to nudge it around without ever revealing an edge.
-aC.Size=UDim2.new(1,20,1,20)
-aC.Position=UDim2.new(0,-10,0,-10)
+aC.Image=""
+aC.Size=UDim2.new(1,0,1,0)
+aC.Position=UDim2.new(0,0,0,0)
 aC.ZIndex=0
--- Keeps any offset/duplicated child layers (blur, darken, vignette) from ever poking out
--- past the photo's own bounds, no matter how far their sliders push them.
 aC.ClipsDescendants=true
 ao.UIElements.Main.Background.ClipsDescendants=true
 
@@ -9502,6 +9507,24 @@ WindUI_BG_corner.Parent=aC
 WindUI_BG_SyncCorner(ao.UIElements.Main.Background,WindUI_BG_corner)
 ao.UIElements.Main.Background:GetPropertyChangedSignal("SliceScale"):Connect(function()
 WindUI_BG_SyncCorner(ao.UIElements.Main.Background,WindUI_BG_corner)
+end)
+
+-- The actual visible photo. Oversized by 10px each side so Parallax Background Shift
+-- can nudge it around — it can never reveal an edge because aC (fixed, unmoving, exactly
+-- matching the window's own bounds) always clips it first.
+local WindUI_BG_photo=Instance.new("ImageLabel")
+WindUI_BG_photo.Name="WindUI_BackgroundPhotoContent"
+WindUI_BG_photo.BackgroundTransparency=1
+WindUI_BG_photo.ImageTransparency=aC.ImageTransparency
+WindUI_BG_photo.ScaleType=Enum.ScaleType.Crop
+WindUI_BG_photo.Size=UDim2.new(1,20,1,20)
+WindUI_BG_photo.Position=UDim2.new(0,-10,0,-10)
+WindUI_BG_photo.ZIndex=0
+WindUI_BG_photo.Parent=aC
+ao.UIElements.WindUI_BackgroundPhotoContent=WindUI_BG_photo
+
+aC:GetPropertyChangedSignal("ImageTransparency"):Connect(function()
+WindUI_BG_photo.ImageTransparency=aC.ImageTransparency
 end)
 
 -- Darkening overlay (Background Photo Opacity) — a plain black frame on top of the
@@ -9514,21 +9537,14 @@ WindUI_BG_dark.BackgroundTransparency=1
 WindUI_BG_dark.BorderSizePixel=0
 WindUI_BG_dark.Size=UDim2.new(1,0,1,0)
 WindUI_BG_dark.ZIndex=1
-local WindUI_BG_darkCorner=Instance.new("UICorner")
-WindUI_BG_darkCorner.Parent=WindUI_BG_dark
-WindUI_BG_SyncCorner(ao.UIElements.Main.Background,WindUI_BG_darkCorner)
-ao.UIElements.Main.Background:GetPropertyChangedSignal("SliceScale"):Connect(function()
-WindUI_BG_SyncCorner(ao.UIElements.Main.Background,WindUI_BG_darkCorner)
-end)
-WindUI_BG_dark.Parent=aC
+WindUI_BG_dark.Parent=WindUI_BG_photo
 ao.UIElements.WindUI_BackgroundDarken=WindUI_BG_dark
 
 -- Blur approximation (Background Photo Blur) — Roblox has no real blur filter for a GUI
 -- image, so this stacks several faint, radially-offset copies of the same photo instead
 -- of one strong 4-way one: more layers at lower opacity each blend into a soft haze
--- rather than reading as distinct duplicated copies, and the layers never resize (only
--- shift a few pixels), so they can't spill past the photo's own edges — ClipsDescendants
--- above catches anything that would anyway.
+-- rather than reading as distinct duplicated copies. They only ever shift a few pixels
+-- (never resize), and aC's clipping catches anything that would spill out regardless.
 local WindUI_BG_blurLayers={}
 for WindUI_BG_i=1,8 do
 local WindUI_BG_layer=Instance.new("ImageLabel")
@@ -9538,14 +9554,14 @@ WindUI_BG_layer.ImageTransparency=1
 WindUI_BG_layer.ScaleType=Enum.ScaleType.Crop
 WindUI_BG_layer.Size=UDim2.new(1,0,1,0)
 WindUI_BG_layer.ZIndex=0
-WindUI_BG_layer.Parent=aC
+WindUI_BG_layer.Parent=WindUI_BG_photo
 table.insert(WindUI_BG_blurLayers,WindUI_BG_layer)
 end
 ao.UIElements.WindUI_BackgroundBlurLayers=WindUI_BG_blurLayers
 
 aC.Parent=ao.UIElements.Main.Background
 end
-return aC
+return ao.UIElements.WindUI_BackgroundPhotoContent
 end
 
 function ao.SetBackgroundImage(j,l)
@@ -9559,7 +9575,8 @@ end
 end
 end
 function ao.SetBackgroundImageTransparency(j,l)
-WindUI_BG_EnsurePhoto().ImageTransparency=l
+WindUI_BG_EnsurePhoto()
+aC.ImageTransparency=l
 ao.BackgroundImageTransparency=l
 end
 -- Background Photo Opacity slider — 0 = no darkening, 1 = fully black.
@@ -9570,10 +9587,10 @@ WindUI_BG_img.WindUI_BackgroundDarken.BackgroundTransparency=1-l
 end
 end
 -- Background Photo Blur slider — 0 = off (all layers hidden), higher = more spread/softer.
--- Layers only ever SHIFT position, never resize, and the parent clips them — so unlike
--- before, nothing can spill out past the photo's own edges at any slider value.
+-- Layers only ever SHIFT position, never resize, and aC clips everything regardless — so
+-- nothing can spill out past the window's edges at any slider value.
 function ao.SetBackgroundBlur(j,l)
-WindUI_BG_EnsurePhoto()
+local WindUI_BG_img=WindUI_BG_EnsurePhoto()
 local WindUI_BG_layers=ao.UIElements.WindUI_BackgroundBlurLayers
 if not WindUI_BG_layers then return end
 
@@ -9604,13 +9621,14 @@ function ao.SetAnimatedToggles(j,l)
 _G.WindUI_AnimatedToggles=l
 end
 
--- Parallax Background Shift: the photo nudges opposite... actually toward the cursor's
--- offset from window-center, within the 10px overscan budget baked into its Size/Position
--- above, so it can never reveal an edge no matter the slider value.
+-- Parallax Background Shift: moves the PHOTO CONTENT child toward the cursor's offset
+-- from window-center, within the 10px overscan budget baked into its own Size/Position
+-- above — aC (fixed, never moves) always clips it, so this can never reveal an edge or
+-- misalign the window's rounded corners, unlike the old approach that moved aC itself.
 local WindUI_Parallax_Conn
 function ao.SetParallaxAmount(j,l)
 ao.ParallaxAmount=tonumber(l)or 0
-WindUI_BG_EnsurePhoto()
+local WindUI_Px_photo=WindUI_BG_EnsurePhoto()
 
 if ao.ParallaxAmount>0 and not WindUI_Parallax_Conn then
 WindUI_Parallax_Conn=game:GetService("RunService").RenderStepped:Connect(function()
@@ -9621,12 +9639,12 @@ local WindUI_Px_delta=WindUI_Px_mouse-WindUI_Px_center
 local WindUI_Px_max=10
 local WindUI_Px_x=math.clamp((WindUI_Px_delta.X/400)*(ao.ParallaxAmount/100)*WindUI_Px_max,-WindUI_Px_max,WindUI_Px_max)
 local WindUI_Px_y=math.clamp((WindUI_Px_delta.Y/400)*(ao.ParallaxAmount/100)*WindUI_Px_max,-WindUI_Px_max,WindUI_Px_max)
-aC.Position=UDim2.new(0,-10+WindUI_Px_x,0,-10+WindUI_Px_y)
+WindUI_Px_photo.Position=UDim2.new(0,-10+WindUI_Px_x,0,-10+WindUI_Px_y)
 end)
 elseif ao.ParallaxAmount<=0 and WindUI_Parallax_Conn then
 WindUI_Parallax_Conn:Disconnect()
 WindUI_Parallax_Conn=nil
-aC.Position=UDim2.new(0,-10,0,-10)
+WindUI_Px_photo.Position=UDim2.new(0,-10,0,-10)
 end
 end
 
