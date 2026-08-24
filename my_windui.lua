@@ -9513,19 +9513,35 @@ ao.UIElements.Main.Background:GetPropertyChangedSignal("SliceScale"):Connect(fun
 WindUI_BG_SyncCorner(ao.UIElements.Main.Background,WindUI_BG_corner)
 end)
 
--- The actual visible photo. Oversized by 10px each side so Parallax Background Shift
--- can nudge it around — it can never reveal an edge because aC (fixed, unmoving, exactly
--- matching the window's own bounds) always clips it first.
+-- The actual visible photo. Oversized by 6px each side so Parallax Background Shift can
+-- nudge it around — aC (fixed, unmoving, exactly matching the window's own bounds)
+-- clips it first no matter what. It also gets its OWN UICorner (this was the actual
+-- remaining corner bug: aC's own rounding only masks aC's own rendering, not a child's —
+-- ClipsDescendants clips children to a plain rectangle, not to aC's rounded shape, so an
+-- unrounded rectangular child inside it always showed square corners regardless of
+-- oversize). Its radius is aC's own radius PLUS the 6px overscan, so at rest the two
+-- curves land on the exact same pixels; while actively panning it can drift by at most
+-- the shift amount, which is far less noticeable than a flat square corner every time.
+local WindUI_BG_PHOTO_OVERSCAN=6
 local WindUI_BG_photo=Instance.new("ImageLabel")
 WindUI_BG_photo.Name="WindUI_BackgroundPhotoContent"
 WindUI_BG_photo.BackgroundTransparency=1
 WindUI_BG_photo.ImageTransparency=aC.ImageTransparency
 WindUI_BG_photo.ScaleType=Enum.ScaleType.Crop
-WindUI_BG_photo.Size=UDim2.new(1,20,1,20)
-WindUI_BG_photo.Position=UDim2.new(0,-10,0,-10)
+WindUI_BG_photo.Size=UDim2.new(1,WindUI_BG_PHOTO_OVERSCAN*2,1,WindUI_BG_PHOTO_OVERSCAN*2)
+WindUI_BG_photo.Position=UDim2.new(0,-WindUI_BG_PHOTO_OVERSCAN,0,-WindUI_BG_PHOTO_OVERSCAN)
 WindUI_BG_photo.ZIndex=0
 WindUI_BG_photo.Parent=aC
 ao.UIElements.WindUI_BackgroundPhotoContent=WindUI_BG_photo
+
+local WindUI_BG_photoCorner=Instance.new("UICorner")
+WindUI_BG_photoCorner.Parent=WindUI_BG_photo
+local function WindUI_BG_SyncPhotoCorner()
+local WindUI_BG_radius=(ao.UIElements.Main.Background.SliceScale or 0.0625)*256
+WindUI_BG_photoCorner.CornerRadius=UDim.new(0,WindUI_BG_radius+WindUI_BG_PHOTO_OVERSCAN)
+end
+WindUI_BG_SyncPhotoCorner()
+ao.UIElements.Main.Background:GetPropertyChangedSignal("SliceScale"):Connect(WindUI_BG_SyncPhotoCorner)
 
 aC:GetPropertyChangedSignal("ImageTransparency"):Connect(function()
 WindUI_BG_photo.ImageTransparency=aC.ImageTransparency
@@ -9640,7 +9656,7 @@ _G.WindUI_AnimatedToggles=l
 end
 
 -- Parallax Background Shift: moves the PHOTO CONTENT child toward the cursor's offset
--- from window-center, within the 10px overscan budget baked into its own Size/Position
+-- from window-center, within the 6px overscan budget baked into its own Size/Position
 -- above — aC (fixed, never moves) always clips it, so this can never reveal an edge or
 -- misalign the window's rounded corners, unlike the old approach that moved aC itself.
 local WindUI_Parallax_Conn
@@ -9654,15 +9670,15 @@ if not ao.ParallaxAmount or ao.ParallaxAmount<=0 then return end
 local WindUI_Px_mouse=game:GetService("UserInputService"):GetMouseLocation()
 local WindUI_Px_center=ao.UIElements.Main.AbsolutePosition+ao.UIElements.Main.AbsoluteSize/2
 local WindUI_Px_delta=WindUI_Px_mouse-WindUI_Px_center
-local WindUI_Px_max=10
+local WindUI_Px_max=6
 local WindUI_Px_x=math.clamp((WindUI_Px_delta.X/400)*(ao.ParallaxAmount/100)*WindUI_Px_max,-WindUI_Px_max,WindUI_Px_max)
 local WindUI_Px_y=math.clamp((WindUI_Px_delta.Y/400)*(ao.ParallaxAmount/100)*WindUI_Px_max,-WindUI_Px_max,WindUI_Px_max)
-WindUI_Px_photo.Position=UDim2.new(0,-10+WindUI_Px_x,0,-10+WindUI_Px_y)
+WindUI_Px_photo.Position=UDim2.new(0,-6+WindUI_Px_x,0,-6+WindUI_Px_y)
 end)
 elseif ao.ParallaxAmount<=0 and WindUI_Parallax_Conn then
 WindUI_Parallax_Conn:Disconnect()
 WindUI_Parallax_Conn=nil
-WindUI_Px_photo.Position=UDim2.new(0,-10,0,-10)
+WindUI_Px_photo.Position=UDim2.new(0,-6,0,-6)
 end
 end
 
@@ -9846,8 +9862,22 @@ if l then
 WindUI_Outline_stroke.Enabled=true
 WindUI_Outline_Gradient.Enabled=true
 if not ao.RainbowOutlineConn then
+-- Animating via Offset used to cause the "GIF loop" stutter: Roblox's UIGradient
+-- clamps at the 0/1 boundary instead of tiling, so the instant it wrapped back to 0
+-- there was a visible jump. This sidesteps that entirely by rebuilding the actual
+-- ColorSequence every frame with a continuously rotating base hue instead — hue 0 and
+-- hue 1 are the same color, so wrapping it with %1 is mathematically seamless, no
+-- boundary to ever hit.
+local WindUI_Outline_hue=0
 ao.RainbowOutlineConn=game:GetService("RunService").RenderStepped:Connect(function(WindUI_Outline_dt)
-WindUI_Outline_Gradient.Offset=Vector2.new((WindUI_Outline_Gradient.Offset.X+WindUI_Outline_dt*0.35)%1,0)
+WindUI_Outline_hue=(WindUI_Outline_hue+WindUI_Outline_dt*0.15)%1
+local WindUI_Outline_keypoints={}
+for WindUI_Outline_i=0,10 do
+local WindUI_Outline_t=WindUI_Outline_i/10
+local WindUI_Outline_h=(WindUI_Outline_t+WindUI_Outline_hue)%1
+table.insert(WindUI_Outline_keypoints,ColorSequenceKeypoint.new(WindUI_Outline_t,Color3.fromHSV(WindUI_Outline_h,1,1)))
+end
+WindUI_Outline_Gradient.Color=ColorSequence.new(WindUI_Outline_keypoints)
 end)
 end
 else
