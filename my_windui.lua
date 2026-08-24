@@ -9499,8 +9499,12 @@ aC.Image=""
 aC.Size=UDim2.new(1,0,1,0)
 aC.Position=UDim2.new(0,0,0,0)
 aC.ZIndex=0
+-- Only aC itself clips (its own children: the photo, darken, blur, vignette) — NOT
+-- Main.Background. Main.Background also parents the resize-handle and drag-bar
+-- decorations (which are deliberately positioned to poke slightly past its edges to stay
+-- grabbable) — clipping Main.Background itself was cutting those off, making them
+-- invisible while still technically clickable/draggable underneath.
 aC.ClipsDescendants=true
-ao.UIElements.Main.Background.ClipsDescendants=true
 
 local WindUI_BG_corner=Instance.new("UICorner")
 WindUI_BG_corner.Parent=aC
@@ -9790,19 +9794,25 @@ local WindUI_Outline_Stroke
 local WindUI_Outline_Gradient
 local function WindUI_Outline_Ensure()
 if not WindUI_Outline_Stroke then
-local WindUI_Outline_holder=ao.UIElements.Main.Background
+-- A brand-new, empty wrapper Frame — NOT a UICorner added directly onto
+-- Main.Background itself. Main.Background is a 9-slice image with its own internal
+-- rendering, and adding UICorner straight onto it was NOT reliably respected by
+-- UIStroke in testing. A plain, dedicated Frame with nothing else going on, sized to
+-- match Main.Background exactly (same 1,0,1,0 relative trick already proven to work
+-- correctly for the background photo), is a much safer, guaranteed-clean target.
+local WindUI_Outline_holder=Instance.new("Frame")
+WindUI_Outline_holder.Name="WindUI_OutlineHolder"
+WindUI_Outline_holder.BackgroundTransparency=1
+WindUI_Outline_holder.Size=UDim2.new(1,0,1,0)
+WindUI_Outline_holder.ZIndex=5
+WindUI_Outline_holder.Parent=ao.UIElements.Main.Background
 
--- UIStroke follows its parent's UICorner for rounded corners — the squircle image
--- itself has no such Instance (it's a 9-slice image, not a real UICorner), which is
--- why the outline was square before. Give it one, synced the same way the photo's is.
-if not WindUI_Outline_holder:FindFirstChildOfClass("UICorner")then
 local WindUI_Outline_holderCorner=Instance.new("UICorner")
 WindUI_Outline_holderCorner.Parent=WindUI_Outline_holder
-WindUI_BG_SyncCorner(WindUI_Outline_holder,WindUI_Outline_holderCorner)
-WindUI_Outline_holder:GetPropertyChangedSignal("SliceScale"):Connect(function()
-WindUI_BG_SyncCorner(WindUI_Outline_holder,WindUI_Outline_holderCorner)
+WindUI_BG_SyncCorner(ao.UIElements.Main.Background,WindUI_Outline_holderCorner)
+ao.UIElements.Main.Background:GetPropertyChangedSignal("SliceScale"):Connect(function()
+WindUI_BG_SyncCorner(ao.UIElements.Main.Background,WindUI_Outline_holderCorner)
 end)
-end
 
 WindUI_Outline_Stroke=Instance.new("UIStroke")
 WindUI_Outline_Stroke.Name="WindUI_MainOutline"
