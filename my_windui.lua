@@ -9442,14 +9442,49 @@ end
 if not isfolder(WindUI_BG_traversed) then makefolder(WindUI_BG_traversed) end
 end
 end
+-- Reads real pixel width/height straight out of the file bytes (PNG IHDR chunk / JPEG
+-- SOF marker) — needed so Parallax can pan within the image's OWN pixel data via
+-- ImageRectOffset/ImageRectSize instead of moving the frame itself, which is what was
+-- causing the corner-rounding mismatch no matter how small the shift was made.
+local function WindUI_BG_GetImageDimensions(WindUI_BG_data)
+if not WindUI_BG_data or #WindUI_BG_data<24 then return nil end
+
+if WindUI_BG_data:sub(1,8)=="\137PNG\r\n\26\n" then
+local WindUI_BG_w=(WindUI_BG_data:byte(17)*16777216)+(WindUI_BG_data:byte(18)*65536)+(WindUI_BG_data:byte(19)*256)+WindUI_BG_data:byte(20)
+local WindUI_BG_h=(WindUI_BG_data:byte(21)*16777216)+(WindUI_BG_data:byte(22)*65536)+(WindUI_BG_data:byte(23)*256)+WindUI_BG_data:byte(24)
+if WindUI_BG_w>0 and WindUI_BG_h>0 then return WindUI_BG_w,WindUI_BG_h end
+return nil
+end
+
+if WindUI_BG_data:byte(1)==0xFF and WindUI_BG_data:byte(2)==0xD8 then
+local WindUI_BG_pos=3
+while WindUI_BG_pos<#WindUI_BG_data-8 do
+if WindUI_BG_data:byte(WindUI_BG_pos)~=0xFF then break end
+local WindUI_BG_marker=WindUI_BG_data:byte(WindUI_BG_pos+1)
+if WindUI_BG_marker>=0xC0 and WindUI_BG_marker<=0xCF and WindUI_BG_marker~=0xC4 and WindUI_BG_marker~=0xC8 and WindUI_BG_marker~=0xCC then
+local WindUI_BG_h=WindUI_BG_data:byte(WindUI_BG_pos+6)*256+WindUI_BG_data:byte(WindUI_BG_pos+7)
+local WindUI_BG_w=WindUI_BG_data:byte(WindUI_BG_pos+8)*256+WindUI_BG_data:byte(WindUI_BG_pos+9)
+if WindUI_BG_w>0 and WindUI_BG_h>0 then return WindUI_BG_w,WindUI_BG_h end
+return nil
+end
+local WindUI_BG_segLen=WindUI_BG_data:byte(WindUI_BG_pos+2)*256+WindUI_BG_data:byte(WindUI_BG_pos+3)
+WindUI_BG_pos=WindUI_BG_pos+2+WindUI_BG_segLen
+end
+return nil
+end
+
+return nil
+end
+
 local function WindUI_BG_ResolveAsset(WindUI_BG_url)
-if typeof(WindUI_BG_url)~="string" or WindUI_BG_url=="" then return "" end
+if typeof(WindUI_BG_url)~="string" or WindUI_BG_url=="" then return "",nil,nil end
 if WindUI_BG_url:match("^rbxassetid://")or WindUI_BG_url:match("^rbxasset://")or WindUI_BG_url:match("^rbxthumb://")then
-return WindUI_BG_url
+return WindUI_BG_url,nil,nil
 end
 if not(writefile and isfile and getcustomasset and game.HttpGet)then
-return WindUI_BG_url
+return WindUI_BG_url,nil,nil
 end
+local WindUI_BG_w,WindUI_BG_h
 local WindUI_BG_ok,WindUI_BG_result=pcall(function()
 local WindUI_BG_clean=WindUI_BG_url:gsub("[%?#].*$","")
 local WindUI_BG_rawName=WindUI_BG_clean:match("(.+)%..+$")
@@ -9461,15 +9496,22 @@ WindUI_BG_fileName=tostring(#WindUI_BG_url)..WindUI_BG_extension
 end
 local WindUI_BG_path="WindUI/BackgroundCache/"..WindUI_BG_fileName
 WindUI_BG_MakeFolders(WindUI_BG_path)
+local WindUI_BG_fileData
 if not isfile(WindUI_BG_path) then
-local WindUI_BG_data=game:HttpGet(WindUI_BG_url)
-if not WindUI_BG_data or WindUI_BG_data=="" then error("empty download")end
-writefile(WindUI_BG_path,WindUI_BG_data)
+WindUI_BG_fileData=game:HttpGet(WindUI_BG_url)
+if not WindUI_BG_fileData or WindUI_BG_fileData=="" then error("empty download")end
+writefile(WindUI_BG_path,WindUI_BG_fileData)
+else
+local WindUI_BG_readOk,WindUI_BG_readData=pcall(readfile,WindUI_BG_path)
+if WindUI_BG_readOk then WindUI_BG_fileData=WindUI_BG_readData end
+end
+if WindUI_BG_fileData then
+WindUI_BG_w,WindUI_BG_h=WindUI_BG_GetImageDimensions(WindUI_BG_fileData)
 end
 return getcustomasset(WindUI_BG_path)
 end)
-if WindUI_BG_ok and WindUI_BG_result then return WindUI_BG_result end
-return ""
+if WindUI_BG_ok and WindUI_BG_result then return WindUI_BG_result,WindUI_BG_w,WindUI_BG_h end
+return "",nil,nil
 end
 local function WindUI_BG_SyncCorner(WindUI_BG_holder,WindUI_BG_corner)
 local WindUI_BG_radius=(WindUI_BG_holder.SliceScale or 0.0625)*256
@@ -9513,35 +9555,27 @@ ao.UIElements.Main.Background:GetPropertyChangedSignal("SliceScale"):Connect(fun
 WindUI_BG_SyncCorner(ao.UIElements.Main.Background,WindUI_BG_corner)
 end)
 
--- The actual visible photo. Oversized by 6px each side so Parallax Background Shift can
--- nudge it around — aC (fixed, unmoving, exactly matching the window's own bounds)
--- clips it first no matter what. It also gets its OWN UICorner (this was the actual
--- remaining corner bug: aC's own rounding only masks aC's own rendering, not a child's —
--- ClipsDescendants clips children to a plain rectangle, not to aC's rounded shape, so an
--- unrounded rectangular child inside it always showed square corners regardless of
--- oversize). Its radius is aC's own radius PLUS the 6px overscan, so at rest the two
--- curves land on the exact same pixels; while actively panning it can drift by at most
--- the shift amount, which is far less noticeable than a flat square corner every time.
-local WindUI_BG_PHOTO_OVERSCAN=6
+-- The actual visible photo. Unlike before, this NEVER resizes or repositions itself —
+-- it always matches aC exactly, so its own rounding can never drift out of alignment,
+-- even mid-shift. Parallax Background Shift instead pans via ImageRectOffset/
+-- ImageRectSize (which crop image PIXELS, not move the frame) — see SetParallaxAmount.
 local WindUI_BG_photo=Instance.new("ImageLabel")
 WindUI_BG_photo.Name="WindUI_BackgroundPhotoContent"
 WindUI_BG_photo.BackgroundTransparency=1
 WindUI_BG_photo.ImageTransparency=aC.ImageTransparency
 WindUI_BG_photo.ScaleType=Enum.ScaleType.Crop
-WindUI_BG_photo.Size=UDim2.new(1,WindUI_BG_PHOTO_OVERSCAN*2,1,WindUI_BG_PHOTO_OVERSCAN*2)
-WindUI_BG_photo.Position=UDim2.new(0,-WindUI_BG_PHOTO_OVERSCAN,0,-WindUI_BG_PHOTO_OVERSCAN)
+WindUI_BG_photo.Size=UDim2.new(1,0,1,0)
+WindUI_BG_photo.Position=UDim2.new(0,0,0,0)
 WindUI_BG_photo.ZIndex=0
 WindUI_BG_photo.Parent=aC
 ao.UIElements.WindUI_BackgroundPhotoContent=WindUI_BG_photo
 
 local WindUI_BG_photoCorner=Instance.new("UICorner")
 WindUI_BG_photoCorner.Parent=WindUI_BG_photo
-local function WindUI_BG_SyncPhotoCorner()
-local WindUI_BG_radius=(ao.UIElements.Main.Background.SliceScale or 0.0625)*256
-WindUI_BG_photoCorner.CornerRadius=UDim.new(0,WindUI_BG_radius+WindUI_BG_PHOTO_OVERSCAN)
-end
-WindUI_BG_SyncPhotoCorner()
-ao.UIElements.Main.Background:GetPropertyChangedSignal("SliceScale"):Connect(WindUI_BG_SyncPhotoCorner)
+WindUI_BG_SyncCorner(ao.UIElements.Main.Background,WindUI_BG_photoCorner)
+ao.UIElements.Main.Background:GetPropertyChangedSignal("SliceScale"):Connect(function()
+WindUI_BG_SyncCorner(ao.UIElements.Main.Background,WindUI_BG_photoCorner)
+end)
 
 aC:GetPropertyChangedSignal("ImageTransparency"):Connect(function()
 WindUI_BG_photo.ImageTransparency=aC.ImageTransparency
@@ -9600,8 +9634,11 @@ end
 
 function ao.SetBackgroundImage(j,l)
 local WindUI_BG_img=WindUI_BG_EnsurePhoto()
-local WindUI_BG_asset=(l==nil or l=="")and""or WindUI_BG_ResolveAsset(l)
+local WindUI_BG_asset,WindUI_BG_w,WindUI_BG_h=(l==nil or l=="")and""or WindUI_BG_ResolveAsset(l)
 WindUI_BG_img.Image=WindUI_BG_asset
+WindUI_BG_img.ImageRectOffset=Vector2.new(0,0)
+WindUI_BG_img.ImageRectSize=Vector2.new(0,0)
+ao.BackgroundImagePixelSize=(WindUI_BG_w and WindUI_BG_h)and Vector2.new(WindUI_BG_w,WindUI_BG_h)or nil
 if ao.UIElements.WindUI_BackgroundBlurLayers then
 for _,WindUI_BG_layer in ipairs(ao.UIElements.WindUI_BackgroundBlurLayers)do
 WindUI_BG_layer.Image=WindUI_BG_asset
@@ -9655,30 +9692,44 @@ function ao.SetAnimatedToggles(j,l)
 _G.WindUI_AnimatedToggles=l
 end
 
--- Parallax Background Shift: moves the PHOTO CONTENT child toward the cursor's offset
--- from window-center, within the 6px overscan budget baked into its own Size/Position
--- above — aC (fixed, never moves) always clips it, so this can never reveal an edge or
--- misalign the window's rounded corners, unlike the old approach that moved aC itself.
+-- Parallax Background Shift: earlier versions of this moved/oversized the photo FRAME
+-- itself, which always eventually showed a corner mismatch while actively panning — the
+-- frame's own rounding is calculated from its own bounds, so the moment those bounds
+-- moved even a few px away from aC's fixed ones, the two stopped lining up exactly.
+-- This version never touches the frame at all: WindUI_BG_photo stays perfectly matched
+-- to aC always (see WindUI_BG_EnsurePhoto), and panning instead crops a moving WINDOW of
+-- PIXELS out of the source image via ImageRectOffset/ImageRectSize — the frame, and
+-- therefore its rounding, genuinely never moves, so there is nothing left to misalign.
+-- Only works once the image's real pixel dimensions were read successfully (PNG/JPEG);
+-- for formats that can't be parsed, this quietly does nothing rather than risk
+-- reintroducing the corner bug.
 local WindUI_Parallax_Conn
 function ao.SetParallaxAmount(j,l)
 ao.ParallaxAmount=tonumber(l)or 0
 local WindUI_Px_photo=WindUI_BG_EnsurePhoto()
 
-if ao.ParallaxAmount>0 and not WindUI_Parallax_Conn then
+if ao.ParallaxAmount>0 and ao.BackgroundImagePixelSize and not WindUI_Parallax_Conn then
 WindUI_Parallax_Conn=game:GetService("RunService").RenderStepped:Connect(function()
-if not ao.ParallaxAmount or ao.ParallaxAmount<=0 then return end
+if not ao.ParallaxAmount or ao.ParallaxAmount<=0 or not ao.BackgroundImagePixelSize then return end
 local WindUI_Px_mouse=game:GetService("UserInputService"):GetMouseLocation()
 local WindUI_Px_center=ao.UIElements.Main.AbsolutePosition+ao.UIElements.Main.AbsoluteSize/2
 local WindUI_Px_delta=WindUI_Px_mouse-WindUI_Px_center
-local WindUI_Px_max=6
-local WindUI_Px_x=math.clamp((WindUI_Px_delta.X/400)*(ao.ParallaxAmount/100)*WindUI_Px_max,-WindUI_Px_max,WindUI_Px_max)
-local WindUI_Px_y=math.clamp((WindUI_Px_delta.Y/400)*(ao.ParallaxAmount/100)*WindUI_Px_max,-WindUI_Px_max,WindUI_Px_max)
-WindUI_Px_photo.Position=UDim2.new(0,-6+WindUI_Px_x,0,-6+WindUI_Px_y)
+local WindUI_Px_size=ao.BackgroundImagePixelSize
+-- Only ever samples the middle 90% of the image (5% margin each side) — plenty of
+-- room to pan within while the visible crop always stays inside the real image.
+local WindUI_Px_marginX=WindUI_Px_size.X*0.05
+local WindUI_Px_marginY=WindUI_Px_size.Y*0.05
+local WindUI_Px_t=math.clamp(ao.ParallaxAmount/100,0,1)
+local WindUI_Px_offX=math.clamp((WindUI_Px_delta.X/400)*WindUI_Px_marginX*WindUI_Px_t,-WindUI_Px_marginX,WindUI_Px_marginX)+WindUI_Px_marginX
+local WindUI_Px_offY=math.clamp((WindUI_Px_delta.Y/400)*WindUI_Px_marginY*WindUI_Px_t,-WindUI_Px_marginY,WindUI_Px_marginY)+WindUI_Px_marginY
+WindUI_Px_photo.ImageRectOffset=Vector2.new(WindUI_Px_offX,WindUI_Px_offY)
+WindUI_Px_photo.ImageRectSize=Vector2.new(WindUI_Px_size.X-WindUI_Px_marginX*2,WindUI_Px_size.Y-WindUI_Px_marginY*2)
 end)
-elseif ao.ParallaxAmount<=0 and WindUI_Parallax_Conn then
+elseif (ao.ParallaxAmount<=0 or not ao.BackgroundImagePixelSize) and WindUI_Parallax_Conn then
 WindUI_Parallax_Conn:Disconnect()
 WindUI_Parallax_Conn=nil
-WindUI_Px_photo.Position=UDim2.new(0,-6,0,-6)
+WindUI_Px_photo.ImageRectOffset=Vector2.new(0,0)
+WindUI_Px_photo.ImageRectSize=Vector2.new(0,0)
 end
 end
 
