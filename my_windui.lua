@@ -9809,6 +9809,10 @@ end
 function ao.SetOutlineSize(j,l)
 WindUI_Outline_Ensure().Thickness=l
 end
+ao.RainbowOutlineSpeed=0.15
+function ao.SetRainbowSpeed(j,l)
+ao.RainbowOutlineSpeed=tonumber(l)or 0.15
+end
 function ao.SetRainbowOutline(j,l)
 local WindUI_Outline_stroke=WindUI_Outline_Ensure()
 ao.RainbowOutlineEnabled=l
@@ -9821,10 +9825,11 @@ if not ao.RainbowOutlineConn then
 -- there was a visible jump. This sidesteps that entirely by rebuilding the actual
 -- ColorSequence every frame with a continuously rotating base hue instead — hue 0 and
 -- hue 1 are the same color, so wrapping it with %1 is mathematically seamless, no
--- boundary to ever hit.
+-- boundary to ever hit. Speed is read fresh every frame (ao.RainbowOutlineSpeed) so
+-- the Rainbow Speed slider can change it live without needing to restart the loop.
 local WindUI_Outline_hue=0
 ao.RainbowOutlineConn=game:GetService("RunService").RenderStepped:Connect(function(WindUI_Outline_dt)
-WindUI_Outline_hue=(WindUI_Outline_hue+WindUI_Outline_dt*0.15)%1
+WindUI_Outline_hue=(WindUI_Outline_hue+WindUI_Outline_dt*(ao.RainbowOutlineSpeed or 0.15))%1
 local WindUI_Outline_keypoints={}
 for WindUI_Outline_i=0,10 do
 local WindUI_Outline_t=WindUI_Outline_i/10
