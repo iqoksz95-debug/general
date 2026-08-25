@@ -9442,49 +9442,14 @@ end
 if not isfolder(WindUI_BG_traversed) then makefolder(WindUI_BG_traversed) end
 end
 end
--- Reads real pixel width/height straight out of the file bytes (PNG IHDR chunk / JPEG
--- SOF marker) — needed so Parallax can pan within the image's OWN pixel data via
--- ImageRectOffset/ImageRectSize instead of moving the frame itself, which is what was
--- causing the corner-rounding mismatch no matter how small the shift was made.
-local function WindUI_BG_GetImageDimensions(WindUI_BG_data)
-if not WindUI_BG_data or #WindUI_BG_data<24 then return nil end
-
-if WindUI_BG_data:sub(1,8)=="\137PNG\r\n\26\n" then
-local WindUI_BG_w=(WindUI_BG_data:byte(17)*16777216)+(WindUI_BG_data:byte(18)*65536)+(WindUI_BG_data:byte(19)*256)+WindUI_BG_data:byte(20)
-local WindUI_BG_h=(WindUI_BG_data:byte(21)*16777216)+(WindUI_BG_data:byte(22)*65536)+(WindUI_BG_data:byte(23)*256)+WindUI_BG_data:byte(24)
-if WindUI_BG_w>0 and WindUI_BG_h>0 then return WindUI_BG_w,WindUI_BG_h end
-return nil
-end
-
-if WindUI_BG_data:byte(1)==0xFF and WindUI_BG_data:byte(2)==0xD8 then
-local WindUI_BG_pos=3
-while WindUI_BG_pos<#WindUI_BG_data-8 do
-if WindUI_BG_data:byte(WindUI_BG_pos)~=0xFF then break end
-local WindUI_BG_marker=WindUI_BG_data:byte(WindUI_BG_pos+1)
-if WindUI_BG_marker>=0xC0 and WindUI_BG_marker<=0xCF and WindUI_BG_marker~=0xC4 and WindUI_BG_marker~=0xC8 and WindUI_BG_marker~=0xCC then
-local WindUI_BG_h=WindUI_BG_data:byte(WindUI_BG_pos+6)*256+WindUI_BG_data:byte(WindUI_BG_pos+7)
-local WindUI_BG_w=WindUI_BG_data:byte(WindUI_BG_pos+8)*256+WindUI_BG_data:byte(WindUI_BG_pos+9)
-if WindUI_BG_w>0 and WindUI_BG_h>0 then return WindUI_BG_w,WindUI_BG_h end
-return nil
-end
-local WindUI_BG_segLen=WindUI_BG_data:byte(WindUI_BG_pos+2)*256+WindUI_BG_data:byte(WindUI_BG_pos+3)
-WindUI_BG_pos=WindUI_BG_pos+2+WindUI_BG_segLen
-end
-return nil
-end
-
-return nil
-end
-
 local function WindUI_BG_ResolveAsset(WindUI_BG_url)
-if typeof(WindUI_BG_url)~="string" or WindUI_BG_url=="" then return "",nil,nil end
+if typeof(WindUI_BG_url)~="string" or WindUI_BG_url=="" then return "" end
 if WindUI_BG_url:match("^rbxassetid://")or WindUI_BG_url:match("^rbxasset://")or WindUI_BG_url:match("^rbxthumb://")then
-return WindUI_BG_url,nil,nil
+return WindUI_BG_url
 end
 if not(writefile and isfile and getcustomasset and game.HttpGet)then
-return WindUI_BG_url,nil,nil
+return WindUI_BG_url
 end
-local WindUI_BG_w,WindUI_BG_h
 local WindUI_BG_ok,WindUI_BG_result=pcall(function()
 local WindUI_BG_clean=WindUI_BG_url:gsub("[%?#].*$","")
 local WindUI_BG_rawName=WindUI_BG_clean:match("(.+)%..+$")
@@ -9496,22 +9461,15 @@ WindUI_BG_fileName=tostring(#WindUI_BG_url)..WindUI_BG_extension
 end
 local WindUI_BG_path="WindUI/BackgroundCache/"..WindUI_BG_fileName
 WindUI_BG_MakeFolders(WindUI_BG_path)
-local WindUI_BG_fileData
 if not isfile(WindUI_BG_path) then
-WindUI_BG_fileData=game:HttpGet(WindUI_BG_url)
-if not WindUI_BG_fileData or WindUI_BG_fileData=="" then error("empty download")end
-writefile(WindUI_BG_path,WindUI_BG_fileData)
-else
-local WindUI_BG_readOk,WindUI_BG_readData=pcall(readfile,WindUI_BG_path)
-if WindUI_BG_readOk then WindUI_BG_fileData=WindUI_BG_readData end
-end
-if WindUI_BG_fileData then
-WindUI_BG_w,WindUI_BG_h=WindUI_BG_GetImageDimensions(WindUI_BG_fileData)
+local WindUI_BG_data=game:HttpGet(WindUI_BG_url)
+if not WindUI_BG_data or WindUI_BG_data=="" then error("empty download")end
+writefile(WindUI_BG_path,WindUI_BG_data)
 end
 return getcustomasset(WindUI_BG_path)
 end)
-if WindUI_BG_ok and WindUI_BG_result then return WindUI_BG_result,WindUI_BG_w,WindUI_BG_h end
-return "",nil,nil
+if WindUI_BG_ok and WindUI_BG_result then return WindUI_BG_result end
+return ""
 end
 local function WindUI_BG_SyncCorner(WindUI_BG_holder,WindUI_BG_corner)
 local WindUI_BG_radius=(WindUI_BG_holder.SliceScale or 0.0625)*256
@@ -9525,12 +9483,9 @@ end
 -- aC ("shell"): ALWAYS exactly matches its parent (never resized/repositioned) so its
 -- own UICorner stays perfectly aligned with the window's real rounded edge. It's kept as
 -- an empty ImageLabel purely because the library's existing Open()/Close() animation code
--- checks aC:IsA("ImageLabel") and tweens aC.ImageTransparency to fade the background in/out
--- — this was actually the root cause of the corner artifact bug: the photo itself used to
--- BE aC, oversized+shifted for Parallax, which dragged its own rounding out of alignment
--- with the (unmoving) window edge. Now the real, pannable photo lives on a child instead,
--- inside aC's fixed, correctly-clipped, correctly-rounded bounds, and mirrors aC's
--- transparency so the open/close fade still works exactly as before.
+-- checks aC:IsA("ImageLabel") and tweens aC.ImageTransparency to fade the background in/out.
+-- The real, visible photo lives on a child instead, inside aC's fixed, correctly-clipped,
+-- correctly-rounded bounds, and mirrors aC's transparency so the open/close fade works.
 local function WindUI_BG_EnsurePhoto()
 if not aC then
 aC=Instance.new("ImageLabel")
@@ -9555,10 +9510,8 @@ ao.UIElements.Main.Background:GetPropertyChangedSignal("SliceScale"):Connect(fun
 WindUI_BG_SyncCorner(ao.UIElements.Main.Background,WindUI_BG_corner)
 end)
 
--- The actual visible photo. Unlike before, this NEVER resizes or repositions itself —
--- it always matches aC exactly, so its own rounding can never drift out of alignment,
--- even mid-shift. Parallax Background Shift instead pans via ImageRectOffset/
--- ImageRectSize (which crop image PIXELS, not move the frame) — see SetParallaxAmount.
+-- The actual visible photo. Never resizes or repositions itself — it always matches aC
+-- exactly, so its own rounding can never drift out of alignment.
 local WindUI_BG_photo=Instance.new("ImageLabel")
 WindUI_BG_photo.Name="WindUI_BackgroundPhotoContent"
 WindUI_BG_photo.BackgroundTransparency=1
@@ -9583,13 +9536,8 @@ end)
 
 -- Darkening overlay (Background Photo Opacity), Blur layers, and Vignette (added later
 -- via SetVignette) are all parented to aC directly — NOT to WindUI_BG_photo above —
--- and (darken/vignette) get their own UICorner synced the same way aC's is. This is
--- deliberate: WindUI_BG_photo moves/resizes (for Parallax), and anything parented to a
--- moving+resizing layer while ALSO trying to carry its own matching rounding will drift
--- out of alignment with the window's real, fixed corner the moment it shifts — which is
--- exactly the corner-artifact bug from before. Parenting to the fixed aC instead makes
--- that impossible: their rounding is calculated against the same never-moving reference
--- aC's own is, every time.
+-- and (darken/vignette) get their own UICorner synced the same way aC's is, so their
+-- rounding is always calculated against the same never-moving reference aC's own is.
 local WindUI_BG_dark=Instance.new("Frame")
 WindUI_BG_dark.Name="WindUI_BackgroundDarken"
 WindUI_BG_dark.BackgroundColor3=Color3.new(0,0,0)
@@ -9608,11 +9556,10 @@ ao.UIElements.WindUI_BackgroundDarken=WindUI_BG_dark
 
 -- Blur approximation (Background Photo Blur) — Roblox has no real blur filter for a GUI
 -- image, so this stacks several faint, radially-offset copies of the same photo instead
--- of one strong 4-way one. Unlike the main photo, these stay at aC's EXACT size (no
--- overscan) and only ever nudge position by a few px — no room to need their own
--- rounding: any sliver that peeks past aC's fixed edge at max offset is just a few
--- percent of a semi-transparent duplicate, not worth the complexity of syncing 8
--- separate corners.
+-- of one strong 4-way one. These stay at aC's EXACT size (no overscan) and only ever
+-- nudge position by a few px — no room to need their own rounding: any sliver that peeks
+-- past aC's fixed edge at max offset is just a few percent of a semi-transparent
+-- duplicate, not worth the complexity of syncing 8 separate corners.
 local WindUI_BG_blurLayers={}
 for WindUI_BG_i=1,8 do
 local WindUI_BG_layer=Instance.new("ImageLabel")
@@ -9634,11 +9581,8 @@ end
 
 function ao.SetBackgroundImage(j,l)
 local WindUI_BG_img=WindUI_BG_EnsurePhoto()
-local WindUI_BG_asset,WindUI_BG_w,WindUI_BG_h=(l==nil or l=="")and""or WindUI_BG_ResolveAsset(l)
+local WindUI_BG_asset=(l==nil or l=="")and""or WindUI_BG_ResolveAsset(l)
 WindUI_BG_img.Image=WindUI_BG_asset
-WindUI_BG_img.ImageRectOffset=Vector2.new(0,0)
-WindUI_BG_img.ImageRectSize=Vector2.new(0,0)
-ao.BackgroundImagePixelSize=(WindUI_BG_w and WindUI_BG_h)and Vector2.new(WindUI_BG_w,WindUI_BG_h)or nil
 if ao.UIElements.WindUI_BackgroundBlurLayers then
 for _,WindUI_BG_layer in ipairs(ao.UIElements.WindUI_BackgroundBlurLayers)do
 WindUI_BG_layer.Image=WindUI_BG_asset
@@ -9690,47 +9634,6 @@ end
 -- a.B) reads each time it animates — no per-toggle wiring needed anywhere.
 function ao.SetAnimatedToggles(j,l)
 _G.WindUI_AnimatedToggles=l
-end
-
--- Parallax Background Shift: earlier versions of this moved/oversized the photo FRAME
--- itself, which always eventually showed a corner mismatch while actively panning — the
--- frame's own rounding is calculated from its own bounds, so the moment those bounds
--- moved even a few px away from aC's fixed ones, the two stopped lining up exactly.
--- This version never touches the frame at all: WindUI_BG_photo stays perfectly matched
--- to aC always (see WindUI_BG_EnsurePhoto), and panning instead crops a moving WINDOW of
--- PIXELS out of the source image via ImageRectOffset/ImageRectSize — the frame, and
--- therefore its rounding, genuinely never moves, so there is nothing left to misalign.
--- Only works once the image's real pixel dimensions were read successfully (PNG/JPEG);
--- for formats that can't be parsed, this quietly does nothing rather than risk
--- reintroducing the corner bug.
-local WindUI_Parallax_Conn
-function ao.SetParallaxAmount(j,l)
-ao.ParallaxAmount=tonumber(l)or 0
-local WindUI_Px_photo=WindUI_BG_EnsurePhoto()
-
-if ao.ParallaxAmount>0 and ao.BackgroundImagePixelSize and not WindUI_Parallax_Conn then
-WindUI_Parallax_Conn=game:GetService("RunService").RenderStepped:Connect(function()
-if not ao.ParallaxAmount or ao.ParallaxAmount<=0 or not ao.BackgroundImagePixelSize then return end
-local WindUI_Px_mouse=game:GetService("UserInputService"):GetMouseLocation()
-local WindUI_Px_center=ao.UIElements.Main.AbsolutePosition+ao.UIElements.Main.AbsoluteSize/2
-local WindUI_Px_delta=WindUI_Px_mouse-WindUI_Px_center
-local WindUI_Px_size=ao.BackgroundImagePixelSize
--- Only ever samples the middle 90% of the image (5% margin each side) — plenty of
--- room to pan within while the visible crop always stays inside the real image.
-local WindUI_Px_marginX=WindUI_Px_size.X*0.05
-local WindUI_Px_marginY=WindUI_Px_size.Y*0.05
-local WindUI_Px_t=math.clamp(ao.ParallaxAmount/100,0,1)
-local WindUI_Px_offX=math.clamp((WindUI_Px_delta.X/400)*WindUI_Px_marginX*WindUI_Px_t,-WindUI_Px_marginX,WindUI_Px_marginX)+WindUI_Px_marginX
-local WindUI_Px_offY=math.clamp((WindUI_Px_delta.Y/400)*WindUI_Px_marginY*WindUI_Px_t,-WindUI_Px_marginY,WindUI_Px_marginY)+WindUI_Px_marginY
-WindUI_Px_photo.ImageRectOffset=Vector2.new(WindUI_Px_offX,WindUI_Px_offY)
-WindUI_Px_photo.ImageRectSize=Vector2.new(WindUI_Px_size.X-WindUI_Px_marginX*2,WindUI_Px_size.Y-WindUI_Px_marginY*2)
-end)
-elseif (ao.ParallaxAmount<=0 or not ao.BackgroundImagePixelSize) and WindUI_Parallax_Conn then
-WindUI_Parallax_Conn:Disconnect()
-WindUI_Parallax_Conn=nil
-WindUI_Px_photo.ImageRectOffset=Vector2.new(0,0)
-WindUI_Px_photo.ImageRectSize=Vector2.new(0,0)
-end
 end
 
 -- Vignette Effect: two overlapping linear gradients (horizontal + vertical) darkening
