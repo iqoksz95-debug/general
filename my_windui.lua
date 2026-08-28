@@ -7267,6 +7267,140 @@ return"Space",{__type="Space"}
 end
 
 return ae end function a.P()
+local WindUI_New=a.load'a'.New
+local WindUI_NewRoundFrame=a.load'a'.NewRoundFrame
+local WindUI_AddSignal=a.load'a'.AddSignal
+
+-- Multidropdown: literally the same Dropdown module (a.H already has full multi-select
+-- support built in — Multi=true just wasn't exposed under its own name before), just
+-- forced into Multi mode so it doesn't need to be remembered as a flag.
+local WindUI_Multidropdown={}
+function WindUI_Multidropdown.New(WindUI_af,WindUI_ag)
+WindUI_ag.Multi=true
+return a.load'H'.New(WindUI_af,WindUI_ag)
+end
+
+-- Checkboxtoggle: same story — Toggle (a.D) already renders a real square checkbox
+-- (module a.C) whenever Type=="Checkbox", it just wasn't exposed as its own element type.
+local WindUI_Checkboxtoggle={}
+function WindUI_Checkboxtoggle.New(WindUI_af,WindUI_ag)
+WindUI_ag.Type="Checkbox"
+return a.load'D'.New(WindUI_af,WindUI_ag)
+end
+
+-- Textinfo: the exact same Title+Desc+background container Paragraph and Button are
+-- both built on (module 'y') — any number of lines via Desc, background included.
+local WindUI_Textinfo={}
+function WindUI_Textinfo.New(WindUI_af,WindUI_ag)
+local WindUI_ah={
+__type="Textinfo",
+Title=WindUI_ag.Title or"Textinfo",
+Desc=WindUI_ag.Desc or WindUI_ag.Text or nil,
+Locked=WindUI_ag.Locked or false,
+}
+WindUI_ah.TextinfoFrame=a.load'y'(WindUI_ag)
+function WindUI_ah.SetText(WindUI_ai,WindUI_aj)
+WindUI_ah.Desc=WindUI_aj
+WindUI_ah.TextinfoFrame:SetDesc(WindUI_aj)
+end
+return WindUI_ah.__type,WindUI_ah
+end
+
+-- Textbox: a fixed, read-only line of text inside a rounded box — visually the same
+-- family as Input's own box, but with a plain TextLabel instead of an editable TextBox,
+-- so there's nothing for the player to type into.
+local WindUI_Textbox={}
+function WindUI_Textbox.New(WindUI_af,WindUI_ag)
+local WindUI_ah={
+__type="Textbox",
+Title=WindUI_ag.Title or"Textbox",
+Text=WindUI_ag.Text or WindUI_ag.Title or"",
+UIElements={},
+}
+local WindUI_ai=WindUI_New("TextLabel",{
+BackgroundTransparency=1,
+Text=WindUI_ah.Text,
+TextSize=14,
+TextXAlignment="Left",
+TextWrapped=true,
+ThemeTag={TextColor3="Text"},
+Size=UDim2.new(1,0,0,0),
+AutomaticSize="Y",
+FontFace=Font.new(a.load'a'.Font,Enum.FontWeight.Medium),
+})
+local WindUI_aj=WindUI_NewRoundFrame(8,"Squircle",{
+Size=UDim2.new(1,0,0,0),
+AutomaticSize="Y",
+ImageTransparency=.93,
+ThemeTag={ImageColor3="Text"},
+Parent=WindUI_ag.Parent,
+},{
+WindUI_New("UIPadding",{
+PaddingLeft=UDim.new(0,12),
+PaddingRight=UDim.new(0,12),
+PaddingTop=UDim.new(0,9),
+PaddingBottom=UDim.new(0,9),
+}),
+WindUI_ai,
+})
+WindUI_ah.UIElements.Main=WindUI_aj
+WindUI_ah.UIElements.TextLabel=WindUI_ai
+function WindUI_ah.SetText(WindUI_ak,WindUI_al)
+WindUI_ah.Text=WindUI_al
+WindUI_ai.Text=WindUI_al
+end
+return WindUI_ah.__type,WindUI_ah
+end
+
+-- TextDivider: same thin theme-colored line as the plain Divider, just with a named
+-- label centered in the middle and a line running to it from each side.
+local WindUI_TextDivider={}
+function WindUI_TextDivider.New(WindUI_af,WindUI_ag)
+local WindUI_ah={
+__type="TextDivider",
+Title=WindUI_ag.Title or"Divider",
+}
+local WindUI_ai=WindUI_New("TextLabel",{
+BackgroundTransparency=1,
+Text=WindUI_ah.Title,
+TextSize=13,
+TextTransparency=.35,
+AutomaticSize="X",
+Size=UDim2.new(0,0,1,0),
+ThemeTag={TextColor3="Text"},
+FontFace=Font.new(a.load'a'.Font,Enum.FontWeight.Medium),
+})
+local function WindUI_Line()
+return WindUI_New("Frame",{
+Size=UDim2.new(1,0,0,1),
+AnchorPoint=Vector2.new(0.5,0.5),
+Position=UDim2.new(0.5,0,0.5,0),
+BackgroundTransparency=.9,
+ThemeTag={BackgroundColor3="Text"},
+})
+end
+WindUI_New("Frame",{
+Parent=WindUI_ag.Parent,
+Size=UDim2.new(1,-7,0,20),
+BackgroundTransparency=1,
+},{
+WindUI_New("UIListLayout",{
+FillDirection="Horizontal",
+VerticalAlignment="Center",
+HorizontalAlignment="Center",
+Padding=UDim.new(0,10),
+}),
+WindUI_New("Frame",{Size=UDim2.new(0.4,0,0,1),BackgroundTransparency=1},{WindUI_Line()}),
+WindUI_ai,
+WindUI_New("Frame",{Size=UDim2.new(0.4,0,0,1),BackgroundTransparency=1},{WindUI_Line()}),
+})
+function WindUI_ah.SetTitle(WindUI_aj,WindUI_ak)
+WindUI_ah.Title=WindUI_ak
+WindUI_ai.Text=WindUI_ak
+end
+return WindUI_ah.__type,WindUI_ah
+end
+
 return{
 Elements={
 Paragraph=a.load'z',
@@ -7281,6 +7415,11 @@ Colorpicker=a.load'L',
 Section=a.load'M',
 Divider=a.load'N',
 Space=a.load'O',
+Multidropdown=WindUI_Multidropdown,
+Checkboxtoggle=WindUI_Checkboxtoggle,
+Textinfo=WindUI_Textinfo,
+Textbox=WindUI_Textbox,
+TextDivider=WindUI_TextDivider,
 },
 Load=function(aa,ac,ae,af,ag,ah,ai,aj)
 for ak,al in next,ae do
@@ -9320,6 +9459,69 @@ ah(x.Outline,.1,{ImageTransparency=1}):Play()
 end)
 
 return x
+end
+
+-- Searchtab: filters currently-visible elements across the whole window by title —
+-- parented into Topbar.Center, the same auto-arranging row Window:Tag() items already
+-- live in, so it slots in next to the version/beta/time tags automatically.
+function ao.CreateSearchBar(j,p)
+local WindUI_Search_Box=ag("TextBox",{
+Name="SearchInput",
+BackgroundTransparency=1,
+Size=UDim2.new(1,-28,1,0),
+Position=UDim2.new(0,28,0,0),
+Text="",
+PlaceholderText="Search...",
+ClearTextOnFocus=false,
+TextXAlignment=Enum.TextXAlignment.Left,
+TextSize=13,
+ThemeTag={TextColor3="Text",PlaceholderColor3="Placeholder"},
+FontFace=Font.new(af.Font,Enum.FontWeight.Regular),
+})
+
+local WindUI_Search_Icon=af.Image("search","search",0,ao.Folder,"SearchIcon",true)
+WindUI_Search_Icon.Size=UDim2.new(0,15,0,15)
+WindUI_Search_Icon.Position=UDim2.new(0,10,0.5,0)
+WindUI_Search_Icon.AnchorPoint=Vector2.new(0,0.5)
+WindUI_Search_Icon.ImageTransparency=.4
+WindUI_Search_Icon.ThemeTag={ImageColor3="Text"}
+
+local WindUI_Search_Container=af.NewRoundFrame(9,"Squircle",{
+Size=UDim2.new(0,200,0,30),
+LayoutOrder=p or 500,
+Parent=ao.UIElements.Main.Main.Topbar.Center,
+ThemeTag={ImageColor3="Dialog"},
+ImageTransparency=.15,
+},{
+WindUI_Search_Icon,
+WindUI_Search_Box,
+})
+
+local function WindUI_Search_GetMainFrame(WindUI_Search_el)
+for WindUI_Search_k,WindUI_Search_v in pairs(WindUI_Search_el)do
+if type(WindUI_Search_v)=="table" and type(WindUI_Search_k)=="string" and WindUI_Search_k:match("Frame$") and WindUI_Search_v.UIElements and WindUI_Search_v.UIElements.Main then
+return WindUI_Search_v.UIElements.Main
+end
+end
+return nil
+end
+
+af.AddSignal(WindUI_Search_Box:GetPropertyChangedSignal("Text"),function()
+local WindUI_Search_query=WindUI_Search_Box.Text:lower()
+for _,WindUI_Search_el in pairs(ao.AllElements)do
+local WindUI_Search_frame=WindUI_Search_GetMainFrame(WindUI_Search_el)
+if WindUI_Search_frame then
+if WindUI_Search_query=="" then
+WindUI_Search_frame.Visible=true
+else
+local WindUI_Search_title=tostring(WindUI_Search_el.Title or""):lower()
+WindUI_Search_frame.Visible=WindUI_Search_title:find(WindUI_Search_query,1,true)~=nil
+end
+end
+end
+end)
+
+return WindUI_Search_Container
 end
 
 
