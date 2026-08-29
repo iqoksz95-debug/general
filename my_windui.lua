@@ -9468,8 +9468,8 @@ function ao.CreateSearchBar(j,p)
 local WindUI_Search_Box=ag("TextBox",{
 Name="SearchInput",
 BackgroundTransparency=1,
-Size=UDim2.new(1,-28,1,0),
-Position=UDim2.new(0,28,0,0),
+Size=UDim2.new(1,-16,1,0),
+Position=UDim2.new(0,16,0,0),
 Text="",
 PlaceholderText="Search...",
 ClearTextOnFocus=false,
@@ -9479,13 +9479,15 @@ ThemeTag={TextColor3="Text",PlaceholderColor3="Placeholder"},
 FontFace=Font.new(af.Font,Enum.FontWeight.Regular),
 })
 
-local WindUI_Search_Icon=af.Image("search","search",0,ao.Folder,"SearchIcon",true)
-WindUI_Search_Icon.Size=UDim2.new(0,15,0,15)
-WindUI_Search_Icon.Position=UDim2.new(0,10,0.5,0)
-WindUI_Search_Icon.AnchorPoint=Vector2.new(0,0.5)
-WindUI_Search_Icon.ImageTransparency=.4
-WindUI_Search_Icon.ThemeTag={ImageColor3="Text"}
-
+-- NOTE: no decorative icon here on purpose. af.Image() returns a wrapper Frame, not an
+-- ImageLabel directly — setting .ImageTransparency/.ThemeTag on THAT Frame directly
+-- (after construction, not as constructor props) was a hard Lua error ("not a valid
+-- member of Frame"), since neither is a real property of Frame, and ThemeTag isn't a
+-- real Roblox property at all outside of being read from the constructor's own props
+-- table. That one error, thrown the moment this ran, was silently aborting the ENTIRE
+-- rest of the script — every Tab/Section/element after this call never got created,
+-- which is exactly the "completely blank window" bug. Keeping this plain and simple on
+-- purpose so nothing here can ever do that again.
 local WindUI_Search_Container=af.NewRoundFrame(9,"Squircle",{
 Size=UDim2.new(0,200,0,30),
 LayoutOrder=p or 500,
@@ -9493,7 +9495,6 @@ Parent=ao.UIElements.Main.Main.Topbar.Center,
 ThemeTag={ImageColor3="Dialog"},
 ImageTransparency=.15,
 },{
-WindUI_Search_Icon,
 WindUI_Search_Box,
 })
 
