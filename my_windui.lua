@@ -1823,14 +1823,14 @@ end
 
 af.UIElements.Main=ab("Frame",{
 Size=UDim2.new(0,280,0,0),
-ThemeTag={
-BackgroundColor3="Dialog",
-},
 AutomaticSize="Y",
 BackgroundTransparency=1,
 Visible=false,
 ZIndex=99999,
 },{
+ab("UICorner",{
+CornerRadius=UDim.new(0,af.UICorner)
+}),
 ab("UIPadding",{
 PaddingTop=UDim.new(0,af.UIPadding),
 PaddingLeft=UDim.new(0,af.UIPadding),
@@ -3570,9 +3570,7 @@ end
 
 for aj,ak in next,(ai.__elements or{})do
 if af.Elements[aj]and ac.Parser[ak.__type]then
-task.spawn(function()
-ac.Parser[ak.__type].Load(af.Elements[aj],ak)
-end)
+pcall(ac.Parser[ak.__type].Load,af.Elements[aj],ak)
 end
 end
 
@@ -4847,9 +4845,9 @@ local ak=ai.Value
 
 local al,am
 if ai.Type=="Toggle"then
-al,am=ad(ak,ai.Icon,ai.ToggleFrame.UIElements.Main,ai.Callback)
+al,am=ad(ak,ai.Icon,ai.ToggleFrame.UIElements.Main,function(...)if ai.Callback then return ai.Callback(...)end end)
 elseif ai.Type=="Checkbox"then
-al,am=ae(ak,ai.Icon,ai.ToggleFrame.UIElements.Main,ai.Callback)
+al,am=ae(ak,ai.Icon,ai.ToggleFrame.UIElements.Main,function(...)if ai.Callback then return ai.Callback(...)end end)
 else
 error("Unknown Toggle Type: "..tostring(ai.Type))
 end
@@ -7013,6 +7011,7 @@ TextXAlignment=ah.TextXAlignment or"Left",
 TextSize=ah.TextSize or 19,
 TextTransparency=ah.TextTransparency or 0.05,
 UIElements={},
+Tab=ah.Tab,
 
 HeaderSize=42,
 IconSize=20,
@@ -7129,11 +7128,8 @@ VerticalAlignment="Bottom",
 })
 })
 
-
-
-
-
-
+ai.UIElements.Main=am
+ai.Frame=am
 
 local an=ah.ElementsModule
 
@@ -9556,52 +9552,44 @@ ZIndex=20,
 WindUI_Search_Box,
 })
 
--- Fade-to-background strip right where Center would otherwise collide with the topbar
--- buttons — a child of Right itself, so it always tracks Right's real position with no
--- manual resize-tracking needed. Whatever's underneath (a tag, the search bar, however
--- wide it gets) blends smoothly into the background instead of visibly clipping/clashing.
-ag("Frame",{
-Size=UDim2.new(0,40,1,0),
-Position=UDim2.new(0,-40,0,0),
-BackgroundTransparency=0,
-ThemeTag={BackgroundColor3="Background"},
-BorderSizePixel=0,
-ZIndex=50,
-Parent=ao.UIElements.Main.Main.Topbar.Right,
-},{
-ag("UIGradient",{
-Transparency=NumberSequence.new({
-NumberSequenceKeypoint.new(0,1),
-NumberSequenceKeypoint.new(1,0),
-}),
-}),
-})
-
 local WindUI_Search_Results=ag("ScrollingFrame",{
 Name="SearchResults",
 Size=UDim2.new(0,240,0,0),
-AutomaticSize=Enum.AutomaticSize.Y,
 Position=UDim2.new(0,0,1,6),
 BackgroundTransparency=0,
 BorderSizePixel=0,
-ThemeTag={BackgroundColor3="Dialog"},
+ThemeTag={BackgroundColor3="Dialog",ScrollBarImageColor3="Text"},
 Visible=false,
 ZIndex=1000,
 CanvasSize=UDim2.new(0,0,0,0),
-AutomaticCanvasSize=Enum.AutomaticSize.Y,
-ScrollBarThickness=3,
+ScrollBarThickness=4,
+ScrollBarImageTransparency=0,
+ScrollingDirection=Enum.ScrollingDirection.Y,
+Active=true,
+Selectable=true,
 Parent=WindUI_Search_Container,
 },{
 ag("UICorner",{CornerRadius=UDim.new(0,8)}),
 ag("UIListLayout",{SortOrder=Enum.SortOrder.LayoutOrder,Padding=UDim.new(0,2)}),
 ag("UIPadding",{PaddingTop=UDim.new(0,4),PaddingBottom=UDim.new(0,4),PaddingLeft=UDim.new(0,4),PaddingRight=UDim.new(0,4)}),
 })
-WindUI_Search_Results.Size=UDim2.new(0,240,0,0)
 
 local function WindUI_Search_GetMainFrame(WindUI_Search_el)
+if not WindUI_Search_el then return nil end
+if WindUI_Search_el.UIElements and WindUI_Search_el.UIElements.Main then
+return WindUI_Search_el.UIElements.Main
+end
+if WindUI_Search_el.Frame and typeof(WindUI_Search_el.Frame)=="Instance" then
+return WindUI_Search_el.Frame
+end
 for WindUI_Search_k,WindUI_Search_v in pairs(WindUI_Search_el)do
-if type(WindUI_Search_v)=="table" and type(WindUI_Search_k)=="string" and WindUI_Search_k:match("Frame$") and WindUI_Search_v.UIElements and WindUI_Search_v.UIElements.Main then
+if type(WindUI_Search_v)=="table" and type(WindUI_Search_k)=="string" and WindUI_Search_k:match("Frame$") then
+if WindUI_Search_v.UIElements and WindUI_Search_v.UIElements.Main then
 return WindUI_Search_v.UIElements.Main
+end
+if WindUI_Search_v.Frame and typeof(WindUI_Search_v.Frame)=="Instance" then
+return WindUI_Search_v.Frame
+end
 end
 end
 return nil
@@ -9619,24 +9607,45 @@ local function WindUI_Search_Jump(WindUI_Search_el)
 local WindUI_Search_frame=WindUI_Search_GetMainFrame(WindUI_Search_el)
 if not WindUI_Search_frame then return end
 
--- Switch to the right tab (Tab.Index is the exact key SelectTab expects).
-if WindUI_Search_el.Tab and WindUI_Search_el.Tab.Index and ao.TabManager then
+local WindUI_Search_realTab=nil
+local WindUI_Search_cur=WindUI_Search_el
+local WindUI_Search_sections={}
+while WindUI_Search_cur do
+if WindUI_Search_cur.__type=="Section" then
+table.insert(WindUI_Search_sections,WindUI_Search_cur)
+end
+if WindUI_Search_cur.UIElements and WindUI_Search_cur.UIElements.ContainerFrame then
+WindUI_Search_realTab=WindUI_Search_cur
+break
+end
+if WindUI_Search_cur.Tab and WindUI_Search_cur.Tab~=WindUI_Search_cur then
+WindUI_Search_cur=WindUI_Search_cur.Tab
+else
+break
+end
+end
+
+if WindUI_Search_realTab and WindUI_Search_realTab.Index and ao.TabManager then
 pcall(function()
-ao.TabManager:SelectTab(WindUI_Search_el.Tab.Index)
+ao.TabManager:SelectTab(WindUI_Search_realTab.Index)
 end)
 end
 
--- Scroll the tab's own content canvas so the element is actually in view.
-task.wait(0.05)
+for _,WindUI_Search_sec in ipairs(WindUI_Search_sections)do
+if WindUI_Search_sec.Open and not WindUI_Search_sec.Opened then
+pcall(function()WindUI_Search_sec:Open()end)
+end
+end
+
+task.wait(0.08)
 pcall(function()
-local WindUI_Search_canvas=WindUI_Search_el.Tab and WindUI_Search_el.Tab.ContainerFrame
+local WindUI_Search_canvas=WindUI_Search_realTab and WindUI_Search_realTab.UIElements and WindUI_Search_realTab.UIElements.ContainerFrame
 if WindUI_Search_canvas and WindUI_Search_canvas:IsA("ScrollingFrame") then
-local WindUI_Search_targetY=(WindUI_Search_frame.AbsolutePosition.Y-WindUI_Search_canvas.AbsolutePosition.Y)+WindUI_Search_canvas.CanvasPosition.Y-40
+local WindUI_Search_targetY=(WindUI_Search_frame.AbsolutePosition.Y-WindUI_Search_canvas.AbsolutePosition.Y)+WindUI_Search_canvas.CanvasPosition.Y-20
 WindUI_Search_canvas.CanvasPosition=Vector2.new(0,math.max(0,WindUI_Search_targetY))
 end
 end)
 
--- Briefly outline the matched element in the current theme's Accent color.
 pcall(function()
 local WindUI_Search_highlight=WindUI_Search_frame:FindFirstChild("WindUI_SearchHighlight")
 if not WindUI_Search_highlight then
@@ -9645,8 +9654,7 @@ WindUI_Search_highlight.Name="WindUI_SearchHighlight"
 WindUI_Search_highlight.Thickness=2
 WindUI_Search_highlight.Parent=WindUI_Search_frame
 end
-local WindUI_Search_theme=an.WindUI and an.WindUI.Theme
-local WindUI_Search_accent=(WindUI_Search_theme and WindUI_Search_theme.Accent)or"#733dd1"
+local WindUI_Search_accent=(af.Theme and af.Theme.Accent)or"#733dd1"
 WindUI_Search_highlight.Color=Color3.fromHex(WindUI_Search_accent)
 WindUI_Search_highlight.Transparency=0
 task.delay(2,function()
@@ -9671,7 +9679,7 @@ for _,WindUI_Search_el in pairs(ao.AllElements)do
 local WindUI_Search_title=tostring(WindUI_Search_el.Title or""):lower()
 if WindUI_Search_title~="" and WindUI_Search_title:find(WindUI_Search_query,1,true) then
 table.insert(WindUI_Search_matches,WindUI_Search_el)
-if #WindUI_Search_matches>=8 then break end
+if #WindUI_Search_matches>=50 then break end
 end
 end
 
@@ -9679,6 +9687,12 @@ if #WindUI_Search_matches==0 then
 WindUI_Search_Results.Visible=false
 return
 end
+
+local WindUI_itemH=28
+local WindUI_totalH=#WindUI_Search_matches*WindUI_itemH+8
+local WindUI_visibleH=math.clamp(#WindUI_Search_matches,1,7)*WindUI_itemH+8
+WindUI_Search_Results.Size=UDim2.new(0,240,0,WindUI_visibleH)
+WindUI_Search_Results.CanvasSize=UDim2.new(0,0,0,WindUI_totalH)
 
 for _,WindUI_Search_el in ipairs(WindUI_Search_matches)do
 local WindUI_Search_item=ag("TextButton",{
