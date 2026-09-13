@@ -7271,39 +7271,95 @@ local WindUI_New=a.load'a'.New
 local WindUI_NewRoundFrame=a.load'a'.NewRoundFrame
 local WindUI_AddSignal=a.load'a'.AddSignal
 
+-- Every one of the 5 modules below is wrapped in pcall with a safe fallback. A single
+-- uncaught error anywhere in one of these — as actually happened before — doesn't just
+-- fail that one element, it kills the entire rest of the SCRIPT that called it (Lua
+-- errors propagate up through the whole call chain unless something catches them), which
+-- is exactly why one bad element could make whole tabs after it render completely empty.
+-- This guarantees that can never happen again, regardless of what future bug might exist
+-- in any of them: worst case is a blank placeholder element, never a dead script.
+
 -- Multidropdown: literally the same Dropdown module (a.H already has full multi-select
 -- support built in — Multi=true just wasn't exposed under its own name before), just
 -- forced into Multi mode so it doesn't need to be remembered as a flag.
 local WindUI_Multidropdown={}
 function WindUI_Multidropdown.New(WindUI_af,WindUI_ag)
+local WindUI_ok,WindUI_a,WindUI_b=pcall(function()
 WindUI_ag.Multi=true
 return a.load'H'.New(WindUI_af,WindUI_ag)
+end)
+if WindUI_ok then return WindUI_a,WindUI_b end
+warn("[WindUI] Multidropdown failed: "..tostring(WindUI_a))
+return"Multidropdown",{__type="Multidropdown",Title=WindUI_ag.Title or"Multidropdown"}
 end
 
 -- Checkboxtoggle: same story — Toggle (a.D) already renders a real square checkbox
 -- (module a.C) whenever Type=="Checkbox", it just wasn't exposed as its own element type.
 local WindUI_Checkboxtoggle={}
 function WindUI_Checkboxtoggle.New(WindUI_af,WindUI_ag)
+local WindUI_ok,WindUI_a,WindUI_b=pcall(function()
 WindUI_ag.Type="Checkbox"
 return a.load'D'.New(WindUI_af,WindUI_ag)
+end)
+if WindUI_ok then return WindUI_a,WindUI_b end
+warn("[WindUI] Checkboxtoggle failed: "..tostring(WindUI_a))
+return"Checkboxtoggle",{__type="Checkboxtoggle",Title=WindUI_ag.Title or"Checkboxtoggle"}
 end
 
--- Textinfo: the exact same Title+Desc+background container Paragraph and Button are
--- both built on (module 'y') — any number of lines via Desc, background included.
+-- Textinfo: a fixed background panel (same family as Textbox/Input) holding a wrapped,
+-- any-number-of-lines TextLabel. Deliberately NOT built on the shared Paragraph/Button
+-- factory ('y') anymore — that factory is large, has requirements around Tab/Window/
+-- hover/lock wiring that were never fully confirmed safe for a hand-rolled caller, and
+-- was the prime suspect for why this specific element (and everything the script tried
+-- to build after it) was silently going missing. This uses the exact same plain,
+-- already-proven construction Textbox below uses.
 local WindUI_Textinfo={}
 function WindUI_Textinfo.New(WindUI_af,WindUI_ag)
+local WindUI_ok,WindUI_a,WindUI_b=pcall(function()
 local WindUI_ah={
 __type="Textinfo",
 Title=WindUI_ag.Title or"Textinfo",
-Desc=WindUI_ag.Desc or WindUI_ag.Text or nil,
-Locked=WindUI_ag.Locked or false,
+Text=WindUI_ag.Desc or WindUI_ag.Text or"",
+UIElements={},
 }
-WindUI_ah.TextinfoFrame=a.load'y'(WindUI_ag)
-function WindUI_ah.SetText(WindUI_ai,WindUI_aj)
-WindUI_ah.Desc=WindUI_aj
-WindUI_ah.TextinfoFrame:SetDesc(WindUI_aj)
+local WindUI_ai=WindUI_New("TextLabel",{
+BackgroundTransparency=1,
+Text=WindUI_ah.Text,
+TextSize=14,
+TextXAlignment="Left",
+TextYAlignment="Top",
+TextWrapped=true,
+ThemeTag={TextColor3="Text"},
+Size=UDim2.new(1,0,0,0),
+AutomaticSize="Y",
+FontFace=Font.new(a.load'a'.Font,Enum.FontWeight.Medium),
+})
+local WindUI_aj=WindUI_NewRoundFrame(10,"Squircle",{
+Size=UDim2.new(1,0,0,0),
+AutomaticSize="Y",
+ImageTransparency=.93,
+ThemeTag={ImageColor3="Text"},
+Parent=WindUI_ag.Parent,
+},{
+WindUI_New("UIPadding",{
+PaddingLeft=UDim.new(0,14),
+PaddingRight=UDim.new(0,14),
+PaddingTop=UDim.new(0,12),
+PaddingBottom=UDim.new(0,12),
+}),
+WindUI_ai,
+})
+WindUI_ah.UIElements.Main=WindUI_aj
+WindUI_ah.UIElements.TextLabel=WindUI_ai
+function WindUI_ah.SetText(WindUI_ak,WindUI_al)
+WindUI_ah.Text=WindUI_al
+WindUI_ai.Text=WindUI_al
 end
 return WindUI_ah.__type,WindUI_ah
+end)
+if WindUI_ok then return WindUI_a,WindUI_b end
+warn("[WindUI] Textinfo failed: "..tostring(WindUI_a))
+return"Textinfo",{__type="Textinfo",Title=WindUI_ag.Title or"Textinfo"}
 end
 
 -- Textbox: a fixed, read-only line of text inside a rounded box — visually the same
@@ -7311,6 +7367,7 @@ end
 -- so there's nothing for the player to type into.
 local WindUI_Textbox={}
 function WindUI_Textbox.New(WindUI_af,WindUI_ag)
+local WindUI_ok,WindUI_a,WindUI_b=pcall(function()
 local WindUI_ah={
 __type="Textbox",
 Title=WindUI_ag.Title or"Textbox",
@@ -7350,12 +7407,17 @@ WindUI_ah.Text=WindUI_al
 WindUI_ai.Text=WindUI_al
 end
 return WindUI_ah.__type,WindUI_ah
+end)
+if WindUI_ok then return WindUI_a,WindUI_b end
+warn("[WindUI] Textbox failed: "..tostring(WindUI_a))
+return"Textbox",{__type="Textbox",Title=WindUI_ag.Title or"Textbox"}
 end
 
 -- TextDivider: same thin theme-colored line as the plain Divider, just with a named
 -- label centered in the middle and a line running to it from each side.
 local WindUI_TextDivider={}
 function WindUI_TextDivider.New(WindUI_af,WindUI_ag)
+local WindUI_ok,WindUI_a,WindUI_b=pcall(function()
 local WindUI_ah={
 __type="TextDivider",
 Title=WindUI_ag.Title or"Divider",
@@ -7399,6 +7461,10 @@ WindUI_ah.Title=WindUI_ak
 WindUI_ai.Text=WindUI_ak
 end
 return WindUI_ah.__type,WindUI_ah
+end)
+if WindUI_ok then return WindUI_a,WindUI_b end
+warn("[WindUI] TextDivider failed: "..tostring(WindUI_a))
+return"TextDivider",{__type="TextDivider",Title=WindUI_ag.Title or"Divider"}
 end
 
 return{
@@ -9461,9 +9527,9 @@ end)
 return x
 end
 
--- Searchtab: filters currently-visible elements across the whole window by title —
--- parented into Topbar.Center, the same auto-arranging row Window:Tag() items already
--- live in, so it slots in next to the version/beta/time tags automatically.
+-- Searchtab: as you type, shows a real results list of every element whose title
+-- contains the query. Clicking a result switches to its tab, scrolls its section into
+-- view, and briefly outlines it in the current theme's accent color.
 function ao.CreateSearchBar(j,p)
 local WindUI_Search_Box=ag("TextBox",{
 Name="SearchInput",
@@ -9479,24 +9545,58 @@ ThemeTag={TextColor3="Text",PlaceholderColor3="Placeholder"},
 FontFace=Font.new(af.Font,Enum.FontWeight.Regular),
 })
 
--- NOTE: no decorative icon here on purpose. af.Image() returns a wrapper Frame, not an
--- ImageLabel directly — setting .ImageTransparency/.ThemeTag on THAT Frame directly
--- (after construction, not as constructor props) was a hard Lua error ("not a valid
--- member of Frame"), since neither is a real property of Frame, and ThemeTag isn't a
--- real Roblox property at all outside of being read from the constructor's own props
--- table. That one error, thrown the moment this ran, was silently aborting the ENTIRE
--- rest of the script — every Tab/Section/element after this call never got created,
--- which is exactly the "completely blank window" bug. Keeping this plain and simple on
--- purpose so nothing here can ever do that again.
 local WindUI_Search_Container=af.NewRoundFrame(9,"Squircle",{
 Size=UDim2.new(0,200,0,30),
 LayoutOrder=p or 500,
 Parent=ao.UIElements.Main.Main.Topbar.Center,
 ThemeTag={ImageColor3="Dialog"},
 ImageTransparency=.15,
+ZIndex=20,
 },{
 WindUI_Search_Box,
 })
+
+-- Fade-to-background strip right where Center would otherwise collide with the topbar
+-- buttons — a child of Right itself, so it always tracks Right's real position with no
+-- manual resize-tracking needed. Whatever's underneath (a tag, the search bar, however
+-- wide it gets) blends smoothly into the background instead of visibly clipping/clashing.
+ag("Frame",{
+Size=UDim2.new(0,40,1,0),
+Position=UDim2.new(0,-40,0,0),
+BackgroundTransparency=0,
+ThemeTag={BackgroundColor3="Background"},
+BorderSizePixel=0,
+ZIndex=50,
+Parent=ao.UIElements.Main.Main.Topbar.Right,
+},{
+ag("UIGradient",{
+Transparency=NumberSequence.new({
+NumberSequenceKeypoint.new(0,1),
+NumberSequenceKeypoint.new(1,0),
+}),
+}),
+})
+
+local WindUI_Search_Results=ag("ScrollingFrame",{
+Name="SearchResults",
+Size=UDim2.new(0,240,0,0),
+AutomaticSize=Enum.AutomaticSize.Y,
+Position=UDim2.new(0,0,1,6),
+BackgroundTransparency=0,
+BorderSizePixel=0,
+ThemeTag={BackgroundColor3="Dialog"},
+Visible=false,
+ZIndex=1000,
+CanvasSize=UDim2.new(0,0,0,0),
+AutomaticCanvasSize=Enum.AutomaticSize.Y,
+ScrollBarThickness=3,
+Parent=WindUI_Search_Container,
+},{
+ag("UICorner",{CornerRadius=UDim.new(0,8)}),
+ag("UIListLayout",{SortOrder=Enum.SortOrder.LayoutOrder,Padding=UDim.new(0,2)}),
+ag("UIPadding",{PaddingTop=UDim.new(0,4),PaddingBottom=UDim.new(0,4),PaddingLeft=UDim.new(0,4),PaddingRight=UDim.new(0,4)}),
+})
+WindUI_Search_Results.Size=UDim2.new(0,240,0,0)
 
 local function WindUI_Search_GetMainFrame(WindUI_Search_el)
 for WindUI_Search_k,WindUI_Search_v in pairs(WindUI_Search_el)do
@@ -9507,19 +9607,101 @@ end
 return nil
 end
 
+local function WindUI_Search_ClearResults()
+for _,WindUI_Search_child in ipairs(WindUI_Search_Results:GetChildren())do
+if WindUI_Search_child:IsA("TextButton")then
+WindUI_Search_child:Destroy()
+end
+end
+end
+
+local function WindUI_Search_Jump(WindUI_Search_el)
+local WindUI_Search_frame=WindUI_Search_GetMainFrame(WindUI_Search_el)
+if not WindUI_Search_frame then return end
+
+-- Switch to the right tab (Tab.Index is the exact key SelectTab expects).
+if WindUI_Search_el.Tab and WindUI_Search_el.Tab.Index and ao.TabManager then
+pcall(function()
+ao.TabManager:SelectTab(WindUI_Search_el.Tab.Index)
+end)
+end
+
+-- Scroll the tab's own content canvas so the element is actually in view.
+task.wait(0.05)
+pcall(function()
+local WindUI_Search_canvas=WindUI_Search_el.Tab and WindUI_Search_el.Tab.ContainerFrame
+if WindUI_Search_canvas and WindUI_Search_canvas:IsA("ScrollingFrame") then
+local WindUI_Search_targetY=(WindUI_Search_frame.AbsolutePosition.Y-WindUI_Search_canvas.AbsolutePosition.Y)+WindUI_Search_canvas.CanvasPosition.Y-40
+WindUI_Search_canvas.CanvasPosition=Vector2.new(0,math.max(0,WindUI_Search_targetY))
+end
+end)
+
+-- Briefly outline the matched element in the current theme's Accent color.
+pcall(function()
+local WindUI_Search_highlight=WindUI_Search_frame:FindFirstChild("WindUI_SearchHighlight")
+if not WindUI_Search_highlight then
+WindUI_Search_highlight=Instance.new("UIStroke")
+WindUI_Search_highlight.Name="WindUI_SearchHighlight"
+WindUI_Search_highlight.Thickness=2
+WindUI_Search_highlight.Parent=WindUI_Search_frame
+end
+local WindUI_Search_theme=an.WindUI and an.WindUI.Theme
+local WindUI_Search_accent=(WindUI_Search_theme and WindUI_Search_theme.Accent)or"#733dd1"
+WindUI_Search_highlight.Color=Color3.fromHex(WindUI_Search_accent)
+WindUI_Search_highlight.Transparency=0
+task.delay(2,function()
+if WindUI_Search_highlight then
+WindUI_Search_highlight.Transparency=1
+end
+end)
+end)
+end
+
 af.AddSignal(WindUI_Search_Box:GetPropertyChangedSignal("Text"),function()
 local WindUI_Search_query=WindUI_Search_Box.Text:lower()
-for _,WindUI_Search_el in pairs(ao.AllElements)do
-local WindUI_Search_frame=WindUI_Search_GetMainFrame(WindUI_Search_el)
-if WindUI_Search_frame then
+WindUI_Search_ClearResults()
+
 if WindUI_Search_query=="" then
-WindUI_Search_frame.Visible=true
-else
+WindUI_Search_Results.Visible=false
+return
+end
+
+local WindUI_Search_matches={}
+for _,WindUI_Search_el in pairs(ao.AllElements)do
 local WindUI_Search_title=tostring(WindUI_Search_el.Title or""):lower()
-WindUI_Search_frame.Visible=WindUI_Search_title:find(WindUI_Search_query,1,true)~=nil
+if WindUI_Search_title~="" and WindUI_Search_title:find(WindUI_Search_query,1,true) then
+table.insert(WindUI_Search_matches,WindUI_Search_el)
+if #WindUI_Search_matches>=8 then break end
 end
 end
+
+if #WindUI_Search_matches==0 then
+WindUI_Search_Results.Visible=false
+return
 end
+
+for _,WindUI_Search_el in ipairs(WindUI_Search_matches)do
+local WindUI_Search_item=ag("TextButton",{
+Size=UDim2.new(1,0,0,26),
+BackgroundTransparency=.9,
+AutoButtonColor=false,
+Text=tostring(WindUI_Search_el.Title or"?"),
+TextSize=13,
+TextXAlignment=Enum.TextXAlignment.Left,
+ThemeTag={BackgroundColor3="Button",TextColor3="Text"},
+Parent=WindUI_Search_Results,
+},{
+ag("UICorner",{CornerRadius=UDim.new(0,6)}),
+ag("UIPadding",{PaddingLeft=UDim.new(0,8)}),
+})
+af.AddSignal(WindUI_Search_item.MouseButton1Click,function()
+WindUI_Search_Box.Text=""
+WindUI_Search_Results.Visible=false
+WindUI_Search_Jump(WindUI_Search_el)
+end)
+end
+
+WindUI_Search_Results.Visible=true
 end)
 
 return WindUI_Search_Container
@@ -10435,6 +10617,13 @@ local r=m.Init(ao,an.WindUI,an.Parent.Parent.ToolTips)
 r:OnChange(function(x)ao.CurrentTab=x end)
 
 ao.TabModule=m
+-- Exposed so CreateSearchBar (defined earlier in the file, before "r" exists yet as a
+-- local) can still reach :SelectTab/.Tabs at CALL time — ao.CreateSearchBar's body only
+-- actually runs once the script calls Window:CreateSearchBar(), by which point
+-- CreateWindow has already fully finished and this field is already set. Reading
+-- ao.TabManager is a runtime table lookup, not a lexical upvalue capture, so the textual
+-- order of the two doesn't matter the way it would for a plain local reference.
+ao.TabManager=r
 
 function ao.Tab(x,z)
 z.Parent=ao.UIElements.SideBar.Frame
@@ -10666,9 +10855,19 @@ return C
 end
 
 
+local WindUI_CloseDialog=nil
+
 ao:CreateTopbarButton("Close","x",function()
+-- Prevents the confirmation dialog from stacking on top of itself if the button gets
+-- clicked again while it's already open — a second click just hides the existing one
+-- instead of creating another Dialog on top of it.
+if WindUI_CloseDialog then
+pcall(function()WindUI_CloseDialog:Close()end)
+WindUI_CloseDialog=nil
+return
+end
 ah(ao.UIElements.Main,0.35,{Position=UDim2.new(0.5,0,0.5,0)},Enum.EasingStyle.Quint,Enum.EasingDirection.Out):Play()
-ao:Dialog{
+WindUI_CloseDialog=ao:Dialog{
 
 Title="Close Window",
 Content="Do you want to close this window? You will not be able to open it again.",
@@ -10676,7 +10875,7 @@ Buttons={
 {
 Title="Cancel",
 
-Callback=function()end,
+Callback=function()WindUI_CloseDialog=nil end,
 Variant="Secondary",
 },
 {
