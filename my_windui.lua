@@ -8428,6 +8428,779 @@ function WindUI_ToggleGroup.New(WindUI_af,WindUI_ag)
     return"ToggleGroup",{__type="ToggleGroup",Title=WindUI_ag.Title or"ToggleGroup"}
 end
 
+
+-- SocialCard: Community / social media card with action button
+local WindUI_SocialCard={}
+function WindUI_SocialCard.New(WindUI_af,WindUI_ag)
+    local WindUI_ok,WindUI_resA,WindUI_resB=pcall(function()
+        local aa=a.load'a'
+        local ac=aa.New
+        local ad=aa.Tween
+        local isLocked=not WindUI_ag.Locked
+
+        local ai={
+            __type="SocialCard",
+            Title=WindUI_ag.Title or"Social Card",
+            Desc=WindUI_ag.Desc or"",
+            Icon=WindUI_ag.Icon or"users",
+            ButtonText=WindUI_ag.ButtonText or"Join",
+            ButtonIcon=WindUI_ag.ButtonIcon or"external-link",
+            Link=WindUI_ag.Link or"",
+            Callback=WindUI_ag.Callback or function()end,
+            UIElements={},
+        }
+
+        local btnWidth=90
+        ai.Frame=a.load'y'{
+            Title=ai.Title,
+            Desc=ai.Desc,
+            Icon=ai.Icon,
+            Window=WindUI_ag.Window,
+            Parent=WindUI_ag.Parent,
+            TextOffset=btnWidth+15,
+            Hover=false,
+            Tab=WindUI_ag.Tab,
+            Index=WindUI_ag.Index,
+            ElementTable=ai,
+        }
+
+        local actionBtn=aa.NewRoundFrame(8,"Squircle",{
+            Size=UDim2.new(0,btnWidth,0,30),
+            Position=UDim2.new(1,0,0.5,0),
+            AnchorPoint=Vector2.new(1,0.5),
+            ImageTransparency=0.15,
+            ThemeTag={ImageColor3="Accent"},
+            Parent=ai.Frame.UIElements.Main,
+            Active=true,
+        },nil,true)
+
+        local actionContent=ac("Frame",{
+            Size=UDim2.new(1,0,1,0),
+            BackgroundTransparency=1,
+            Parent=actionBtn,
+        },{
+            ac("UIListLayout",{
+                FillDirection=Enum.FillDirection.Horizontal,
+                VerticalAlignment=Enum.VerticalAlignment.Center,
+                HorizontalAlignment=Enum.HorizontalAlignment.Center,
+                Padding=UDim.new(0,5),
+            }),
+        })
+
+        local btnIcon=nil
+        if ai.ButtonIcon and ai.ButtonIcon~="" then
+            pcall(function()
+                local iconData=aa.Icon(ai.ButtonIcon)
+                if iconData then
+                    btnIcon=ac("ImageLabel",{
+                        Size=UDim2.new(0,14,0,14),
+                        BackgroundTransparency=1,
+                        Image=iconData[1],
+                        ImageRectOffset=iconData[2].ImageRectPosition,
+                        ImageRectSize=iconData[2].ImageRectSize,
+                        ThemeTag={ImageColor3="Text"},
+                        Parent=actionContent,
+                    })
+                end
+            end)
+        end
+
+        local btnLbl=ac("TextLabel",{
+            AutomaticSize="X",
+            Size=UDim2.new(0,0,1,0),
+            BackgroundTransparency=1,
+            Text=ai.ButtonText,
+            TextSize=12,
+            ThemeTag={TextColor3="Text"},
+            FontFace=Font.new(aa.Font,Enum.FontWeight.SemiBold),
+            Parent=actionContent,
+        })
+
+        aa.AddSignal(actionBtn.MouseEnter,function()
+            if isLocked then
+                ad(actionBtn,0.1,{ImageTransparency=0.05}):Play()
+            end
+        end)
+        aa.AddSignal(actionBtn.MouseLeave,function()
+            if isLocked then
+                ad(actionBtn,0.1,{ImageTransparency=0.15}):Play()
+            end
+        end)
+
+        aa.AddSignal(actionBtn.MouseButton1Click,function()
+            if not isLocked then return end
+            if ai.Link and ai.Link~="" then
+                pcall(function()
+                    if setclipboard then
+                        setclipboard(ai.Link)
+                    elseif toclipboard then
+                        toclipboard(ai.Link)
+                    end
+                end)
+            end
+            aa.SafeCallback(ai.Callback,ai.Link)
+        end)
+
+        function ai.SetLink(self,link)
+            ai.Link=link
+        end
+        function ai.SetTitle(self,t)
+            ai.Title=t
+            ai.Frame:SetTitle(t)
+        end
+        function ai.SetDesc(self,d)
+            ai.Desc=d
+            ai.Frame:SetDesc(d)
+        end
+        function ai.Lock(self)
+            ai.Locked=true
+            isLocked=false
+            return ai.Frame:Lock()
+        end
+        function ai.Unlock(self)
+            ai.Locked=false
+            isLocked=true
+            return ai.Frame:Unlock()
+        end
+        if ai.Locked then ai:Lock() end
+
+        return ai.__type,ai
+    end)
+    if WindUI_ok then return WindUI_resA,WindUI_resB end
+    warn("[WindUI] SocialCard failed: "..tostring(WindUI_resA))
+    return"SocialCard",{__type="SocialCard",Title=WindUI_ag.Title or"SocialCard"}
+end
+
+-- DualSlider: Range slider with two draggable knobs for Min and Max range
+local WindUI_DualSlider={}
+function WindUI_DualSlider.New(WindUI_af,WindUI_ag)
+    local WindUI_ok,WindUI_resA,WindUI_resB=pcall(function()
+        local aa=a.load'a'
+        local ac=aa.New
+        local ad=aa.Tween
+        local isLocked=not WindUI_ag.Locked
+
+        local ai={
+            __type="DualSlider",
+            Title=WindUI_ag.Title or"DualSlider",
+            Desc=WindUI_ag.Desc or nil,
+            Locked=WindUI_ag.Locked or false,
+            Step=WindUI_ag.Step or 1,
+            Min=WindUI_ag.Min or 0,
+            Max=WindUI_ag.Max or 100,
+            Callback=WindUI_ag.Callback or function()end,
+            UIElements={},
+        }
+
+        local initLower=ai.Min
+        local initUpper=ai.Max
+        if type(WindUI_ag.Value)=="table" then
+            initLower=WindUI_ag.Value.Min or WindUI_ag.Value.min or WindUI_ag.Value[1] or ai.Min
+            initUpper=WindUI_ag.Value.Max or WindUI_ag.Value.max or WindUI_ag.Value[2] or ai.Max
+        end
+        initLower=math.clamp(initLower,ai.Min,ai.Max)
+        initUpper=math.clamp(initUpper,initLower,ai.Max)
+
+        local currentLower=initLower
+        local currentUpper=initUpper
+        ai.Value={Min=currentLower,Max=currentUpper}
+
+        local isFloat=ai.Step%1~=0
+        local function FormatVal(v)
+            if isFloat then return string.format("%.2f",v) else return tostring(math.floor(v+0.5)) end
+        end
+        local function CalcVal(v)
+            return math.floor(v/ai.Step+0.5)*ai.Step
+        end
+
+        local trackWidth=105
+        local rightWidth=trackWidth+65
+
+        ai.Frame=a.load'y'{
+            Title=ai.Title,
+            Desc=ai.Desc,
+            Window=WindUI_ag.Window,
+            Parent=WindUI_ag.Parent,
+            TextOffset=rightWidth+15,
+            Hover=false,
+            Tab=WindUI_ag.Tab,
+            Index=WindUI_ag.Index,
+            ElementTable=ai,
+        }
+
+        local rightHolder=ac("Frame",{
+            Size=UDim2.new(0,rightWidth,1,0),
+            Position=UDim2.new(1,0,0.5,0),
+            AnchorPoint=Vector2.new(1,0.5),
+            BackgroundTransparency=1,
+            Parent=ai.Frame.UIElements.Main,
+        },{
+            ac("UIListLayout",{
+                FillDirection=Enum.FillDirection.Horizontal,
+                VerticalAlignment=Enum.VerticalAlignment.Center,
+                HorizontalAlignment=Enum.HorizontalAlignment.Right,
+                Padding=UDim.new(0,8),
+            }),
+        })
+
+        local sliderFr=ac("Frame",{
+            Size=UDim2.new(0,trackWidth,0,4),
+            BackgroundColor3=Color3.new(1,1,1),
+            BackgroundTransparency=0.88,
+            ThemeTag={BackgroundColor3="Text"},
+            AnchorPoint=Vector2.new(0,0.5),
+            Position=UDim2.new(0,0,0.5,0),
+            Parent=rightHolder,
+        },{
+            ac("UICorner",{CornerRadius=UDim.new(1,0)}),
+        })
+
+        local lowerPct=math.clamp((currentLower-ai.Min)/(ai.Max-ai.Min),0,1)
+        local upperPct=math.clamp((currentUpper-ai.Min)/(ai.Max-ai.Min),0,1)
+
+        local fillFr=ac("Frame",{
+            Position=UDim2.new(lowerPct,0,0,0),
+            Size=UDim2.new(math.max(0.001,upperPct-lowerPct),0,1,0),
+            BackgroundColor3=Color3.new(1,1,1),
+            BackgroundTransparency=0,
+            ThemeTag={BackgroundColor3="Accent"},
+            Parent=sliderFr,
+        },{
+            ac("UICorner",{CornerRadius=UDim.new(1,0)}),
+        })
+
+        local lowerKnob=ac("Frame",{
+            Size=UDim2.new(0,12,0,12),
+            AnchorPoint=Vector2.new(0.5,0.5),
+            Position=UDim2.new(lowerPct,0,0.5,0),
+            BackgroundColor3=Color3.new(1,1,1),
+            BackgroundTransparency=0,
+            ThemeTag={BackgroundColor3="Text"},
+            Parent=sliderFr,
+            ZIndex=3,
+        },{
+            ac("UICorner",{CornerRadius=UDim.new(1,0)}),
+        })
+
+        local upperKnob=ac("Frame",{
+            Size=UDim2.new(0,12,0,12),
+            AnchorPoint=Vector2.new(0.5,0.5),
+            Position=UDim2.new(upperPct,0,0.5,0),
+            BackgroundColor3=Color3.new(1,1,1),
+            BackgroundTransparency=0,
+            ThemeTag={BackgroundColor3="Text"},
+            Parent=sliderFr,
+            ZIndex=4,
+        },{
+            ac("UICorner",{CornerRadius=UDim.new(1,0)}),
+        })
+
+        local valueLabel=ac("TextLabel",{
+            Size=UDim2.new(0,54,0,18),
+            Text=FormatVal(currentLower).." - "..FormatVal(currentUpper),
+            TextSize=11,
+            TextXAlignment=Enum.TextXAlignment.Right,
+            BackgroundTransparency=1,
+            ThemeTag={TextColor3="Text"},
+            TextTransparency=0.3,
+            FontFace=Font.new(aa.Font,Enum.FontWeight.Medium),
+            Parent=rightHolder,
+        })
+
+        local function UpdateVisuals()
+            local lPct=math.clamp((currentLower-ai.Min)/(ai.Max-ai.Min),0,1)
+            local uPct=math.clamp((currentUpper-ai.Min)/(ai.Max-ai.Min),0,1)
+            ad(lowerKnob,0.06,{Position=UDim2.new(lPct,0,0.5,0)}):Play()
+            ad(upperKnob,0.06,{Position=UDim2.new(uPct,0,0.5,0)}):Play()
+            ad(fillFr,0.06,{Position=UDim2.new(lPct,0,0,0),Size=UDim2.new(math.max(0.001,uPct-lPct),0,1,0)}):Play()
+            valueLabel.Text=FormatVal(currentLower).." - "..FormatVal(currentUpper)
+        end
+
+        function ai.Set(self,valTable,triggerCb)
+            if not isLocked then return end
+            if type(valTable)=="table" then
+                local l=valTable.Min or valTable.min or valTable[1] or currentLower
+                local u=valTable.Max or valTable.max or valTable[2] or currentUpper
+                l=math.clamp(CalcVal(tonumber(l) or ai.Min),ai.Min,ai.Max)
+                u=math.clamp(CalcVal(tonumber(u) or ai.Max),l,ai.Max)
+                currentLower=l
+                currentUpper=u
+                ai.Value.Min=l
+                ai.Value.Max=u
+                UpdateVisuals()
+                if triggerCb~=false then
+                    aa.SafeCallback(ai.Callback,ai.Value)
+                end
+            end
+        end
+
+        local isDragging=false
+        local function StartDrag(inputObj)
+            if not isLocked or isDragging then return end
+            local scrollParent=ai.Frame.Parent:IsA("ScrollingFrame") and ai.Frame.Parent or (ai.Frame.Parent.Parent:IsA("ScrollingFrame") and ai.Frame.Parent.Parent or nil)
+            if scrollParent then scrollParent.ScrollingEnabled=false end
+            isDragging=true
+
+            local tPos=sliderFr.AbsolutePosition.X
+            local tSize=sliderFr.AbsoluteSize.X
+            local isTouch=(inputObj.UserInputType==Enum.UserInputType.Touch)
+            local startX=isTouch and inputObj.Position.X or game:GetService("UserInputService"):GetMouseLocation().X
+            local startAlpha=math.clamp((startX-tPos)/tSize,0,1)
+            local startVal=CalcVal(ai.Min+startAlpha*(ai.Max-ai.Min))
+
+            local distLower=math.abs(startVal-currentLower)
+            local distUpper=math.abs(startVal-currentUpper)
+            local dragTarget=distLower<=distUpper and"lower" or"upper"
+
+            local moveConn,endConn
+            moveConn=game:GetService("RunService").RenderStepped:Connect(function()
+                local curX=isTouch and inputObj.Position.X or game:GetService("UserInputService"):GetMouseLocation().X
+                local p=math.clamp((curX-tPos)/tSize,0,1)
+                local v=CalcVal(ai.Min+p*(ai.Max-ai.Min))
+                local changed=false
+                if dragTarget=="lower" then
+                    v=math.clamp(v,ai.Min,currentUpper)
+                    if v~=currentLower then
+                        currentLower=v
+                        ai.Value.Min=v
+                        changed=true
+                    end
+                else
+                    v=math.clamp(v,currentLower,ai.Max)
+                    if v~=currentUpper then
+                        currentUpper=v
+                        ai.Value.Max=v
+                        changed=true
+                    end
+                end
+                if changed then
+                    UpdateVisuals()
+                    aa.SafeCallback(ai.Callback,ai.Value)
+                end
+            end)
+
+            endConn=game:GetService("UserInputService").InputEnded:Connect(function(endedInput)
+                if (endedInput.UserInputType==Enum.UserInputType.MouseButton1 or endedInput.UserInputType==Enum.UserInputType.Touch) and endedInput==inputObj then
+                    moveConn:Disconnect()
+                    endConn:Disconnect()
+                    isDragging=false
+                    if scrollParent then scrollParent.ScrollingEnabled=true end
+                end
+            end)
+        end
+
+        aa.AddSignal(sliderFr.InputBegan,function(inp)
+            if (inp.UserInputType==Enum.UserInputType.MouseButton1 or inp.UserInputType==Enum.UserInputType.Touch) and isLocked then
+                StartDrag(inp)
+            end
+        end)
+
+        function ai.Lock(self)
+            ai.Locked=true
+            isLocked=false
+            return ai.Frame:Lock()
+        end
+        function ai.Unlock(self)
+            ai.Locked=false
+            isLocked=true
+            return ai.Frame:Unlock()
+        end
+        if ai.Locked then ai:Lock() end
+
+        return ai.__type,ai
+    end)
+    if WindUI_ok then return WindUI_resA,WindUI_resB end
+    warn("[WindUI] DualSlider failed: "..tostring(WindUI_resA))
+    return"DualSlider",{__type="DualSlider",Title=WindUI_ag.Title or"DualSlider"}
+end
+
+-- ToggleInput: Combines a boolean switch and an editable text box in a single row
+local WindUI_ToggleInput={}
+function WindUI_ToggleInput.New(WindUI_af,WindUI_ag)
+    local WindUI_ok,WindUI_resA,WindUI_resB=pcall(function()
+        local aa=a.load'a'
+        local ac=aa.New
+        local ad=aa.Tween
+        local createSwitch=a.load'B'.New
+        local isLocked=not WindUI_ag.Locked
+
+        local initToggle=false
+        local initInput=""
+        if type(WindUI_ag.Value)=="table" then
+            initToggle=WindUI_ag.Value.Toggle or WindUI_ag.Value.toggle or WindUI_ag.Value[1] or false
+            initInput=tostring(WindUI_ag.Value.Input or WindUI_ag.Value.input or WindUI_ag.Value.Text or WindUI_ag.Value.text or WindUI_ag.Value[2] or"")
+        elseif type(WindUI_ag.Value)=="boolean" then
+            initToggle=WindUI_ag.Value
+            initInput=tostring(WindUI_ag.Input or WindUI_ag.Text or"")
+        elseif type(WindUI_ag.Value)=="string" then
+            initInput=WindUI_ag.Value
+        end
+
+        local ai={
+            __type="ToggleInput",
+            Title=WindUI_ag.Title or"ToggleInput",
+            Desc=WindUI_ag.Desc or nil,
+            Locked=WindUI_ag.Locked or false,
+            Placeholder=WindUI_ag.Placeholder or"Enter text...",
+            Callback=WindUI_ag.Callback or function()end,
+            UIElements={},
+        }
+
+        local currentToggle=initToggle
+        local currentInput=initInput
+        ai.Value={Toggle=currentToggle,Input=currentInput}
+
+        local inputWidth=105
+        local rightWidth=inputWidth+46+8
+
+        ai.Frame=a.load'y'{
+            Title=ai.Title,
+            Desc=ai.Desc,
+            Window=WindUI_ag.Window,
+            Parent=WindUI_ag.Parent,
+            TextOffset=rightWidth+15,
+            Hover=false,
+            Tab=WindUI_ag.Tab,
+            Index=WindUI_ag.Index,
+            ElementTable=ai,
+        }
+
+        local rightHolder=ac("Frame",{
+            Size=UDim2.new(0,rightWidth,1,0),
+            Position=UDim2.new(1,0,0.5,0),
+            AnchorPoint=Vector2.new(1,0.5),
+            BackgroundTransparency=1,
+            Parent=ai.Frame.UIElements.Main,
+        },{
+            ac("UIListLayout",{
+                FillDirection=Enum.FillDirection.Horizontal,
+                VerticalAlignment=Enum.VerticalAlignment.Center,
+                HorizontalAlignment=Enum.HorizontalAlignment.Right,
+                Padding=UDim.new(0,8),
+            }),
+        })
+
+        local inputContainer=aa.NewRoundFrame(8,"Squircle",{
+            Size=UDim2.new(0,inputWidth,0,28),
+            ThemeTag={ImageColor3="Background"},
+            ImageTransparency=0.3,
+            Parent=rightHolder,
+        },{
+            ac("UIPadding",{
+                PaddingLeft=UDim.new(0,8),
+                PaddingRight=UDim.new(0,8),
+            }),
+        })
+
+        local textBox=ac("TextBox",{
+            Size=UDim2.new(1,0,1,0),
+            BackgroundTransparency=1,
+            Text=currentInput,
+            PlaceholderText=ai.Placeholder,
+            ClearTextOnFocus=false,
+            TextSize=12,
+            TextTruncate=Enum.TextTruncate.AtEnd,
+            TextXAlignment=Enum.TextXAlignment.Left,
+            ThemeTag={TextColor3="Text",PlaceholderColor3="Placeholder"},
+            FontFace=Font.new(aa.Font,Enum.FontWeight.Medium),
+            Parent=inputContainer,
+        })
+        ai.UIElements.TextBox=textBox
+
+        local switchBtn=ac("TextButton",{
+            Size=UDim2.new(0,42,0,26),
+            BackgroundTransparency=1,
+            Text="",
+            AutoButtonColor=false,
+            Parent=rightHolder,
+        })
+
+        local switchFr,switchObj=createSwitch(currentToggle,WindUI_ag.Icon,switchBtn,function(st)
+            if isLocked then
+                currentToggle=st
+                ai.Value.Toggle=st
+                aa.SafeCallback(ai.Callback,ai.Value)
+            end
+        end)
+        switchFr.Position=UDim2.new(0.5,0,0.5,0)
+        switchFr.AnchorPoint=Vector2.new(0.5,0.5)
+
+        aa.AddSignal(switchBtn.MouseButton1Click,function()
+            if isLocked then
+                ai:SetToggle(not currentToggle)
+            end
+        end)
+
+        aa.AddSignal(textBox.FocusLost,function()
+            if not isLocked then return end
+            currentInput=textBox.Text
+            ai.Value.Input=currentInput
+            aa.SafeCallback(ai.Callback,ai.Value)
+        end)
+
+        function ai.SetToggle(self,st,triggerCb)
+            if not isLocked then return end
+            currentToggle=st
+            ai.Value.Toggle=st
+            switchObj:Set(st,triggerCb~=false)
+            if triggerCb~=false then
+                aa.SafeCallback(ai.Callback,ai.Value)
+            end
+        end
+
+        function ai.SetInput(self,text,triggerCb)
+            if not isLocked then return end
+            currentInput=tostring(text)
+            ai.Value.Input=currentInput
+            textBox.Text=currentInput
+            if triggerCb~=false then
+                aa.SafeCallback(ai.Callback,ai.Value)
+            end
+        end
+
+        function ai.Set(self,valTable,triggerCb)
+            if type(valTable)=="table" then
+                local t=valTable.Toggle~=nil and valTable.Toggle or valTable.toggle
+                local inp=valTable.Input~=nil and valTable.Input or valTable.input or valTable.Text or valTable.text
+                if inp~=nil then ai:SetInput(inp,false) end
+                if t~=nil then ai:SetToggle(t,false) end
+                if triggerCb~=false then
+                    aa.SafeCallback(ai.Callback,ai.Value)
+                end
+            elseif type(valTable)=="boolean" then
+                ai:SetToggle(valTable,triggerCb)
+            elseif type(valTable)=="string" then
+                ai:SetInput(valTable,triggerCb)
+            end
+        end
+
+        function ai.Lock(self)
+            ai.Locked=true
+            isLocked=false
+            return ai.Frame:Lock()
+        end
+        function ai.Unlock(self)
+            ai.Locked=false
+            isLocked=true
+            return ai.Frame:Unlock()
+        end
+        if ai.Locked then ai:Lock() end
+
+        return ai.__type,ai
+    end)
+    if WindUI_ok then return WindUI_resA,WindUI_resB end
+    warn("[WindUI] ToggleInput failed: "..tostring(WindUI_resA))
+    return"ToggleInput",{__type="ToggleInput",Title=WindUI_ag.Title or"ToggleInput"}
+end
+
+-- ToggleKeybind: Combines a boolean switch and a keybind selector in a single row
+local WindUI_ToggleKeybind={}
+function WindUI_ToggleKeybind.New(WindUI_af,WindUI_ag)
+    local WindUI_ok,WindUI_resA,WindUI_resB=pcall(function()
+        local aa=a.load'a'
+        local ac=aa.New
+        local ad=aa.Tween
+        local createSwitch=a.load'B'.New
+        local createKeyBadge=a.load's'.New
+        local isLocked=not WindUI_ag.Locked
+
+        local initToggle=false
+        local initKey="F"
+        if type(WindUI_ag.Value)=="table" then
+            initToggle=WindUI_ag.Value.Toggle or WindUI_ag.Value.toggle or WindUI_ag.Value[1] or false
+            initKey=tostring(WindUI_ag.Value.Key or WindUI_ag.Value.key or WindUI_ag.Value.Bind or WindUI_ag.Value.bind or WindUI_ag.Value[2] or"F")
+        elseif type(WindUI_ag.Value)=="boolean" then
+            initToggle=WindUI_ag.Value
+            initKey=tostring(WindUI_ag.Key or WindUI_ag.Bind or"F")
+        elseif type(WindUI_ag.Value)=="string" then
+            initKey=WindUI_ag.Value
+        end
+
+        local ai={
+            __type="ToggleKeybind",
+            Title=WindUI_ag.Title or"ToggleKeybind",
+            Desc=WindUI_ag.Desc or nil,
+            Locked=WindUI_ag.Locked or false,
+            Callback=WindUI_ag.Callback or function()end,
+            UIElements={},
+        }
+
+        local currentToggle=initToggle
+        local currentKey=initKey
+        local isPicking=false
+        ai.Value={Toggle=currentToggle,Key=currentKey}
+
+        local rightWidth=120
+
+        ai.Frame=a.load'y'{
+            Title=ai.Title,
+            Desc=ai.Desc,
+            Window=WindUI_ag.Window,
+            Parent=WindUI_ag.Parent,
+            TextOffset=rightWidth+15,
+            Hover=false,
+            Tab=WindUI_ag.Tab,
+            Index=WindUI_ag.Index,
+            ElementTable=ai,
+        }
+
+        local rightHolder=ac("Frame",{
+            Size=UDim2.new(0,rightWidth,1,0),
+            Position=UDim2.new(1,0,0.5,0),
+            AnchorPoint=Vector2.new(1,0.5),
+            BackgroundTransparency=1,
+            Parent=ai.Frame.UIElements.Main,
+        },{
+            ac("UIListLayout",{
+                FillDirection=Enum.FillDirection.Horizontal,
+                VerticalAlignment=Enum.VerticalAlignment.Center,
+                HorizontalAlignment=Enum.HorizontalAlignment.Right,
+                Padding=UDim.new(0,8),
+            }),
+        })
+
+        local keyBadge=createKeyBadge(currentKey,nil,rightHolder)
+        ai.UIElements.Keybind=keyBadge
+
+        local function UpdateKeySize()
+            local textWidth=keyBadge.Frame.Frame.TextLabel.TextBounds.X
+            keyBadge.Size=UDim2.new(0,24+textWidth,0,32)
+        end
+        UpdateKeySize()
+        ac("UIScale",{Parent=keyBadge,Scale=0.85})
+
+        aa.AddSignal(keyBadge.Frame.Frame.TextLabel:GetPropertyChangedSignal("TextBounds"),UpdateKeySize)
+
+        local switchBtn=ac("TextButton",{
+            Size=UDim2.new(0,42,0,26),
+            BackgroundTransparency=1,
+            Text="",
+            AutoButtonColor=false,
+            Parent=rightHolder,
+        })
+
+        local switchFr,switchObj=createSwitch(currentToggle,WindUI_ag.Icon,switchBtn,function(st)
+            if isLocked then
+                currentToggle=st
+                ai.Value.Toggle=st
+                aa.SafeCallback(ai.Callback,ai.Value)
+            end
+        end)
+        switchFr.Position=UDim2.new(0.5,0,0.5,0)
+        switchFr.AnchorPoint=Vector2.new(0.5,0.5)
+
+        aa.AddSignal(switchBtn.MouseButton1Click,function()
+            if isLocked then
+                ai:SetToggle(not currentToggle)
+            end
+        end)
+
+        aa.AddSignal(keyBadge.MouseButton1Click,function()
+            if not isLocked or isPicking then return end
+            isPicking=true
+            keyBadge.Frame.Frame.TextLabel.Text="..."
+
+            task.wait(0.15)
+            local uis=game:GetService("UserInputService")
+            local connA,connB
+            connA=uis.InputBegan:Connect(function(input)
+                local captured=nil
+                if input.UserInputType==Enum.UserInputType.Keyboard then
+                    captured=input.KeyCode.Name
+                elseif input.UserInputType==Enum.UserInputType.MouseButton1 then
+                    captured="MouseLeft"
+                elseif input.UserInputType==Enum.UserInputType.MouseButton2 then
+                    captured="MouseRight"
+                end
+                if captured then
+                    connB=uis.InputEnded:Connect(function(endedInput)
+                        if (endedInput.UserInputType==Enum.UserInputType.Keyboard and endedInput.KeyCode.Name==captured) or
+                           (captured=="MouseLeft" and endedInput.UserInputType==Enum.UserInputType.MouseButton1) or
+                           (captured=="MouseRight" and endedInput.UserInputType==Enum.UserInputType.MouseButton2) then
+                            connA:Disconnect()
+                            connB:Disconnect()
+                            isPicking=false
+                            currentKey=captured
+                            ai.Value.Key=captured
+                            keyBadge.Frame.Frame.TextLabel.Text=captured
+                            aa.SafeCallback(ai.Callback,ai.Value)
+                        end
+                    end)
+                end
+            end)
+        end)
+
+        aa.AddSignal(game:GetService("UserInputService").InputBegan,function(input)
+            if isLocked and not isPicking then
+                local matches=false
+                if input.UserInputType==Enum.UserInputType.Keyboard and input.KeyCode.Name==currentKey then
+                    matches=true
+                elseif currentKey=="MouseLeft" and input.UserInputType==Enum.UserInputType.MouseButton1 then
+                    matches=true
+                elseif currentKey=="MouseRight" and input.UserInputType==Enum.UserInputType.MouseButton2 then
+                    matches=true
+                end
+                if matches then
+                    ai:SetToggle(not currentToggle)
+                end
+            end
+        end)
+
+        function ai.SetToggle(self,st,triggerCb)
+            if not isLocked then return end
+            currentToggle=st
+            ai.Value.Toggle=st
+            switchObj:Set(st,triggerCb~=false)
+            if triggerCb~=false then
+                aa.SafeCallback(ai.Callback,ai.Value)
+            end
+        end
+
+        function ai.SetKey(self,k,triggerCb)
+            if not isLocked then return end
+            currentKey=tostring(k)
+            ai.Value.Key=currentKey
+            keyBadge.Frame.Frame.TextLabel.Text=currentKey
+            if triggerCb~=false then
+                aa.SafeCallback(ai.Callback,ai.Value)
+            end
+        end
+
+        function ai.Set(self,valTable,triggerCb)
+            if type(valTable)=="table" then
+                local t=valTable.Toggle~=nil and valTable.Toggle or valTable.toggle
+                local k=valTable.Key~=nil and valTable.Key or valTable.key or valTable.Bind or valTable.bind
+                if k~=nil then ai:SetKey(k,false) end
+                if t~=nil then ai:SetToggle(t,false) end
+                if triggerCb~=false then
+                    aa.SafeCallback(ai.Callback,ai.Value)
+                end
+            elseif type(valTable)=="boolean" then
+                ai:SetToggle(valTable,triggerCb)
+            elseif type(valTable)=="string" then
+                ai:SetKey(valTable,triggerCb)
+            end
+        end
+
+        function ai.Lock(self)
+            ai.Locked=true
+            isLocked=false
+            return ai.Frame:Lock()
+        end
+        function ai.Unlock(self)
+            ai.Locked=false
+            isLocked=true
+            return ai.Frame:Unlock()
+        end
+        if ai.Locked then ai:Lock() end
+
+        return ai.__type,ai
+    end)
+    if WindUI_ok then return WindUI_resA,WindUI_resB end
+    warn("[WindUI] ToggleKeybind failed: "..tostring(WindUI_resA))
+    return"ToggleKeybind",{__type="ToggleKeybind",Title=WindUI_ag.Title or"ToggleKeybind"}
+end
+
 return{
 Elements={
 Paragraph=a.load'z',
@@ -8453,6 +9226,10 @@ ProgressBar=WindUI_ProgressBar,
 StatCard=WindUI_StatCard,
 ButtonGroup=WindUI_ButtonGroup,
 ToggleGroup=WindUI_ToggleGroup,
+SocialCard=WindUI_SocialCard,
+DualSlider=WindUI_DualSlider,
+ToggleInput=WindUI_ToggleInput,
+ToggleKeybind=WindUI_ToggleKeybind,
 },
 Load=function(aa,ac,ae,af,ag,ah,ai,aj)
 for ak,al in next,ae do
@@ -10704,6 +11481,10 @@ ProgressBar="percent",
 StatCard="bar-chart-2",
 ButtonGroup="layers",
 ToggleGroup="toggle-right",
+SocialCard="users",
+DualSlider="sliders-horizontal",
+ToggleInput="text-cursor-input",
+ToggleKeybind="command",
 }
 
 local function WindUI_Search_GetTabName(WindUI_Search_el)
