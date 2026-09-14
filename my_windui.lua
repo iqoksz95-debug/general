@@ -440,12 +440,19 @@ end
 local function update(H)
 local J=H.Position-C
 local WindUI_smooth=p:GetAttribute("WindUI_SmoothDragging")
-local WindUI_dur=WindUI_smooth and 0.18 or 0.02
-local WindUI_style=WindUI_smooth and Enum.EasingStyle.Quad or Enum.EasingStyle.Linear
+if WindUI_smooth then
+local WindUI_dur=0.18
+local WindUI_style=Enum.EasingStyle.Quad
 j.Tween(p,WindUI_dur,{Position=UDim2.new(
 F.X.Scale,F.X.Offset+J.X,
 F.Y.Scale,F.Y.Offset+J.Y
 )},WindUI_style,Enum.EasingDirection.Out):Play()
+else
+p.Position=UDim2.new(
+F.X.Scale,F.X.Offset+J.X,
+F.Y.Scale,F.Y.Offset+J.Y
+)
+end
 end
 
 for H,J in pairs(r)do
@@ -7569,7 +7576,7 @@ function WindUI_ToggleSlider.New(WindUI_af,WindUI_ag)
             }),
         })
 
-        local valueLabel=ac("TextLabel",{
+        local valueLabel=ac("TextBox",{
             Size=UDim2.new(0,34,0,18),
             Text=FormatVal(currentVal),
             TextSize=12,
@@ -7577,8 +7584,18 @@ function WindUI_ToggleSlider.New(WindUI_af,WindUI_ag)
             BackgroundTransparency=1,
             ThemeTag={TextColor3="Text"},
             TextTransparency=0.3,
+            ClearTextOnFocus=false,
             FontFace=Font.new(aa.Font,Enum.FontWeight.Medium),
         })
+
+        aa.AddSignal(valueLabel.FocusLost,function(enterPressed)
+            local num=tonumber(valueLabel.Text)
+            if num then
+                ai:SetSlider(num)
+            else
+                valueLabel.Text=FormatVal(currentVal)
+            end
+        end)
 
         local sliderRow=ac("Frame",{
             Size=UDim2.new(0,trackWidth+38,0,26),
@@ -7628,12 +7645,15 @@ function WindUI_ToggleSlider.New(WindUI_af,WindUI_ag)
                 ai.Value.Slider=val
                 valueLabel.Text=FormatVal(val)
                 ad(fillFr,0.06,{Size=UDim2.new(pct,0,1,0)}):Play()
-                aa.SafeCallback(ai.Callback,ai.Value)
+                if not inputObj then
+                    aa.SafeCallback(ai.Callback,ai.Value)
+                end
             end
             if inputObj then
                 local scrollParent=ai.Frame.Parent:IsA("ScrollingFrame") and ai.Frame.Parent or (ai.Frame.Parent.Parent:IsA("ScrollingFrame") and ai.Frame.Parent.Parent or nil)
                 if scrollParent then scrollParent.ScrollingEnabled=false end
                 isDragging=true
+                local anyChanged=false
                 local moveConn,endConn
                 local isTouch=(inputObj.UserInputType==Enum.UserInputType.Touch)
                 moveConn=game:GetService("RunService").RenderStepped:Connect(function()
@@ -7647,7 +7667,7 @@ function WindUI_ToggleSlider.New(WindUI_af,WindUI_ag)
                         ai.Value.Slider=v
                         valueLabel.Text=FormatVal(v)
                         ad(fillFr,0.06,{Size=UDim2.new(p,0,1,0)}):Play()
-                        aa.SafeCallback(ai.Callback,ai.Value)
+                        anyChanged=true
                     end
                 end)
                 endConn=game:GetService("UserInputService").InputEnded:Connect(function(endedInput)
@@ -7656,6 +7676,9 @@ function WindUI_ToggleSlider.New(WindUI_af,WindUI_ag)
                         endConn:Disconnect()
                         isDragging=false
                         if scrollParent then scrollParent.ScrollingEnabled=true end
+                        if anyChanged then
+                            aa.SafeCallback(ai.Callback,ai.Value)
+                        end
                     end
                 end)
             end
@@ -8695,17 +8718,35 @@ function WindUI_DualSlider.New(WindUI_af,WindUI_ag)
             ac("UICorner",{CornerRadius=UDim.new(1,0)}),
         })
 
-        local valueLabel=ac("TextLabel",{
-            Size=UDim2.new(0,54,0,18),
+        local valueLabel=ac("TextBox",{
+            Size=UDim2.new(0,68,0,18),
             Text=FormatVal(currentLower).." - "..FormatVal(currentUpper),
             TextSize=11,
             TextXAlignment=Enum.TextXAlignment.Right,
             BackgroundTransparency=1,
             ThemeTag={TextColor3="Text"},
             TextTransparency=0.3,
+            ClearTextOnFocus=false,
             FontFace=Font.new(aa.Font,Enum.FontWeight.Medium),
             Parent=rightHolder,
         })
+
+        aa.AddSignal(valueLabel.FocusLost,function(enterPressed)
+            local nums={}
+            for n in string.gmatch(valueLabel.Text,"[-+]?%d*%.?%d+") do
+                local num=tonumber(n)
+                if num then table.insert(nums,num) end
+            end
+            if #nums>=2 then
+                local l,u=nums[1],nums[2]
+                if l>u then l,u=u,l end
+                ai:Set({Min=l,Max=u})
+            elseif #nums==1 then
+                ai:Set({Min=nums[1],Max=currentUpper})
+            else
+                valueLabel.Text=FormatVal(currentLower).." - "..FormatVal(currentUpper)
+            end
+        end)
 
         local function UpdateVisuals()
             local lPct=math.clamp((currentLower-ai.Min)/(ai.Max-ai.Min),0,1)
@@ -8752,6 +8793,25 @@ function WindUI_DualSlider.New(WindUI_af,WindUI_ag)
             local distUpper=math.abs(startVal-currentUpper)
             local dragTarget=distLower<=distUpper and"lower" or"upper"
 
+            local anyChanged=false
+            if dragTarget=="lower" then
+                local v=math.clamp(startVal,ai.Min,currentUpper)
+                if v~=currentLower then
+                    currentLower=v
+                    ai.Value.Min=v
+                    anyChanged=true
+                    UpdateVisuals()
+                end
+            else
+                local v=math.clamp(startVal,currentLower,ai.Max)
+                if v~=currentUpper then
+                    currentUpper=v
+                    ai.Value.Max=v
+                    anyChanged=true
+                    UpdateVisuals()
+                end
+            end
+
             local moveConn,endConn
             moveConn=game:GetService("RunService").RenderStepped:Connect(function()
                 local curX=isTouch and inputObj.Position.X or game:GetService("UserInputService"):GetMouseLocation().X
@@ -8774,8 +8834,8 @@ function WindUI_DualSlider.New(WindUI_af,WindUI_ag)
                     end
                 end
                 if changed then
+                    anyChanged=true
                     UpdateVisuals()
-                    aa.SafeCallback(ai.Callback,ai.Value)
                 end
             end)
 
@@ -8785,6 +8845,9 @@ function WindUI_DualSlider.New(WindUI_af,WindUI_ag)
                     endConn:Disconnect()
                     isDragging=false
                     if scrollParent then scrollParent.ScrollingEnabled=true end
+                    if anyChanged then
+                        aa.SafeCallback(ai.Callback,ai.Value)
+                    end
                 end
             end)
         end
@@ -12902,10 +12965,7 @@ B.Y.Scale,
 math.clamp(B.Y.Offset,ao.MinSize.Y,ao.MaxSize.Y)
 )
 
-ah(ao.UIElements.Main,0,{
-Size=B
-}):Play()
-
+ao.UIElements.Main.Size=B
 ao.Size=B
 end
 end
