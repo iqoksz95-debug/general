@@ -5519,12 +5519,12 @@ local ar=an.Values
 local as=""
 
 if an.Multi then
-for at,au in next,ar do
-if table.find(an.Value,au)then
-as=as..au..", "
+if type(an.Value)=="table" then
+for at,au in next,an.Value do
+as=as..tostring(au)..", "
 end
+if #as>2 then as=as:sub(1,#as-2) end
 end
-as=as:sub(1,#as-2)
 else
 as=an.Value or""
 end
@@ -5533,6 +5533,11 @@ an.UIElements.Dropdown.Frame.Frame.TextLabel.Text=(as==""and"--"or as)
 end
 
 function an.Refresh(aq,ar)
+if ar then
+an.Values=ar
+else
+ar=an.Values or{}
+end
 for as,at in next,an.UIElements.Menu.Frame.ScrollingFrame:GetChildren()do
 if not at:IsA"UIListLayout"then
 at:Destroy()
@@ -10591,14 +10596,24 @@ return nil
 end
 
 local function WindUI_Search_ClearResults()
+pcall(function()
 WindUI_Search_Results.CanvasPosition=Vector2.new(0,0)
+end)
+local WindUI_ThemeMod
+pcall(function()WindUI_ThemeMod=a.load'b'end)
 for _,WindUI_Search_child in ipairs(WindUI_Search_Results:GetChildren())do
 if WindUI_Search_child:IsA("GuiObject") and not WindUI_Search_child:IsA("UIListLayout") and not WindUI_Search_child:IsA("UIPadding") and not WindUI_Search_child:IsA("UICorner") and not WindUI_Search_child:IsA("UIStroke") then
+pcall(function()
+if WindUI_ThemeMod and WindUI_ThemeMod.Objects then
 for _,desc in ipairs(WindUI_Search_child:GetDescendants()) do
-if j.Objects[desc] then j.Objects[desc]=nil end
+WindUI_ThemeMod.Objects[desc]=nil
 end
-if j.Objects[WindUI_Search_child] then j.Objects[WindUI_Search_child]=nil end
+WindUI_ThemeMod.Objects[WindUI_Search_child]=nil
+end
+end)
+pcall(function()
 WindUI_Search_child:Destroy()
+end)
 end
 end
 end
@@ -10707,6 +10722,7 @@ return nil
 end
 
 local function WindUI_Search_Update()
+pcall(function()
 local WindUI_Search_query=WindUI_Search_Box.Text:lower()
 WindUI_Search_ClearResults()
 
@@ -10845,6 +10861,7 @@ end)
 end
 
 WindUI_Search_Results.Visible=true
+end)
 end
 
 af.AddSignal(WindUI_Search_Box:GetPropertyChangedSignal("Text"),WindUI_Search_Update)
