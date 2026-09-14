@@ -207,18 +207,13 @@ end
 local WindUI_transProp=WindUI_TransparencySiblingProp[r]
 if WindUI_transProp and type(u)=="string" and WindUI_TransparencyRoleProp[u]==r then
 pcall(function()
--- Always resolve to a concrete value (default: fully opaque) instead of skipping when
--- the active theme doesn't define one — otherwise a transparency picked while "Custom"
--- was active stays stuck on the object forever after switching to Dark/Light/etc, which
--- looked like Custom's colors "bleeding" into other themes.
 local WindUI_transVal=j.Theme and j.Theme[u.."Transparency"]
-if typeof(WindUI_transVal)~="number" then
-WindUI_transVal=0
-end
+if typeof(WindUI_transVal)=="number" then
 if not m then
 p.Object[WindUI_transProp]=WindUI_transVal
 else
 j.Tween(p.Object,0.08,{[WindUI_transProp]=WindUI_transVal}):Play()
+end
 end
 end)
 end
@@ -5289,10 +5284,9 @@ end
 
 function aj.Set(am,an)
 if ak then
-aa.SafeCallback(aj.Callback,an)
-
-al.Frame.Frame.TextBox.Text=an
 aj.Value=an
+al.Frame.Frame.TextBox.Text=an
+aa.SafeCallback(aj.Callback,an)
 end
 end
 function aj.SetPlaceholder(am,an)
@@ -9565,21 +9559,21 @@ WindUI_Search_Box,
 
 local WindUI_Search_Results=ag("ScrollingFrame",{
 Name="SearchResults",
-Size=UDim2.new(0,260,0,0),
-Position=UDim2.new(0.5,0,1,8),
+Size=UDim2.new(0,300,0,0),
+Position=UDim2.new(0,0,0,0),
 AnchorPoint=Vector2.new(0.5,0),
 BackgroundTransparency=0,
 BorderSizePixel=0,
 ThemeTag={BackgroundColor3="Dialog",ScrollBarImageColor3="Text"},
 Visible=false,
-ZIndex=1000,
+ZIndex=999999,
 CanvasSize=UDim2.new(0,0,0,0),
 ScrollBarThickness=3,
 ScrollBarImageTransparency=0.3,
 ScrollingDirection=Enum.ScrollingDirection.Y,
 Active=true,
 Selectable=true,
-Parent=WindUI_Search_Container,
+Parent=ao.UIElements.Main,
 },{
 ag("UICorner",{CornerRadius=UDim.new(0,10)}),
 ag("UIStroke",{
@@ -9591,6 +9585,17 @@ ThemeTag={Color="Outline"},
 ag("UIListLayout",{SortOrder=Enum.SortOrder.LayoutOrder,Padding=UDim.new(0,4)}),
 ag("UIPadding",{PaddingTop=UDim.new(0,6),PaddingBottom=UDim.new(0,6),PaddingLeft=UDim.new(0,6),PaddingRight=UDim.new(0,6)}),
 })
+
+local function WindUI_Search_UpdatePosition()
+if not WindUI_Search_Container or not ao.UIElements.Main then return end
+local cPos=WindUI_Search_Container.AbsolutePosition
+local mPos=ao.UIElements.Main.AbsolutePosition
+local cSize=WindUI_Search_Container.AbsoluteSize
+local relX=(cPos.X-mPos.X)+(cSize.X/2)
+local relY=(cPos.Y-mPos.Y)+cSize.Y+6
+WindUI_Search_Results.Position=UDim2.new(0,relX,0,relY)
+end
+af.AddSignal(WindUI_Search_Container:GetPropertyChangedSignal("AbsolutePosition"),WindUI_Search_UpdatePosition)
 
 local function WindUI_Search_GetMainFrame(WindUI_Search_el)
 if not WindUI_Search_el then return nil end
@@ -9732,6 +9737,8 @@ WindUI_Search_Results.Visible=false
 return
 end
 
+WindUI_Search_UpdatePosition()
+
 local WindUI_Search_matches={}
 for _,WindUI_Search_el in pairs(ao.AllElements)do
 local WindUI_Search_title=tostring(WindUI_Search_el.Title or""):lower()
@@ -9743,7 +9750,7 @@ end
 
 if #WindUI_Search_matches==0 then
 local WindUI_NoResult=ag("Frame",{
-Size=UDim2.new(1,0,0,32),
+Size=UDim2.new(1,0,0,34),
 BackgroundTransparency=1,
 Parent=WindUI_Search_Results,
 },{
@@ -9758,18 +9765,18 @@ FontFace=Font.new(af.Font,Enum.FontWeight.Medium),
 TextXAlignment=Enum.TextXAlignment.Center,
 })
 })
-WindUI_Search_Results.Size=UDim2.new(0,260,0,44)
-WindUI_Search_Results.CanvasSize=UDim2.new(0,0,0,44)
+WindUI_Search_Results.Size=UDim2.new(0,300,0,46)
+WindUI_Search_Results.CanvasSize=UDim2.new(0,0,0,46)
 WindUI_Search_Results.CanvasPosition=Vector2.new(0,0)
 WindUI_Search_Results.Visible=true
 return
 end
 
-local WindUI_itemH=32
+local WindUI_itemH=34
 local WindUI_visibleCount=math.min(#WindUI_Search_matches,6)
 local WindUI_visibleH=WindUI_visibleCount*WindUI_itemH+(WindUI_visibleCount-1)*4+12
 local WindUI_totalH=#WindUI_Search_matches*WindUI_itemH+(#WindUI_Search_matches-1)*4+12
-WindUI_Search_Results.Size=UDim2.new(0,260,0,WindUI_visibleH)
+WindUI_Search_Results.Size=UDim2.new(0,300,0,WindUI_visibleH)
 WindUI_Search_Results.CanvasSize=UDim2.new(0,0,0,WindUI_totalH)
 WindUI_Search_Results.CanvasPosition=Vector2.new(0,0)
 
@@ -9780,14 +9787,14 @@ local WindUI_iconName=WindUI_Search_TypeIcons[WindUI_elType] or"search"
 local WindUI_tabName=WindUI_Search_GetTabName(WindUI_Search_el)
 
 local WindUI_Search_item=ag("TextButton",{
-Size=UDim2.new(1,0,0,32),
+Size=UDim2.new(1,0,0,34),
 BackgroundTransparency=1,
 AutoButtonColor=false,
 Text="",
 ThemeTag={BackgroundColor3="Text"},
 Parent=WindUI_Search_Results,
 },{
-ag("UICorner",{CornerRadius=UDim.new(0,6)}),
+ag("UICorner",{CornerRadius=UDim.new(0,7)}),
 })
 
 local WindUI_iconImg=nil
@@ -9801,11 +9808,11 @@ WindUI_iconImg.Parent=WindUI_Search_item
 end
 end)
 
-local WindUI_titleOffset=WindUI_iconImg and 30 or 10
-local WindUI_titleRightOffset=WindUI_tabName and-65 or-8
+local WindUI_titleOffset=WindUI_iconImg and 32 or 10
+local WindUI_rightPadding=WindUI_tabName and 82 or 10
 
 ag("TextLabel",{
-Size=UDim2.new(1,-WindUI_titleOffset+WindUI_titleRightOffset,1,0),
+Size=UDim2.new(1,-WindUI_titleOffset-WindUI_rightPadding,1,0),
 Position=UDim2.new(0,WindUI_titleOffset,0,0),
 BackgroundTransparency=1,
 Text=tostring(WindUI_Search_el.Title or"?"),
@@ -9818,23 +9825,32 @@ Parent=WindUI_Search_item,
 })
 
 if WindUI_tabName then
+local WindUI_tabBadge=ag("Frame",{
+Size=UDim2.new(0,70,0,20),
+Position=UDim2.new(1,-6,0.5,0),
+AnchorPoint=Vector2.new(1,0.5),
+BackgroundTransparency=0.88,
+ThemeTag={BackgroundColor3="Text"},
+Parent=WindUI_Search_item,
+},{
+ag("UICorner",{CornerRadius=UDim.new(0,5)}),
 ag("TextLabel",{
-Size=UDim2.new(0,60,1,0),
-Position=UDim2.new(1,-8,0,0),
-AnchorPoint=Vector2.new(1,0),
+Size=UDim2.new(1,-8,1,0),
+Position=UDim2.new(0.5,0,0.5,0),
+AnchorPoint=Vector2.new(0.5,0.5),
 BackgroundTransparency=1,
 Text=WindUI_tabName,
-TextSize=11,
+TextSize=10,
 TextTruncate=Enum.TextTruncate.AtEnd,
-TextXAlignment=Enum.TextXAlignment.Right,
+TextXAlignment=Enum.TextXAlignment.Center,
 ThemeTag={TextColor3="Placeholder"},
-FontFace=Font.new(af.Font,Enum.FontWeight.Regular),
-Parent=WindUI_Search_item,
+FontFace=Font.new(af.Font,Enum.FontWeight.Medium),
+}),
 })
 end
 
 af.AddSignal(WindUI_Search_item.MouseEnter,function()
-ah(WindUI_Search_item,0.1,{BackgroundTransparency=0.92}):Play()
+ah(WindUI_Search_item,0.1,{BackgroundTransparency=0.9}):Play()
 end)
 af.AddSignal(WindUI_Search_item.MouseLeave,function()
 ah(WindUI_Search_item,0.1,{BackgroundTransparency=1}):Play()
@@ -9857,6 +9873,23 @@ af.AddSignal(WindUI_Search_Box:GetPropertyChangedSignal("Text"),WindUI_Search_Up
 af.AddSignal(WindUI_Search_Box.Focused,function()
 if WindUI_Search_Box.Text~="" and not WindUI_Search_Results.Visible then
 WindUI_Search_Update()
+end
+end)
+
+af.AddSignal(game:GetService("UserInputService").InputBegan,function(input)
+if input.UserInputType==Enum.UserInputType.MouseButton1 or input.UserInputType==Enum.UserInputType.Touch then
+if WindUI_Search_Results.Visible then
+local mousePos=input.Position
+local rPos=WindUI_Search_Results.AbsolutePosition
+local rSize=WindUI_Search_Results.AbsoluteSize
+local cPos=WindUI_Search_Container.AbsolutePosition
+local cSize=WindUI_Search_Container.AbsoluteSize
+local inResults=(mousePos.X>=rPos.X and mousePos.X<=rPos.X+rSize.X and mousePos.Y>=rPos.Y and mousePos.Y<=rPos.Y+rSize.Y)
+local inContainer=(mousePos.X>=cPos.X and mousePos.X<=cPos.X+cSize.X and mousePos.Y>=cPos.Y and mousePos.Y<=cPos.Y+cSize.Y)
+if not inResults and not inContainer then
+WindUI_Search_Results.Visible=false
+end
+end
 end
 end)
 
