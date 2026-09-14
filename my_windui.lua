@@ -194,6 +194,12 @@ Accent="BackgroundColor3",
 }
 function j.UpdateTheme(l,m)
 local function ApplyTheme(p)
+if not p or not p.Object then return end
+if not pcall(function() return p.Object.Parent end) or not p.Object.Parent then
+j.Objects[p.Object]=nil
+return
+end
+pcall(function()
 for r,u in pairs(p.Properties or{})do
 local v=j.GetThemeProperty(u,j.Theme)
 if v then
@@ -223,6 +229,7 @@ end
 end)
 end
 end
+end)
 end
 
 if l then
@@ -908,7 +915,7 @@ Outline="#09090b",
 Text="#000000",
 Placeholder="#777777",
 Background="#e4e4e7",
-Button="#18181b",
+Button="#d4d4d8",
 Icon="#52525b",
 },
 Rose={
@@ -7498,6 +7505,17 @@ an.ElementsModule=ai local
 
 ao, ap=al:New(an)
 
+if type(ap)=="table" then
+ap.__type=ap.__type or ao or ak
+ap.Tab=an.Tab
+ap.Window=af
+ap.Index=an.Index
+ap.GlobalIndex=an.GlobalIndex
+if an.Title and not ap.Title then
+ap.Title=an.Title
+end
+end
+
 
 local aq
 for ar,at in pairs(ap)do
@@ -9301,18 +9319,19 @@ Active=true,
 },{
 ao.AcrylicPaint.Frame,
 ax,
+aC,
 af.NewRoundFrame(ao.UICorner,"Squircle",{
 ImageTransparency=1,
 Size=UDim2.new(1,0,1,-240),
 AnchorPoint=Vector2.new(0.5,0.5),
 Position=UDim2.new(0.5,0,0.5,0),
 Name="Background",
+ZIndex=1,
 ThemeTag={
 ImageColor3="Background"
 },
 
 },{
-aC,
 aE,
 au,
 
@@ -9554,24 +9573,31 @@ WindUI_Search_Box,
 
 local WindUI_Search_Results=ag("ScrollingFrame",{
 Name="SearchResults",
-Size=UDim2.new(0,240,0,0),
-Position=UDim2.new(0,0,1,6),
+Size=UDim2.new(0,260,0,0),
+Position=UDim2.new(0.5,0,1,8),
+AnchorPoint=Vector2.new(0.5,0),
 BackgroundTransparency=0,
 BorderSizePixel=0,
 ThemeTag={BackgroundColor3="Dialog",ScrollBarImageColor3="Text"},
 Visible=false,
 ZIndex=1000,
 CanvasSize=UDim2.new(0,0,0,0),
-ScrollBarThickness=4,
-ScrollBarImageTransparency=0,
+ScrollBarThickness=3,
+ScrollBarImageTransparency=0.3,
 ScrollingDirection=Enum.ScrollingDirection.Y,
 Active=true,
 Selectable=true,
 Parent=WindUI_Search_Container,
 },{
-ag("UICorner",{CornerRadius=UDim.new(0,8)}),
-ag("UIListLayout",{SortOrder=Enum.SortOrder.LayoutOrder,Padding=UDim.new(0,2)}),
-ag("UIPadding",{PaddingTop=UDim.new(0,4),PaddingBottom=UDim.new(0,4),PaddingLeft=UDim.new(0,4),PaddingRight=UDim.new(0,4)}),
+ag("UICorner",{CornerRadius=UDim.new(0,10)}),
+ag("UIStroke",{
+Thickness=1,
+ApplyStrokeMode=Enum.ApplyStrokeMode.Border,
+Transparency=0.85,
+ThemeTag={Color="Outline"},
+}),
+ag("UIListLayout",{SortOrder=Enum.SortOrder.LayoutOrder,Padding=UDim.new(0,4)}),
+ag("UIPadding",{PaddingTop=UDim.new(0,6),PaddingBottom=UDim.new(0,6),PaddingLeft=UDim.new(0,6),PaddingRight=UDim.new(0,6)}),
 })
 
 local function WindUI_Search_GetMainFrame(WindUI_Search_el)
@@ -9597,7 +9623,11 @@ end
 
 local function WindUI_Search_ClearResults()
 for _,WindUI_Search_child in ipairs(WindUI_Search_Results:GetChildren())do
-if WindUI_Search_child:IsA("TextButton")then
+if WindUI_Search_child:IsA("GuiObject") and not WindUI_Search_child:IsA("UIListLayout") and not WindUI_Search_child:IsA("UIPadding") and not WindUI_Search_child:IsA("UICorner") and not WindUI_Search_child:IsA("UIStroke") then
+for _,desc in ipairs(WindUI_Search_child:GetDescendants()) do
+if j.Objects[desc] then j.Objects[desc]=nil end
+end
+if j.Objects[WindUI_Search_child] then j.Objects[WindUI_Search_child]=nil end
 WindUI_Search_child:Destroy()
 end
 end
@@ -9637,7 +9667,7 @@ pcall(function()WindUI_Search_sec:Open()end)
 end
 end
 
-task.wait(0.08)
+task.wait(0.1)
 pcall(function()
 local WindUI_Search_canvas=WindUI_Search_realTab and WindUI_Search_realTab.UIElements and WindUI_Search_realTab.UIElements.ContainerFrame
 if WindUI_Search_canvas and WindUI_Search_canvas:IsA("ScrollingFrame") then
@@ -9652,6 +9682,7 @@ if not WindUI_Search_highlight then
 WindUI_Search_highlight=Instance.new("UIStroke")
 WindUI_Search_highlight.Name="WindUI_SearchHighlight"
 WindUI_Search_highlight.Thickness=2
+WindUI_Search_highlight.ApplyStrokeMode=Enum.ApplyStrokeMode.Border
 WindUI_Search_highlight.Parent=WindUI_Search_frame
 end
 local WindUI_Search_accent=(af.Theme and af.Theme.Accent)or"#733dd1"
@@ -9663,6 +9694,40 @@ WindUI_Search_highlight.Transparency=1
 end
 end)
 end)
+end
+
+local WindUI_Search_TypeIcons={
+Toggle="toggle-right",
+Checkboxtoggle="check-square",
+Slider="sliders-horizontal",
+Dropdown="chevrons-up-down",
+Multidropdown="chevrons-up-down",
+Button="square-mouse-pointer",
+Input="text-cursor-input",
+Textbox="text-cursor-input",
+Keybind="command",
+Colorpicker="palette",
+Section="folder",
+Textinfo="info",
+TextDivider="minus",
+Divider="minus",
+Code="terminal",
+Paragraph="align-left",
+}
+
+local function WindUI_Search_GetTabName(WindUI_Search_el)
+local WindUI_Search_cur=WindUI_Search_el
+while WindUI_Search_cur do
+if WindUI_Search_cur.Title and WindUI_Search_cur.UIElements and WindUI_Search_cur.UIElements.ContainerFrame then
+return tostring(WindUI_Search_cur.Title)
+end
+if WindUI_Search_cur.Tab and WindUI_Search_cur.Tab~=WindUI_Search_cur then
+WindUI_Search_cur=WindUI_Search_cur.Tab
+else
+break
+end
+end
+return nil
 end
 
 af.AddSignal(WindUI_Search_Box:GetPropertyChangedSignal("Text"),function()
@@ -9679,35 +9744,106 @@ for _,WindUI_Search_el in pairs(ao.AllElements)do
 local WindUI_Search_title=tostring(WindUI_Search_el.Title or""):lower()
 if WindUI_Search_title~="" and WindUI_Search_title:find(WindUI_Search_query,1,true) then
 table.insert(WindUI_Search_matches,WindUI_Search_el)
-if #WindUI_Search_matches>=50 then break end
+if #WindUI_Search_matches>=30 then break end
 end
 end
 
 if #WindUI_Search_matches==0 then
-WindUI_Search_Results.Visible=false
+local WindUI_NoResult=ag("Frame",{
+Size=UDim2.new(1,0,0,32),
+BackgroundTransparency=1,
+Parent=WindUI_Search_Results,
+},{
+ag("TextLabel",{
+Size=UDim2.new(1,0,1,0),
+BackgroundTransparency=1,
+Text="No results found",
+TextSize=12,
+TextColor3=Color3.fromRGB(150,150,150),
+ThemeTag={TextColor3="Placeholder"},
+FontFace=Font.new(af.Font,Enum.FontWeight.Medium),
+TextXAlignment=Enum.TextXAlignment.Center,
+})
+})
+WindUI_Search_Results.Size=UDim2.new(0,260,0,44)
+WindUI_Search_Results.CanvasSize=UDim2.new(0,0,0,44)
+WindUI_Search_Results.Visible=true
 return
 end
 
-local WindUI_itemH=28
-local WindUI_totalH=#WindUI_Search_matches*WindUI_itemH+8
-local WindUI_visibleH=math.clamp(#WindUI_Search_matches,1,7)*WindUI_itemH+8
-WindUI_Search_Results.Size=UDim2.new(0,240,0,WindUI_visibleH)
+local WindUI_itemH=32
+local WindUI_visibleCount=math.min(#WindUI_Search_matches,6)
+local WindUI_visibleH=WindUI_visibleCount*WindUI_itemH+(WindUI_visibleCount-1)*4+12
+local WindUI_totalH=#WindUI_Search_matches*WindUI_itemH+(#WindUI_Search_matches-1)*4+12
+WindUI_Search_Results.Size=UDim2.new(0,260,0,WindUI_visibleH)
 WindUI_Search_Results.CanvasSize=UDim2.new(0,0,0,WindUI_totalH)
 
 for _,WindUI_Search_el in ipairs(WindUI_Search_matches)do
+local WindUI_elType=tostring(WindUI_Search_el.__type or"")
+local WindUI_iconName=WindUI_Search_TypeIcons[WindUI_elType] or"search"
+local WindUI_tabName=WindUI_Search_GetTabName(WindUI_Search_el)
+
 local WindUI_Search_item=ag("TextButton",{
-Size=UDim2.new(1,0,0,26),
-BackgroundTransparency=.9,
+Size=UDim2.new(1,0,0,32),
+BackgroundTransparency=1,
 AutoButtonColor=false,
-Text=tostring(WindUI_Search_el.Title or"?"),
-TextSize=13,
-TextXAlignment=Enum.TextXAlignment.Left,
-ThemeTag={BackgroundColor3="Button",TextColor3="Text"},
+Text="",
+ThemeTag={BackgroundColor3="Text"},
 Parent=WindUI_Search_Results,
 },{
 ag("UICorner",{CornerRadius=UDim.new(0,6)}),
-ag("UIPadding",{PaddingLeft=UDim.new(0,8)}),
 })
+
+local WindUI_iconImg=nil
+pcall(function()
+WindUI_iconImg=af.Image(WindUI_iconName,WindUI_iconName,0,ao.Folder,"SearchIcon",true)
+if WindUI_iconImg then
+WindUI_iconImg.Size=UDim2.new(0,16,0,16)
+WindUI_iconImg.Position=UDim2.new(0,8,0.5,0)
+WindUI_iconImg.AnchorPoint=Vector2.new(0,0.5)
+WindUI_iconImg.Parent=WindUI_Search_item
+end
+end)
+
+local WindUI_titleOffset=WindUI_iconImg and 30 or 10
+local WindUI_titleRightOffset=WindUI_tabName and-65 or-8
+
+ag("TextLabel",{
+Size=UDim2.new(1,-WindUI_titleOffset+WindUI_titleRightOffset,1,0),
+Position=UDim2.new(0,WindUI_titleOffset,0,0),
+BackgroundTransparency=1,
+Text=tostring(WindUI_Search_el.Title or"?"),
+TextSize=13,
+TextTruncate=Enum.TextTruncate.AtEnd,
+TextXAlignment=Enum.TextXAlignment.Left,
+ThemeTag={TextColor3="Text"},
+FontFace=Font.new(af.Font,Enum.FontWeight.Medium),
+Parent=WindUI_Search_item,
+})
+
+if WindUI_tabName then
+ag("TextLabel",{
+Size=UDim2.new(0,60,1,0),
+Position=UDim2.new(1,-8,0,0),
+AnchorPoint=Vector2.new(1,0),
+BackgroundTransparency=1,
+Text=WindUI_tabName,
+TextSize=11,
+TextTruncate=Enum.TextTruncate.AtEnd,
+TextXAlignment=Enum.TextXAlignment.Right,
+ThemeTag={TextColor3="Placeholder"},
+FontFace=Font.new(af.Font,Enum.FontWeight.Regular),
+Parent=WindUI_Search_item,
+})
+end
+
+af.AddSignal(WindUI_Search_item.MouseEnter,function()
+ah(WindUI_Search_item,0.1,{BackgroundTransparency=0.92}):Play()
+end)
+af.AddSignal(WindUI_Search_item.MouseLeave,function()
+ah(WindUI_Search_item,0.1,{BackgroundTransparency=1}):Play()
+end)
+
 af.AddSignal(WindUI_Search_item.MouseButton1Click,function()
 WindUI_Search_Box.Text=""
 WindUI_Search_Results.Visible=false
