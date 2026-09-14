@@ -194,12 +194,6 @@ Accent="BackgroundColor3",
 }
 function j.UpdateTheme(l,m)
 local function ApplyTheme(p)
-if not p or not p.Object then return end
-if not pcall(function() return p.Object.Parent end) or not p.Object.Parent then
-j.Objects[p.Object]=nil
-return
-end
-pcall(function()
 for r,u in pairs(p.Properties or{})do
 local v=j.GetThemeProperty(u,j.Theme)
 if v then
@@ -229,7 +223,6 @@ end
 end)
 end
 end
-end)
 end
 
 if l then
@@ -915,7 +908,7 @@ Outline="#09090b",
 Text="#000000",
 Placeholder="#777777",
 Background="#e4e4e7",
-Button="#d4d4d8",
+Button="#18181b",
 Icon="#52525b",
 },
 Rose={
@@ -9319,19 +9312,18 @@ Active=true,
 },{
 ao.AcrylicPaint.Frame,
 ax,
-aC,
 af.NewRoundFrame(ao.UICorner,"Squircle",{
 ImageTransparency=1,
 Size=UDim2.new(1,0,1,-240),
 AnchorPoint=Vector2.new(0.5,0.5),
 Position=UDim2.new(0.5,0,0.5,0),
 Name="Background",
-ZIndex=1,
 ThemeTag={
 ImageColor3="Background"
 },
 
 },{
+aC,
 aE,
 au,
 
@@ -9622,6 +9614,7 @@ return nil
 end
 
 local function WindUI_Search_ClearResults()
+WindUI_Search_Results.CanvasPosition=Vector2.new(0,0)
 for _,WindUI_Search_child in ipairs(WindUI_Search_Results:GetChildren())do
 if WindUI_Search_child:IsA("GuiObject") and not WindUI_Search_child:IsA("UIListLayout") and not WindUI_Search_child:IsA("UIPadding") and not WindUI_Search_child:IsA("UICorner") and not WindUI_Search_child:IsA("UIStroke") then
 for _,desc in ipairs(WindUI_Search_child:GetDescendants()) do
@@ -9730,7 +9723,7 @@ end
 return nil
 end
 
-af.AddSignal(WindUI_Search_Box:GetPropertyChangedSignal("Text"),function()
+local function WindUI_Search_Update()
 local WindUI_Search_query=WindUI_Search_Box.Text:lower()
 WindUI_Search_ClearResults()
 
@@ -9767,6 +9760,7 @@ TextXAlignment=Enum.TextXAlignment.Center,
 })
 WindUI_Search_Results.Size=UDim2.new(0,260,0,44)
 WindUI_Search_Results.CanvasSize=UDim2.new(0,0,0,44)
+WindUI_Search_Results.CanvasPosition=Vector2.new(0,0)
 WindUI_Search_Results.Visible=true
 return
 end
@@ -9777,8 +9771,10 @@ local WindUI_visibleH=WindUI_visibleCount*WindUI_itemH+(WindUI_visibleCount-1)*4
 local WindUI_totalH=#WindUI_Search_matches*WindUI_itemH+(#WindUI_Search_matches-1)*4+12
 WindUI_Search_Results.Size=UDim2.new(0,260,0,WindUI_visibleH)
 WindUI_Search_Results.CanvasSize=UDim2.new(0,0,0,WindUI_totalH)
+WindUI_Search_Results.CanvasPosition=Vector2.new(0,0)
 
 for _,WindUI_Search_el in ipairs(WindUI_Search_matches)do
+pcall(function()
 local WindUI_elType=tostring(WindUI_Search_el.__type or"")
 local WindUI_iconName=WindUI_Search_TypeIcons[WindUI_elType] or"search"
 local WindUI_tabName=WindUI_Search_GetTabName(WindUI_Search_el)
@@ -9845,13 +9841,23 @@ ah(WindUI_Search_item,0.1,{BackgroundTransparency=1}):Play()
 end)
 
 af.AddSignal(WindUI_Search_item.MouseButton1Click,function()
-WindUI_Search_Box.Text=""
 WindUI_Search_Results.Visible=false
+WindUI_Search_Box.Text=""
+task.spawn(function()
 WindUI_Search_Jump(WindUI_Search_el)
+end)
+end)
 end)
 end
 
 WindUI_Search_Results.Visible=true
+end
+
+af.AddSignal(WindUI_Search_Box:GetPropertyChangedSignal("Text"),WindUI_Search_Update)
+af.AddSignal(WindUI_Search_Box.Focused,function()
+if WindUI_Search_Box.Text~="" and not WindUI_Search_Results.Visible then
+WindUI_Search_Update()
+end
 end)
 
 return WindUI_Search_Container
