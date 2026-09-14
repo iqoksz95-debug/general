@@ -7450,11 +7450,906 @@ function WindUI_ah.SetTitle(WindUI_aj,WindUI_ak)
 WindUI_ah.Title=WindUI_ak
 WindUI_ai.Text=WindUI_ak
 end
-return WindUI_ah.__type,WindUI_ah
+return"TextDivider",WindUI_ah
 end)
 if WindUI_ok then return WindUI_a,WindUI_b end
 warn("[WindUI] TextDivider failed: "..tostring(WindUI_a))
 return"TextDivider",{__type="TextDivider",Title=WindUI_ag.Title or"Divider"}
+end
+
+-- ToggleSlider: Combines a boolean switch and a numeric slider in a single row
+local WindUI_ToggleSlider={}
+function WindUI_ToggleSlider.New(WindUI_af,WindUI_ag)
+    local WindUI_ok,WindUI_resA,WindUI_resB=pcall(function()
+        local aa=a.load'a'
+        local ac=aa.New
+        local ad=aa.Tween
+        local createSwitch=a.load'B'.New
+
+        local ai={
+            __type="ToggleSlider",
+            Title=WindUI_ag.Title or"ToggleSlider",
+            Desc=WindUI_ag.Desc or nil,
+            Locked=WindUI_ag.Locked or false,
+            Step=WindUI_ag.Step or 1,
+            Min=WindUI_ag.Min or(WindUI_ag.Value and WindUI_ag.Value.Min)or 0,
+            Max=WindUI_ag.Max or(WindUI_ag.Value and WindUI_ag.Value.Max)or 100,
+            Callback=WindUI_ag.Callback or function()end,
+            UIElements={},
+        }
+
+        local initToggle=false
+        local initSlider=ai.Min
+        if type(WindUI_ag.Value)=="table" then
+            initToggle=WindUI_ag.Value.Toggle or WindUI_ag.Value[1] or false
+            initSlider=WindUI_ag.Value.Slider or WindUI_ag.Value[2] or ai.Min
+        elseif type(WindUI_ag.Value)=="boolean" then
+            initToggle=WindUI_ag.Value
+            initSlider=WindUI_ag.Slider or ai.Min
+        end
+        ai.Value={Toggle=initToggle,Slider=initSlider}
+
+        local isLocked=not ai.Locked
+        local isDragging=false
+        local currentVal=initSlider
+        local currentToggle=initToggle
+
+        local isFloat=ai.Step%1~=0
+        local function FormatVal(v)
+            if isFloat then return string.format("%.2f",v) else return tostring(math.floor(v+0.5)) end
+        end
+        local function CalcVal(v)
+            return math.floor(v/ai.Step+0.5)*ai.Step
+        end
+
+        ai.Frame=a.load'y'{
+            Title=ai.Title,
+            Desc=ai.Desc,
+            Window=WindUI_ag.Window,
+            Parent=WindUI_ag.Parent,
+            TextOffset=210,
+            Hover=false,
+            Tab=WindUI_ag.Tab,
+            Index=WindUI_ag.Index,
+            ElementTable=ai,
+        }
+
+        local mainRight=ai.Frame.UIElements.Main
+
+        local trackWidth=100
+        local sliderFr=ac("Frame",{
+            Size=UDim2.new(0,trackWidth,0,4),
+            BackgroundColor3=Color3.new(1,1,1),
+            BackgroundTransparency=0.88,
+            ThemeTag={BackgroundColor3="Text"},
+            AnchorPoint=Vector2.new(0,0.5),
+            Position=UDim2.new(0,0,0.5,0),
+        },{
+            ac("UICorner",{CornerRadius=UDim.new(1,0)}),
+        })
+
+        local fillAlpha=math.clamp((currentVal-ai.Min)/(ai.Max-ai.Min),0,1)
+        local fillFr=ac("Frame",{
+            Size=UDim2.new(fillAlpha,0,1,0),
+            BackgroundColor3=Color3.new(1,1,1),
+            BackgroundTransparency=0,
+            ThemeTag={BackgroundColor3="Accent"},
+            Parent=sliderFr,
+        },{
+            ac("UICorner",{CornerRadius=UDim.new(1,0)}),
+            ac("Frame",{
+                Size=UDim2.new(0,12,0,12),
+                AnchorPoint=Vector2.new(0.5,0.5),
+                Position=UDim2.new(1,0,0.5,0),
+                BackgroundColor3=Color3.new(1,1,1),
+                BackgroundTransparency=0,
+                ThemeTag={BackgroundColor3="Text"},
+            },{
+                ac("UICorner",{CornerRadius=UDim.new(1,0)}),
+            }),
+        })
+
+        local valueLabel=ac("TextLabel",{
+            Size=UDim2.new(0,34,0,18),
+            Text=FormatVal(currentVal),
+            TextSize=12,
+            TextXAlignment=Enum.TextXAlignment.Right,
+            BackgroundTransparency=1,
+            ThemeTag={TextColor3="Text"},
+            TextTransparency=0.3,
+            FontFace=Font.new(aa.Font,Enum.FontWeight.Medium),
+        })
+
+        local sliderRow=ac("Frame",{
+            Size=UDim2.new(0,trackWidth+42,0,26),
+            BackgroundTransparency=1,
+        },{
+            ac("UIListLayout",{
+                FillDirection=Enum.FillDirection.Horizontal,
+                VerticalAlignment=Enum.VerticalAlignment.Center,
+                Padding=UDim.new(0,6),
+            }),
+            sliderFr,
+            valueLabel,
+        })
+
+        local switchFr,switchObj=createSwitch(currentToggle,WindUI_ag.Icon,mainRight,function(st)
+            if isLocked then
+                currentToggle=st
+                ai.Value.Toggle=st
+                aa.SafeCallback(ai.Callback,ai.Value)
+            end
+        end)
+
+        ac("UIListLayout",{
+            FillDirection=Enum.FillDirection.Horizontal,
+            VerticalAlignment=Enum.VerticalAlignment.Center,
+            HorizontalAlignment=Enum.HorizontalAlignment.Right,
+            Padding=UDim.new(0,10),
+            Parent=mainRight,
+        })
+        sliderRow.Parent=mainRight
+
+        function ai.SetSlider(self,val,inputObj)
+            if not isLocked then return end
+            val=math.clamp(tonumber(val) or ai.Min,ai.Min,ai.Max)
+            local pct=math.clamp((val-ai.Min)/(ai.Max-ai.Min),0,1)
+            val=CalcVal(ai.Min+pct*(ai.Max-ai.Min))
+            if val~=currentVal then
+                currentVal=val
+                ai.Value.Slider=val
+                valueLabel.Text=FormatVal(val)
+                ad(fillFr,0.06,{Size=UDim2.new(pct,0,1,0)}):Play()
+                aa.SafeCallback(ai.Callback,ai.Value)
+            end
+            if inputObj then
+                local scrollParent=ai.Frame.Parent:IsA("ScrollingFrame") and ai.Frame.Parent or (ai.Frame.Parent.Parent:IsA("ScrollingFrame") and ai.Frame.Parent.Parent or nil)
+                if scrollParent then scrollParent.ScrollingEnabled=false end
+                isDragging=true
+                local moveConn,endConn
+                local isTouch=(inputObj.UserInputType==Enum.UserInputType.Touch)
+                moveConn=game:GetService("RunService").RenderStepped:Connect(function()
+                    local mouseX=isTouch and inputObj.Position.X or game:GetService("UserInputService"):GetMouseLocation().X
+                    local tPos=sliderFr.AbsolutePosition.X
+                    local tSize=sliderFr.AbsoluteSize.X
+                    local p=math.clamp((mouseX-tPos)/tSize,0,1)
+                    local v=CalcVal(ai.Min+p*(ai.Max-ai.Min))
+                    if v~=currentVal then
+                        currentVal=v
+                        ai.Value.Slider=v
+                        valueLabel.Text=FormatVal(v)
+                        ad(fillFr,0.06,{Size=UDim2.new(p,0,1,0)}):Play()
+                        aa.SafeCallback(ai.Callback,ai.Value)
+                    end
+                end)
+                endConn=game:GetService("UserInputService").InputEnded:Connect(function(endedInput)
+                    if (endedInput.UserInputType==Enum.UserInputType.MouseButton1 or endedInput.UserInputType==Enum.UserInputType.Touch) and endedInput==inputObj then
+                        moveConn:Disconnect()
+                        endConn:Disconnect()
+                        isDragging=false
+                        if scrollParent then scrollParent.ScrollingEnabled=true end
+                    end
+                end)
+            end
+        end
+
+        function ai.SetToggle(self,st,triggerCb)
+            if not isLocked then return end
+            currentToggle=st
+            ai.Value.Toggle=st
+            switchObj:Set(st,triggerCb~=false)
+            if triggerCb~=false then
+                aa.SafeCallback(ai.Callback,ai.Value)
+            end
+        end
+
+        function ai.Set(self,valTable,triggerCb)
+            if type(valTable)=="table" then
+                local sVal = valTable.Slider ~= nil and valTable.Slider or valTable.slider
+                local tVal = valTable.Toggle ~= nil and valTable.Toggle or valTable.toggle
+                if sVal~=nil then ai:SetSlider(sVal) end
+                if tVal~=nil then ai:SetToggle(tVal,triggerCb) end
+            elseif type(valTable)=="boolean" then
+                ai:SetToggle(valTable,triggerCb)
+            elseif type(valTable)=="number" then
+                ai:SetSlider(valTable)
+            end
+        end
+
+        aa.AddSignal(sliderFr.InputBegan,function(inp)
+            if (inp.UserInputType==Enum.UserInputType.MouseButton1 or inp.UserInputType==Enum.UserInputType.Touch) and isLocked then
+                ai:SetSlider(currentVal,inp)
+            end
+        end)
+
+        function ai.Lock(self)
+            ai.Locked=true
+            isLocked=false
+            return ai.Frame:Lock()
+        end
+        function ai.Unlock(self)
+            ai.Locked=false
+            isLocked=true
+            return ai.Frame:Unlock()
+        end
+        if ai.Locked then ai:Lock() end
+
+        return ai.__type,ai
+    end)
+    if WindUI_ok then return WindUI_resA,WindUI_resB end
+    warn("[WindUI] ToggleSlider failed: "..tostring(WindUI_resA))
+    return"ToggleSlider",{__type="ToggleSlider",Title=WindUI_ag.Title or"ToggleSlider"}
+end
+
+-- ToggleColorpicker: Combines a boolean switch and a colorpicker swatch
+local WindUI_ToggleColorpicker={}
+function WindUI_ToggleColorpicker.New(WindUI_af,WindUI_ag)
+    local WindUI_ok,WindUI_resA,WindUI_resB=pcall(function()
+        local aa=a.load'a'
+        local ac=aa.New
+        local createSwitch=a.load'B'.New
+        local colorpickerModule=a.load'L'
+
+        local initToggle=false
+        local initColor=Color3.fromRGB(255,255,255)
+        local initTransparency=0
+
+        if type(WindUI_ag.Value)=="table" then
+            initToggle=WindUI_ag.Value.Toggle or WindUI_ag.Value[1] or false
+            if WindUI_ag.Value.Color then initColor=WindUI_ag.Value.Color end
+            if WindUI_ag.Value.Transparency then initTransparency=WindUI_ag.Value.Transparency end
+        elseif type(WindUI_ag.Value)=="boolean" then
+            initToggle=WindUI_ag.Value
+        end
+        if WindUI_ag.Default then initColor=WindUI_ag.Default end
+        if WindUI_ag.Transparency then initTransparency=WindUI_ag.Transparency end
+
+        local ai={
+            __type="ToggleColorpicker",
+            Title=WindUI_ag.Title or"ToggleColorpicker",
+            Desc=WindUI_ag.Desc or nil,
+            Locked=WindUI_ag.Locked or false,
+            Default=initColor,
+            Transparency=initTransparency,
+            Callback=WindUI_ag.Callback or function()end,
+            UIElements={},
+        }
+        ai.Value={Toggle=initToggle,Color=initColor,Transparency=initTransparency}
+
+        local isLocked=not ai.Locked
+        local currentToggle=initToggle
+        local currentColor=initColor
+        local currentTransparency=initTransparency
+
+        ai.Frame=a.load'y'{
+            Title=ai.Title,
+            Desc=ai.Desc,
+            Window=WindUI_ag.Window,
+            Parent=WindUI_ag.Parent,
+            TextOffset=95,
+            Hover=false,
+            Tab=WindUI_ag.Tab,
+            Index=WindUI_ag.Index,
+            ElementTable=ai,
+        }
+
+        local mainRight=ai.Frame.UIElements.Main
+
+        local colorBtn=aa.NewRoundFrame(8,"Squircle",{
+            ImageTransparency=currentTransparency,
+            Active=true,
+            ImageColor3=currentColor,
+            Size=UDim2.new(0,26,0,26),
+            ZIndex=2,
+        },nil,true)
+
+        local switchFr,switchObj=createSwitch(currentToggle,WindUI_ag.Icon,mainRight,function(st)
+            if isLocked then
+                currentToggle=st
+                ai.Value.Toggle=st
+                aa.SafeCallback(ai.Callback,ai.Value)
+            end
+        end)
+
+        ac("UIListLayout",{
+            FillDirection=Enum.FillDirection.Horizontal,
+            VerticalAlignment=Enum.VerticalAlignment.Center,
+            HorizontalAlignment=Enum.HorizontalAlignment.Right,
+            Padding=UDim.new(0,10),
+            Parent=mainRight,
+        })
+        colorBtn.Parent=mainRight
+
+        function ai.UpdateColor(self,col,trans)
+            if col then currentColor=col end
+            if trans~=nil then currentTransparency=trans end
+            colorBtn.ImageColor3=currentColor
+            colorBtn.ImageTransparency=currentTransparency
+            ai.Default=currentColor
+            ai.Transparency=currentTransparency
+            ai.Value.Color=currentColor
+            ai.Value.Transparency=currentTransparency
+            aa.SafeCallback(ai.Callback,ai.Value)
+        end
+
+        function ai.SetToggle(self,st,triggerCb)
+            if not isLocked then return end
+            currentToggle=st
+            ai.Value.Toggle=st
+            switchObj:Set(st,triggerCb~=false)
+            if triggerCb~=false then
+                aa.SafeCallback(ai.Callback,ai.Value)
+            end
+        end
+
+        function ai.Set(self,valTable,triggerCb)
+            if type(valTable)=="table" then
+                local tVal = valTable.Toggle ~= nil and valTable.Toggle or valTable.toggle
+                if tVal~=nil then ai:SetToggle(tVal,triggerCb) end
+                if valTable.Color or valTable.color then
+                    local c=valTable.Color or valTable.color
+                    if typeof(c)=="string" then c=Color3.fromHex(c) end
+                    ai:UpdateColor(c,valTable.Transparency or valTable.transparency)
+                end
+            elseif type(valTable)=="boolean" then
+                ai:SetToggle(valTable,triggerCb)
+            end
+        end
+
+        aa.AddSignal(colorBtn.MouseButton1Click,function()
+            if isLocked then
+                colorpickerModule.Colorpicker(ai,ai,WindUI_ag.Window,function(newCol,newTrans)
+                    ai:UpdateColor(newCol,newTrans)
+                end)
+            end
+        end)
+
+        function ai.Lock(self)
+            ai.Locked=true
+            isLocked=false
+            return ai.Frame:Lock()
+        end
+        function ai.Unlock(self)
+            ai.Locked=false
+            isLocked=true
+            return ai.Frame:Unlock()
+        end
+        if ai.Locked then ai:Lock() end
+
+        return ai.__type,ai
+    end)
+    if WindUI_ok then return WindUI_resA,WindUI_resB end
+    warn("[WindUI] ToggleColorpicker failed: "..tostring(WindUI_resA))
+    return"ToggleColorpicker",{__type="ToggleColorpicker",Title=WindUI_ag.Title or"ToggleColorpicker"}
+end
+
+-- ProgressBar: Smooth animated progress track with status label
+local WindUI_ProgressBar={}
+function WindUI_ProgressBar.New(WindUI_af,WindUI_ag)
+    local WindUI_ok,WindUI_resA,WindUI_resB=pcall(function()
+        local aa=a.load'a'
+        local ac=aa.New
+        local ad=aa.Tween
+
+        local curProg=math.clamp(tonumber(WindUI_ag.Progress or WindUI_ag.Value or 0) or 0,0,1)
+        local curStatus=WindUI_ag.Status or (tostring(math.floor(curProg*100)).."%")
+
+        local ai={
+            __type="ProgressBar",
+            Title=WindUI_ag.Title or"ProgressBar",
+            Desc=WindUI_ag.Desc or nil,
+            Progress=curProg,
+            Status=curStatus,
+            UIElements={},
+        }
+
+        ai.Frame=a.load'y'{
+            Title=ai.Title,
+            Desc=ai.Desc,
+            Window=WindUI_ag.Window,
+            Parent=WindUI_ag.Parent,
+            TextOffset=80,
+            Hover=false,
+            Tab=WindUI_ag.Tab,
+            Index=WindUI_ag.Index,
+            ElementTable=ai,
+        }
+
+        local statusLabel=ac("TextLabel",{
+            Size=UDim2.new(1,0,1,0),
+            Text=curStatus,
+            TextSize=13,
+            TextXAlignment=Enum.TextXAlignment.Right,
+            BackgroundTransparency=1,
+            ThemeTag={TextColor3="Placeholder"},
+            FontFace=Font.new(aa.Font,Enum.FontWeight.Medium),
+            Parent=ai.Frame.UIElements.Main,
+        })
+
+        local track=ac("Frame",{
+            Size=UDim2.new(1,0,0,8),
+            BackgroundColor3=Color3.new(1,1,1),
+            BackgroundTransparency=0.88,
+            ThemeTag={BackgroundColor3="Text"},
+            Parent=ai.Frame.UIElements.Container,
+        },{
+            ac("UICorner",{CornerRadius=UDim.new(1,0)}),
+        })
+
+        local fill=ac("Frame",{
+            Size=UDim2.new(curProg,0,1,0),
+            BackgroundColor3=Color3.new(1,1,1),
+            BackgroundTransparency=0,
+            ThemeTag={BackgroundColor3="Accent"},
+            Parent=track,
+        },{
+            ac("UICorner",{CornerRadius=UDim.new(1,0)}),
+        })
+
+        ai.UIElements.StatusLabel=statusLabel
+        ai.UIElements.Track=track
+        ai.UIElements.Fill=fill
+
+        function ai.Set(self,prog,stat)
+            prog=math.clamp(tonumber(prog) or 0,0,1)
+            ai.Progress=prog
+            if stat~=nil then
+                ai.Status=tostring(stat)
+            else
+                ai.Status=tostring(math.floor(prog*100)).."%"
+            end
+            statusLabel.Text=ai.Status
+            ad(fill,0.2,{Size=UDim2.new(prog,0,1,0)},Enum.EasingStyle.Quint,Enum.EasingDirection.Out):Play()
+        end
+
+        function ai.SetProgress(self,prog)
+            ai:Set(prog,nil)
+        end
+        function ai.SetStatus(self,stat)
+            ai:Set(ai.Progress,stat)
+        end
+
+        return ai.__type,ai
+    end)
+    if WindUI_ok then return WindUI_resA,WindUI_resB end
+    warn("[WindUI] ProgressBar failed: "..tostring(WindUI_resA))
+    return"ProgressBar",{__type="ProgressBar",Title=WindUI_ag.Title or"ProgressBar"}
+end
+
+-- StatCard: Metric cards with unlimited rows & dynamic wrapping
+local WindUI_StatCard={}
+function WindUI_StatCard.New(WindUI_af,WindUI_ag)
+    local WindUI_ok,WindUI_resA,WindUI_resB=pcall(function()
+        local aa=a.load'a'
+        local ac=aa.New
+
+        local cols=math.max(1,tonumber(WindUI_ag.Columns) or 2)
+        local ai={
+            __type="StatCard",
+            Title=WindUI_ag.Title or"StatCard",
+            Desc=WindUI_ag.Desc or nil,
+            Items=WindUI_ag.Items or{},
+            UIElements={Tiles={}},
+        }
+
+        ai.Frame=a.load'y'{
+            Title=ai.Title,
+            Desc=ai.Desc,
+            Window=WindUI_ag.Window,
+            Parent=WindUI_ag.Parent,
+            TextOffset=0,
+            Hover=false,
+            Tab=WindUI_ag.Tab,
+            Index=WindUI_ag.Index,
+            ElementTable=ai,
+        }
+
+        local gridHolder=ac("Frame",{
+            Size=UDim2.new(1,0,0,0),
+            AutomaticSize=Enum.AutomaticSize.Y,
+            BackgroundTransparency=1,
+            Parent=ai.Frame.UIElements.Container,
+        })
+
+        local gridLayout=ac("UIGridLayout",{
+            FillDirection=Enum.FillDirection.Horizontal,
+            SortOrder=Enum.SortOrder.LayoutOrder,
+            CellPadding=UDim2.new(0,8,0,8),
+            CellSize=UDim2.new(1/cols,-((cols-1)*8)/cols,0,50),
+            Parent=gridHolder,
+        })
+
+        local function CreateTile(itemData,order)
+            local itemTitle=tostring(itemData.Title or itemData.title or"Stat")
+            local itemVal=tostring(itemData.Value or itemData.value or"0")
+            local itemIcon=itemData.Icon or itemData.icon
+
+            local tile=aa.NewRoundFrame(8,"Squircle",{
+                Size=UDim2.new(1,0,1,0),
+                ImageTransparency=0.92,
+                ThemeTag={ImageColor3="Text"},
+                LayoutOrder=order or 1,
+                Parent=gridHolder,
+            })
+
+            ac("UIPadding",{
+                PaddingLeft=UDim.new(0,10),
+                PaddingRight=UDim.new(0,10),
+                PaddingTop=UDim.new(0,6),
+                PaddingBottom=UDim.new(0,6),
+                Parent=tile,
+            })
+
+            local iconImg=nil
+            if itemIcon and itemIcon~="" then
+                pcall(function()
+                    iconImg=aa.Image(itemIcon,itemIcon,0,WindUI_ag.Window.Folder,"StatIcon",true)
+                    if iconImg then
+                        iconImg.Size=UDim2.new(0,20,0,20)
+                        iconImg.AnchorPoint=Vector2.new(0,0.5)
+                        iconImg.Position=UDim2.new(0,0,0.5,0)
+                        iconImg.Parent=tile
+                    end
+                end)
+            end
+
+            local textLeftOffset=iconImg and 28 or 0
+            local titleLbl=ac("TextLabel",{
+                Size=UDim2.new(1,-textLeftOffset,0,14),
+                Position=UDim2.new(0,textLeftOffset,0,0),
+                Text=itemTitle,
+                TextSize=11,
+                TextTransparency=0.4,
+                TextXAlignment=Enum.TextXAlignment.Left,
+                TextTruncate=Enum.TextTruncate.AtEnd,
+                BackgroundTransparency=1,
+                ThemeTag={TextColor3="Placeholder"},
+                FontFace=Font.new(aa.Font,Enum.FontWeight.Medium),
+                Parent=tile,
+            })
+
+            local valLbl=ac("TextLabel",{
+                Size=UDim2.new(1,-textLeftOffset,0,22),
+                Position=UDim2.new(0,textLeftOffset,1,-22),
+                Text=itemVal,
+                TextSize=15,
+                TextXAlignment=Enum.TextXAlignment.Left,
+                TextTruncate=Enum.TextTruncate.AtEnd,
+                BackgroundTransparency=1,
+                ThemeTag={TextColor3="Text"},
+                FontFace=Font.new(aa.Font,Enum.FontWeight.SemiBold),
+                Parent=tile,
+            })
+
+            return {Frame=tile,TitleLabel=titleLbl,ValueLabel=valLbl,Icon=iconImg}
+        end
+
+        local function RefreshAll()
+            for _,t in pairs(ai.UIElements.Tiles) do
+                if t.Frame then t.Frame:Destroy() end
+            end
+            ai.UIElements.Tiles={}
+            for i,item in ipairs(ai.Items) do
+                ai.UIElements.Tiles[i]=CreateTile(item,i)
+            end
+        end
+
+        RefreshAll()
+
+        function ai.SetItem(self,key,newVal,newTitle)
+            local targetObj=nil
+            local targetData=nil
+            if type(key)=="number" then
+                targetObj=ai.UIElements.Tiles[key]
+                targetData=ai.Items[key]
+            elseif type(key)=="string" then
+                for i,item in ipairs(ai.Items) do
+                    if (item.Title or item.title)==key then
+                        targetObj=ai.UIElements.Tiles[i]
+                        targetData=item
+                        break
+                    end
+                end
+            end
+            if targetObj and targetData then
+                if newVal~=nil then
+                    targetData.Value=newVal
+                    targetObj.ValueLabel.Text=tostring(newVal)
+                end
+                if newTitle~=nil then
+                    targetData.Title=newTitle
+                    targetObj.TitleLabel.Text=tostring(newTitle)
+                end
+            end
+        end
+
+        function ai.SetItems(self,newItems)
+            ai.Items=newItems or{}
+            RefreshAll()
+        end
+
+        function ai.AddItem(self,item)
+            table.insert(ai.Items,item)
+            local idx=#ai.Items
+            ai.UIElements.Tiles[idx]=CreateTile(item,idx)
+        end
+
+        function ai.Clear(self)
+            ai.Items={}
+            RefreshAll()
+        end
+
+        return ai.__type,ai
+    end)
+    if WindUI_ok then return WindUI_resA,WindUI_resB end
+    warn("[WindUI] StatCard failed: "..tostring(WindUI_resA))
+    return"StatCard",{__type="StatCard",Title=WindUI_ag.Title or"StatCard"}
+end
+
+-- ButtonGroup: Row of compact action buttons in a single module
+local WindUI_ButtonGroup={}
+function WindUI_ButtonGroup.New(WindUI_af,WindUI_ag)
+    local WindUI_ok,WindUI_resA,WindUI_resB=pcall(function()
+        local aa=a.load'a'
+        local ac=aa.New
+        local ad=aa.Tween
+
+        local buttons=WindUI_ag.Buttons or{}
+        local ai={
+            __type="ButtonGroup",
+            Title=WindUI_ag.Title or"ButtonGroup",
+            Desc=WindUI_ag.Desc or nil,
+            Buttons=buttons,
+            UIElements={Buttons={}},
+        }
+
+        ai.Frame=a.load'y'{
+            Title=ai.Title,
+            Desc=ai.Desc,
+            Window=WindUI_ag.Window,
+            Parent=WindUI_ag.Parent,
+            TextOffset=0,
+            Hover=false,
+            Tab=WindUI_ag.Tab,
+            Index=WindUI_ag.Index,
+            ElementTable=ai,
+        }
+
+        local btnRow=ac("Frame",{
+            Size=UDim2.new(1,0,0,32),
+            BackgroundTransparency=1,
+            Parent=ai.Frame.UIElements.Container,
+        },{
+            ac("UIListLayout",{
+                FillDirection=Enum.FillDirection.Horizontal,
+                VerticalAlignment=Enum.VerticalAlignment.Center,
+                Padding=UDim.new(0,8),
+            }),
+        })
+
+        local btnCount=math.max(1,#buttons)
+        for i,btnData in ipairs(buttons) do
+            local isPrimary=(btnData.Variant=="Primary" or btnData.Variant=="Accent")
+            local btn=aa.NewRoundFrame(8,"Squircle",{
+                Size=UDim2.new(1/btnCount,-((btnCount-1)*8)/btnCount,1,0),
+                ImageTransparency=isPrimary and 0.2 or 0.9,
+                ThemeTag={ImageColor3=isPrimary and"Accent"or"Text"},
+                Parent=btnRow,
+            })
+
+            ac("UIListLayout",{
+                FillDirection=Enum.FillDirection.Horizontal,
+                VerticalAlignment=Enum.VerticalAlignment.Center,
+                HorizontalAlignment=Enum.HorizontalAlignment.Center,
+                Padding=UDim.new(0,6),
+                Parent=btn,
+            })
+
+            if btnData.Icon and btnData.Icon~="" then
+                pcall(function()
+                    local icon=aa.Image(btnData.Icon,btnData.Icon,0,WindUI_ag.Window.Folder,"BtnIcon",true)
+                    if icon then
+                        icon.Size=UDim2.new(0,16,0,16)
+                        icon.Parent=btn
+                    end
+                end)
+            end
+
+            local lbl=ac("TextLabel",{
+                Text=tostring(btnData.Title or btnData.title or"Action"),
+                TextSize=13,
+                AutomaticSize=Enum.AutomaticSize.X,
+                Size=UDim2.new(0,0,1,0),
+                BackgroundTransparency=1,
+                ThemeTag={TextColor3=isPrimary and"Accent"or"Text"},
+                FontFace=Font.new(aa.Font,Enum.FontWeight.Medium),
+                Parent=btn,
+            })
+
+            aa.AddSignal(btn.MouseEnter,function()
+                ad(btn,0.1,{ImageTransparency=isPrimary and 0.1 or 0.85}):Play()
+            end)
+            aa.AddSignal(btn.MouseLeave,function()
+                ad(btn,0.1,{ImageTransparency=isPrimary and 0.2 or 0.9}):Play()
+            end)
+            aa.AddSignal(btn.MouseButton1Click,function()
+                if btnData.Callback then
+                    aa.SafeCallback(btnData.Callback)
+                end
+            end)
+
+            ai.UIElements.Buttons[i]={Button=btn,Label=lbl,Data=btnData}
+        end
+
+        function ai.SetButtonTitle(self,idx,newTitle)
+            local b=ai.UIElements.Buttons[idx]
+            if b and b.Label then
+                b.Label.Text=tostring(newTitle)
+            end
+        end
+
+        return ai.__type,ai
+    end)
+    if WindUI_ok then return WindUI_resA,WindUI_resB end
+    warn("[WindUI] ButtonGroup failed: "..tostring(WindUI_resA))
+    return"ButtonGroup",{__type="ButtonGroup",Title=WindUI_ag.Title or"ButtonGroup"}
+end
+
+-- ToggleGroup: Segmented pill selector (single radio mode or multi-select)
+local WindUI_ToggleGroup={}
+function WindUI_ToggleGroup.New(WindUI_af,WindUI_ag)
+    local WindUI_ok,WindUI_resA,WindUI_resB=pcall(function()
+        local aa=a.load'a'
+        local ac=aa.New
+        local ad=aa.Tween
+
+        local options=WindUI_ag.Options or{}
+        local isMulti=WindUI_ag.Multi or false
+        local curValue=WindUI_ag.Value or (isMulti and {} or options[1])
+
+        local ai={
+            __type="ToggleGroup",
+            Title=WindUI_ag.Title or"ToggleGroup",
+            Desc=WindUI_ag.Desc or nil,
+            Locked=WindUI_ag.Locked or false,
+            Multi=isMulti,
+            Options=options,
+            Value=curValue,
+            Callback=WindUI_ag.Callback or function()end,
+            UIElements={Buttons={}},
+        }
+
+        local isLocked=not ai.Locked
+
+        ai.Frame=a.load'y'{
+            Title=ai.Title,
+            Desc=ai.Desc,
+            Window=WindUI_ag.Window,
+            Parent=WindUI_ag.Parent,
+            TextOffset=0,
+            Hover=false,
+            Tab=WindUI_ag.Tab,
+            Index=WindUI_ag.Index,
+            ElementTable=ai,
+        }
+
+        local groupContainer=aa.NewRoundFrame(8,"Squircle",{
+            Size=UDim2.new(1,0,0,34),
+            ImageTransparency=0.94,
+            ThemeTag={ImageColor3="Text"},
+            Parent=ai.Frame.UIElements.Container,
+        },{
+            ac("UIPadding",{
+                PaddingLeft=UDim.new(0,4),
+                PaddingRight=UDim.new(0,4),
+                PaddingTop=UDim.new(0,4),
+                PaddingBottom=UDim.new(0,4),
+            }),
+            ac("UIListLayout",{
+                FillDirection=Enum.FillDirection.Horizontal,
+                VerticalAlignment=Enum.VerticalAlignment.Center,
+                Padding=UDim.new(0,4),
+            }),
+        })
+
+        local function IsActive(opt)
+            if isMulti then
+                if type(ai.Value)=="table" then
+                    for _,v in pairs(ai.Value) do
+                        if v==opt then return true end
+                    end
+                end
+                return false
+            else
+                return ai.Value==opt
+            end
+        end
+
+        local count=math.max(1,#options)
+        for i,opt in ipairs(options) do
+            local active=IsActive(opt)
+            local btn=aa.NewRoundFrame(6,"Squircle",{
+                Size=UDim2.new(1/count,-((count-1)*4)/count,1,0),
+                ImageTransparency=active and 0.2 or 1,
+                ThemeTag={ImageColor3=active and"Accent" or"Text"},
+                Parent=groupContainer,
+            })
+
+            local lbl=ac("TextLabel",{
+                Text=tostring(opt),
+                TextSize=13,
+                Size=UDim2.new(1,0,1,0),
+                BackgroundTransparency=1,
+                ThemeTag={TextColor3="Text"},
+                TextTransparency=active and 0 or 0.4,
+                FontFace=Font.new(aa.Font,active and Enum.FontWeight.SemiBold or Enum.FontWeight.Medium),
+                Parent=btn,
+            })
+
+            local btnObj={Button=btn,Label=lbl,Option=opt}
+            ai.UIElements.Buttons[i]=btnObj
+
+            local function UpdateBtnVisual()
+                local act=IsActive(opt)
+                ad(btn,0.12,{ImageTransparency=act and 0.2 or 1}):Play()
+                btn.ThemeTag={ImageColor3=act and"Accent" or"Text"}
+                lbl.TextTransparency=act and 0 or 0.4
+                lbl.FontFace=Font.new(aa.Font,act and Enum.FontWeight.SemiBold or Enum.FontWeight.Medium)
+            end
+            btnObj.Update=UpdateBtnVisual
+
+            aa.AddSignal(btn.MouseButton1Click,function()
+                if not isLocked then return end
+                if isMulti then
+                    if type(ai.Value)~="table" then ai.Value={} end
+                    local foundIdx=nil
+                    for idx,v in pairs(ai.Value) do
+                        if v==opt then foundIdx=idx; break end
+                    end
+                    if foundIdx then
+                        table.remove(ai.Value,foundIdx)
+                    else
+                        table.insert(ai.Value,opt)
+                    end
+                else
+                    ai.Value=opt
+                end
+                for _,b in ipairs(ai.UIElements.Buttons) do
+                    b.Update()
+                end
+                aa.SafeCallback(ai.Callback,ai.Value)
+            end)
+        end
+
+        function ai.Set(self,val)
+            ai.Value=val
+            for _,b in ipairs(ai.UIElements.Buttons) do
+                b.Update()
+            end
+            aa.SafeCallback(ai.Callback,ai.Value)
+        end
+
+        function ai.Select(self,val)
+            ai:Set(val)
+        end
+
+        function ai.Lock(self)
+            ai.Locked=true
+            isLocked=false
+            return ai.Frame:Lock()
+        end
+        function ai.Unlock(self)
+            ai.Locked=false
+            isLocked=true
+            return ai.Frame:Unlock()
+        end
+        if ai.Locked then ai:Lock() end
+
+        return ai.__type,ai
+    end)
+    if WindUI_ok then return WindUI_resA,WindUI_resB end
+    warn("[WindUI] ToggleGroup failed: "..tostring(WindUI_resA))
+    return"ToggleGroup",{__type="ToggleGroup",Title=WindUI_ag.Title or"ToggleGroup"}
 end
 
 return{
@@ -7476,6 +8371,12 @@ Checkboxtoggle=WindUI_Checkboxtoggle,
 Textinfo=WindUI_Textinfo,
 Textbox=WindUI_Textbox,
 TextDivider=WindUI_TextDivider,
+ToggleSlider=WindUI_ToggleSlider,
+ToggleColorpicker=WindUI_ToggleColorpicker,
+ProgressBar=WindUI_ProgressBar,
+StatCard=WindUI_StatCard,
+ButtonGroup=WindUI_ButtonGroup,
+ToggleGroup=WindUI_ToggleGroup,
 },
 Load=function(aa,ac,ae,af,ag,ah,ai,aj)
 for ak,al in next,ae do
@@ -9711,6 +10612,12 @@ TextDivider="minus",
 Divider="minus",
 Code="terminal",
 Paragraph="align-left",
+ToggleSlider="sliders-horizontal",
+ToggleColorpicker="palette",
+ProgressBar="percent",
+StatCard="bar-chart-2",
+ButtonGroup="layers",
+ToggleGroup="toggle-right",
 }
 
 local function WindUI_Search_GetTabName(WindUI_Search_el)
