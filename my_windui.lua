@@ -7481,11 +7481,11 @@ function WindUI_ToggleSlider.New(WindUI_af,WindUI_ag)
         local initToggle=false
         local initSlider=ai.Min
         if type(WindUI_ag.Value)=="table" then
-            initToggle=WindUI_ag.Value.Toggle or WindUI_ag.Value[1] or false
-            initSlider=WindUI_ag.Value.Slider or WindUI_ag.Value[2] or ai.Min
+            initToggle=WindUI_ag.Value.Toggle or WindUI_ag.Value.toggle or WindUI_ag.Value[1] or false
+            initSlider=WindUI_ag.Value.Slider or WindUI_ag.Value.slider or WindUI_ag.Value[2] or ai.Min
         elseif type(WindUI_ag.Value)=="boolean" then
             initToggle=WindUI_ag.Value
-            initSlider=WindUI_ag.Slider or ai.Min
+            initSlider=WindUI_ag.Slider or WindUI_ag.slider or ai.Min
         end
         ai.Value={Toggle=initToggle,Slider=initSlider}
 
@@ -7502,21 +7502,36 @@ function WindUI_ToggleSlider.New(WindUI_af,WindUI_ag)
             return math.floor(v/ai.Step+0.5)*ai.Step
         end
 
+        local trackWidth=90
+        local rightWidth=trackWidth+38+46+10
+
         ai.Frame=a.load'y'{
             Title=ai.Title,
             Desc=ai.Desc,
             Window=WindUI_ag.Window,
             Parent=WindUI_ag.Parent,
-            TextOffset=210,
+            TextOffset=rightWidth+15,
             Hover=false,
             Tab=WindUI_ag.Tab,
             Index=WindUI_ag.Index,
             ElementTable=ai,
         }
 
-        local mainRight=ai.Frame.UIElements.Main
+        local rightHolder=ac("Frame",{
+            Size=UDim2.new(0,rightWidth,1,0),
+            Position=UDim2.new(1,0,0.5,0),
+            AnchorPoint=Vector2.new(1,0.5),
+            BackgroundTransparency=1,
+            Parent=ai.Frame.UIElements.Main,
+        },{
+            ac("UIListLayout",{
+                FillDirection=Enum.FillDirection.Horizontal,
+                VerticalAlignment=Enum.VerticalAlignment.Center,
+                HorizontalAlignment=Enum.HorizontalAlignment.Right,
+                Padding=UDim.new(0,10),
+            }),
+        })
 
-        local trackWidth=100
         local sliderFr=ac("Frame",{
             Size=UDim2.new(0,trackWidth,0,4),
             BackgroundColor3=Color3.new(1,1,1),
@@ -7561,34 +7576,42 @@ function WindUI_ToggleSlider.New(WindUI_af,WindUI_ag)
         })
 
         local sliderRow=ac("Frame",{
-            Size=UDim2.new(0,trackWidth+42,0,26),
+            Size=UDim2.new(0,trackWidth+38,0,26),
             BackgroundTransparency=1,
+            Parent=rightHolder,
         },{
             ac("UIListLayout",{
                 FillDirection=Enum.FillDirection.Horizontal,
                 VerticalAlignment=Enum.VerticalAlignment.Center,
-                Padding=UDim.new(0,6),
+                Padding=UDim.new(0,4),
             }),
             sliderFr,
             valueLabel,
         })
 
-        local switchFr,switchObj=createSwitch(currentToggle,WindUI_ag.Icon,mainRight,function(st)
+        local switchBtn=ac("TextButton",{
+            Size=UDim2.new(0,42,0,26),
+            BackgroundTransparency=1,
+            Text="",
+            AutoButtonColor=false,
+            Parent=rightHolder,
+        })
+
+        local switchFr,switchObj=createSwitch(currentToggle,WindUI_ag.Icon,switchBtn,function(st)
             if isLocked then
                 currentToggle=st
                 ai.Value.Toggle=st
                 aa.SafeCallback(ai.Callback,ai.Value)
             end
         end)
+        switchFr.Position=UDim2.new(0.5,0,0.5,0)
+        switchFr.AnchorPoint=Vector2.new(0.5,0.5)
 
-        ac("UIListLayout",{
-            FillDirection=Enum.FillDirection.Horizontal,
-            VerticalAlignment=Enum.VerticalAlignment.Center,
-            HorizontalAlignment=Enum.HorizontalAlignment.Right,
-            Padding=UDim.new(0,10),
-            Parent=mainRight,
-        })
-        sliderRow.Parent=mainRight
+        aa.AddSignal(switchBtn.MouseButton1Click,function()
+            if isLocked then
+                ai:SetToggle(not currentToggle)
+            end
+        end)
 
         function ai.SetSlider(self,val,inputObj)
             if not isLocked then return end
@@ -7695,9 +7718,15 @@ function WindUI_ToggleColorpicker.New(WindUI_af,WindUI_ag)
         local initTransparency=0
 
         if type(WindUI_ag.Value)=="table" then
-            initToggle=WindUI_ag.Value.Toggle or WindUI_ag.Value[1] or false
-            if WindUI_ag.Value.Color then initColor=WindUI_ag.Value.Color end
-            if WindUI_ag.Value.Transparency then initTransparency=WindUI_ag.Value.Transparency end
+            initToggle=WindUI_ag.Value.Toggle or WindUI_ag.Value.toggle or WindUI_ag.Value[1] or false
+            if WindUI_ag.Value.Color or WindUI_ag.Value.color then
+                local c=WindUI_ag.Value.Color or WindUI_ag.Value.color
+                if typeof(c)=="string" then c=Color3.fromHex(c) end
+                initColor=c
+            end
+            if WindUI_ag.Value.Transparency or WindUI_ag.Value.transparency then
+                initTransparency=WindUI_ag.Value.Transparency or WindUI_ag.Value.transparency
+            end
         elseif type(WindUI_ag.Value)=="boolean" then
             initToggle=WindUI_ag.Value
         end
@@ -7721,44 +7750,67 @@ function WindUI_ToggleColorpicker.New(WindUI_af,WindUI_ag)
         local currentColor=initColor
         local currentTransparency=initTransparency
 
+        local rightWidth=85
+
         ai.Frame=a.load'y'{
             Title=ai.Title,
             Desc=ai.Desc,
             Window=WindUI_ag.Window,
             Parent=WindUI_ag.Parent,
-            TextOffset=95,
+            TextOffset=rightWidth+15,
             Hover=false,
             Tab=WindUI_ag.Tab,
             Index=WindUI_ag.Index,
             ElementTable=ai,
         }
 
-        local mainRight=ai.Frame.UIElements.Main
+        local rightHolder=ac("Frame",{
+            Size=UDim2.new(0,rightWidth,1,0),
+            Position=UDim2.new(1,0,0.5,0),
+            AnchorPoint=Vector2.new(1,0.5),
+            BackgroundTransparency=1,
+            Parent=ai.Frame.UIElements.Main,
+        },{
+            ac("UIListLayout",{
+                FillDirection=Enum.FillDirection.Horizontal,
+                VerticalAlignment=Enum.VerticalAlignment.Center,
+                HorizontalAlignment=Enum.HorizontalAlignment.Right,
+                Padding=UDim.new(0,10),
+            }),
+        })
 
         local colorBtn=aa.NewRoundFrame(8,"Squircle",{
             ImageTransparency=currentTransparency,
             Active=true,
             ImageColor3=currentColor,
             Size=UDim2.new(0,26,0,26),
+            Parent=rightHolder,
             ZIndex=2,
         },nil,true)
 
-        local switchFr,switchObj=createSwitch(currentToggle,WindUI_ag.Icon,mainRight,function(st)
+        local switchBtn=ac("TextButton",{
+            Size=UDim2.new(0,42,0,26),
+            BackgroundTransparency=1,
+            Text="",
+            AutoButtonColor=false,
+            Parent=rightHolder,
+        })
+
+        local switchFr,switchObj=createSwitch(currentToggle,WindUI_ag.Icon,switchBtn,function(st)
             if isLocked then
                 currentToggle=st
                 ai.Value.Toggle=st
                 aa.SafeCallback(ai.Callback,ai.Value)
             end
         end)
+        switchFr.Position=UDim2.new(0.5,0,0.5,0)
+        switchFr.AnchorPoint=Vector2.new(0.5,0.5)
 
-        ac("UIListLayout",{
-            FillDirection=Enum.FillDirection.Horizontal,
-            VerticalAlignment=Enum.VerticalAlignment.Center,
-            HorizontalAlignment=Enum.HorizontalAlignment.Right,
-            Padding=UDim.new(0,10),
-            Parent=mainRight,
-        })
-        colorBtn.Parent=mainRight
+        aa.AddSignal(switchBtn.MouseButton1Click,function()
+            if isLocked then
+                ai:SetToggle(not currentToggle)
+            end
+        end)
 
         function ai.UpdateColor(self,col,trans)
             if col then currentColor=col end
@@ -7798,9 +7850,12 @@ function WindUI_ToggleColorpicker.New(WindUI_af,WindUI_ag)
 
         aa.AddSignal(colorBtn.MouseButton1Click,function()
             if isLocked then
-                colorpickerModule.Colorpicker(ai,ai,WindUI_ag.Window,function(newCol,newTrans)
+                local cp=colorpickerModule:Colorpicker(ai,WindUI_ag.Window,function(newCol,newTrans)
                     ai:UpdateColor(newCol,newTrans)
                 end)
+                if cp and cp.ColorpickerFrame then
+                    cp.ColorpickerFrame:Open()
+                end
             end
         end)
 
@@ -8135,7 +8190,8 @@ function WindUI_ButtonGroup.New(WindUI_af,WindUI_ag)
                 ImageTransparency=isPrimary and 0.2 or 0.9,
                 ThemeTag={ImageColor3=isPrimary and"Accent"or"Text"},
                 Parent=btnRow,
-            })
+                Active=true,
+            },nil,true)
 
             ac("UIListLayout",{
                 FillDirection=Enum.FillDirection.Horizontal,
@@ -8150,6 +8206,7 @@ function WindUI_ButtonGroup.New(WindUI_af,WindUI_ag)
                     local icon=aa.Image(btnData.Icon,btnData.Icon,0,WindUI_ag.Window.Folder,"BtnIcon",true)
                     if icon then
                         icon.Size=UDim2.new(0,16,0,16)
+                        icon.Active=false
                         icon.Parent=btn
                     end
                 end)
@@ -8161,6 +8218,7 @@ function WindUI_ButtonGroup.New(WindUI_af,WindUI_ag)
                 AutomaticSize=Enum.AutomaticSize.X,
                 Size=UDim2.new(0,0,1,0),
                 BackgroundTransparency=1,
+                Active=false,
                 ThemeTag={TextColor3=isPrimary and"Accent"or"Text"},
                 FontFace=Font.new(aa.Font,Enum.FontWeight.Medium),
                 Parent=btn,
@@ -8273,13 +8331,15 @@ function WindUI_ToggleGroup.New(WindUI_af,WindUI_ag)
                 ImageTransparency=active and 0.2 or 1,
                 ThemeTag={ImageColor3=active and"Accent" or"Text"},
                 Parent=groupContainer,
-            })
+                Active=true,
+            },nil,true)
 
             local lbl=ac("TextLabel",{
                 Text=tostring(opt),
                 TextSize=13,
                 Size=UDim2.new(1,0,1,0),
                 BackgroundTransparency=1,
+                Active=false,
                 ThemeTag={TextColor3="Text"},
                 TextTransparency=active and 0 or 0.4,
                 FontFace=Font.new(aa.Font,active and Enum.FontWeight.SemiBold or Enum.FontWeight.Medium),
@@ -8297,6 +8357,17 @@ function WindUI_ToggleGroup.New(WindUI_af,WindUI_ag)
                 lbl.FontFace=Font.new(aa.Font,act and Enum.FontWeight.SemiBold or Enum.FontWeight.Medium)
             end
             btnObj.Update=UpdateBtnVisual
+
+            aa.AddSignal(btn.MouseEnter,function()
+                if not IsActive(opt) then
+                    ad(btn,0.1,{ImageTransparency=0.85}):Play()
+                end
+            end)
+            aa.AddSignal(btn.MouseLeave,function()
+                if not IsActive(opt) then
+                    ad(btn,0.1,{ImageTransparency=1}):Play()
+                end
+            end)
 
             aa.AddSignal(btn.MouseButton1Click,function()
                 if not isLocked then return end
