@@ -441,8 +441,8 @@ local function update(H)
 local J=H.Position-C
 local WindUI_smooth=p:GetAttribute("WindUI_SmoothDragging")
 if WindUI_smooth then
-local WindUI_dur=0.18
-local WindUI_style=Enum.EasingStyle.Quad
+local WindUI_dur=0.06
+local WindUI_style=Enum.EasingStyle.Sine
 j.Tween(p,WindUI_dur,{Position=UDim2.new(
 F.X.Scale,F.X.Offset+J.X,
 F.Y.Scale,F.Y.Offset+J.Y
@@ -492,9 +492,20 @@ end)
 end
 
 e.InputChanged:Connect(function(L)
-if L==B and A and z~=nil then
+if A and z~=nil and(L.UserInputType==Enum.UserInputType.MouseMovement or L.UserInputType==Enum.UserInputType.Touch)then
 if G.CanDraggable then
 update(L)
+end
+end
+end)
+
+e.InputEnded:Connect(function(L)
+if(L.UserInputType==Enum.UserInputType.MouseButton1 or L.UserInputType==Enum.UserInputType.Touch)and A then
+A=false
+local oldZ=z
+z=nil
+if x and type(x)=="function"then
+x(false,oldZ)
 end
 end
 end)
@@ -7689,9 +7700,6 @@ function WindUI_ToggleSlider.New(WindUI_af,WindUI_ag)
             currentToggle=st
             ai.Value.Toggle=st
             switchObj:Set(st,triggerCb~=false)
-            if triggerCb~=false then
-                aa.SafeCallback(ai.Callback,ai.Value)
-            end
         end
 
         function ai.Set(self,valTable,triggerCb)
@@ -7857,9 +7865,6 @@ function WindUI_ToggleColorpicker.New(WindUI_af,WindUI_ag)
             currentToggle=st
             ai.Value.Toggle=st
             switchObj:Set(st,triggerCb~=false)
-            if triggerCb~=false then
-                aa.SafeCallback(ai.Callback,ai.Value)
-            end
         end
 
         function ai.Set(self,valTable,triggerCb)
@@ -8351,6 +8356,10 @@ function WindUI_ToggleGroup.New(WindUI_af,WindUI_ag)
             end
         end
 
+        if ai.Frame and ai.Frame.UIElements and ai.Frame.UIElements.Main then
+            ai.Frame.UIElements.Main.Active = false
+        end
+
         local count=math.max(1,#options)
         for i,opt in ipairs(options) do
             local active=IsActive(opt)
@@ -8360,6 +8369,7 @@ function WindUI_ToggleGroup.New(WindUI_af,WindUI_ag)
                 ThemeTag={ImageColor3=active and"Accent" or"Text"},
                 Parent=groupContainer,
                 Active=true,
+                ZIndex=6,
             },nil,true)
 
             local lbl=ac("TextLabel",{
@@ -8368,13 +8378,23 @@ function WindUI_ToggleGroup.New(WindUI_af,WindUI_ag)
                 Size=UDim2.new(1,0,1,0),
                 BackgroundTransparency=1,
                 Active=false,
+                ZIndex=7,
                 ThemeTag={TextColor3="Text"},
                 TextTransparency=active and 0 or 0.4,
                 FontFace=Font.new(aa.Font,active and Enum.FontWeight.SemiBold or Enum.FontWeight.Medium),
                 Parent=btn,
             })
 
-            local btnObj={Button=btn,Label=lbl,Option=opt}
+            local clickBtn=ac("TextButton",{
+                Size=UDim2.new(1,0,1,0),
+                BackgroundTransparency=1,
+                Text="",
+                ZIndex=15,
+                Active=true,
+                Parent=btn,
+            })
+
+            local btnObj={Button=btn,Label=lbl,ClickButton=clickBtn,Option=opt}
             ai.UIElements.Buttons[i]=btnObj
 
             local function UpdateBtnVisual()
@@ -8386,19 +8406,23 @@ function WindUI_ToggleGroup.New(WindUI_af,WindUI_ag)
             end
             btnObj.Update=UpdateBtnVisual
 
-            aa.AddSignal(btn.MouseEnter,function()
+            aa.AddSignal(clickBtn.MouseEnter,function()
                 if not IsActive(opt) then
                     ad(btn,0.1,{ImageTransparency=0.85}):Play()
                 end
             end)
-            aa.AddSignal(btn.MouseLeave,function()
+            aa.AddSignal(clickBtn.MouseLeave,function()
                 if not IsActive(opt) then
                     ad(btn,0.1,{ImageTransparency=1}):Play()
                 end
             end)
 
-            aa.AddSignal(btn.MouseButton1Click,function()
-                if not isLocked then return end
+            local lastClick=0
+            local function HandleClick()
+                local now=os.clock()
+                if now-lastClick<0.05 then return end
+                lastClick=now
+                if ai.Locked then return end
                 if isMulti then
                     if type(ai.Value)~="table" then ai.Value={} end
                     local foundIdx=nil
@@ -8417,7 +8441,11 @@ function WindUI_ToggleGroup.New(WindUI_af,WindUI_ag)
                     b.Update()
                 end
                 aa.SafeCallback(ai.Callback,ai.Value)
-            end)
+            end
+
+            aa.AddSignal(clickBtn.MouseButton1Click,HandleClick)
+            aa.AddSignal(clickBtn.Activated,HandleClick)
+            aa.AddSignal(btn.MouseButton1Click,HandleClick)
         end
 
         function ai.Set(self,val)
@@ -9006,9 +9034,6 @@ function WindUI_ToggleInput.New(WindUI_af,WindUI_ag)
             currentToggle=st
             ai.Value.Toggle=st
             switchObj:Set(st,triggerCb~=false)
-            if triggerCb~=false then
-                aa.SafeCallback(ai.Callback,ai.Value)
-            end
         end
 
         function ai.SetInput(self,text,triggerCb)
@@ -9214,9 +9239,6 @@ function WindUI_ToggleKeybind.New(WindUI_af,WindUI_ag)
             currentToggle=st
             ai.Value.Toggle=st
             switchObj:Set(st,triggerCb~=false)
-            if triggerCb~=false then
-                aa.SafeCallback(ai.Callback,ai.Value)
-            end
         end
 
         function ai.SetKey(self,k,triggerCb)
@@ -11404,7 +11426,7 @@ ag("UIPadding",{PaddingTop=UDim.new(0,6),PaddingBottom=UDim.new(0,6),PaddingLeft
 })
 
 local function WindUI_Search_UpdatePosition()
-if not WindUI_Search_Container or not ao.UIElements.Main then return end
+if not WindUI_Search_Container or not ao.UIElements.Main or not WindUI_Search_Results or not WindUI_Search_Results.Visible then return end
 local cPos=WindUI_Search_Container.AbsolutePosition
 local mPos=ao.UIElements.Main.AbsolutePosition
 local cSize=WindUI_Search_Container.AbsoluteSize
