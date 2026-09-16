@@ -3015,8 +3015,7 @@ BackgroundTransparency=1,
 TextSize=13,
 FontFace=Font.new(ab.Font,Enum.FontWeight.Regular),
 Size=UDim2.new(1,ai and-24 or 0,1,0),
-TextXAlignment=ai and"Left"or"Center",
-TextYAlignment="Center",
+TextXAlignment="Left",
 ThemeTag={
 TextColor3="Text",
 },
@@ -3075,7 +3074,7 @@ ac("UIListLayout",{
 FillDirection="Horizontal",
 Padding=UDim.new(0,8),
 VerticalAlignment="Center",
-HorizontalAlignment=ai and"Left"or"Center",
+HorizontalAlignment="Left",
 }),
 ai,
 aj,
@@ -4387,7 +4386,6 @@ if an then an.TextSize=boxMode and 12 or 15 end
 end)
 end
 
-as.SetBoxMode=SetRowBoxMode
 af.SetBoxMode=SetRowBoxMode
 if ae.ElementTable then
 ae.ElementTable.SetRowBoxMode=SetRowBoxMode
@@ -5173,15 +5171,23 @@ aj.UIElements.Keybind=ag(aj.Value,nil,aj.KeybindFrame.UIElements.Main)
 aj.UIElements.Keybind.AnchorPoint=Vector2.new(1,0.5)
 aj.UIElements.Keybind.Position=UDim2.new(1,0,0.5,0)
 
-local keyTextLabel=aj.UIElements.Keybind.Frame.Frame.TextLabel
+local keyInnerFrame=aj.UIElements.Keybind.Frame.Frame
+local keyTextLabel=keyInnerFrame.TextLabel
+pcall(function()
+keyInnerFrame.UIPadding.PaddingLeft=UDim.new(0,0)
+keyInnerFrame.UIPadding.PaddingRight=UDim.new(0,0)
+keyInnerFrame.UIListLayout.HorizontalAlignment=Enum.HorizontalAlignment.Center
+end)
 keyTextLabel.TextXAlignment="Center"
 keyTextLabel.TextYAlignment="Center"
 keyTextLabel.TextSize=13
 keyTextLabel.Size=UDim2.new(1,0,1,0)
 
 local function UpdateKeySize()
+pcall(function()
 local tW=keyTextLabel.TextBounds.X
-aj.UIElements.Keybind.Size=UDim2.new(0,math.max(26,tW+16),0,26)
+aj.UIElements.Keybind.Size=UDim2.new(0,math.max(26,tW+14),0,26)
+end)
 end
 UpdateKeySize()
 
@@ -7323,6 +7329,12 @@ topPadding.PaddingLeft=UDim.new(0,0)
 topPadding.PaddingRight=UDim.new(0,0)
 am.Size=UDim2.new(1,0,0,0)
 am.Position=UDim2.new(0,0,0,0)
+end
+
+for _,elem in ipairs(ai.Elements or{}) do
+if type(elem)=="table" and elem.SetBoxMode then
+elem:SetBoxMode(isBoxes)
+end
 end
 end
 
