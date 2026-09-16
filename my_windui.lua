@@ -4245,7 +4245,7 @@ TextColor3=not af.Color and"Text"or nil,
 },
 TextColor3=af.Color and ao or nil,
 TextTransparency=isDesc and (isBoxesMode and 0.35 or 0.3) or 0,
-TextWrapped=true,
+TextWrapped=not isBoxesMode,
 TextTruncate=isBoxesMode and Enum.TextTruncate.AtEnd or Enum.TextTruncate.None,
 Size=UDim2.new(1,0,0,0),
 AutomaticSize="Y",
@@ -4278,6 +4278,7 @@ local textInner=ab("Frame",{
 BackgroundTransparency=1,
 AutomaticSize="Y",
 Size=UDim2.new(1,-aj,1,0),
+ClipsDescendants=isBoxesMode,
 Name="TextInner",
 },{
 textInnerPadding,
@@ -4300,6 +4301,7 @@ AutomaticSize=isBoxesMode and (hasDesc and "Y" or "None") or "Y",
 BackgroundTransparency=1,
 Position=UDim2.new(0,0,isBoxesMode and (hasDesc and 0 or 0.5) or 0,0),
 AnchorPoint=Vector2.new(0,isBoxesMode and (hasDesc and 0 or 0.5) or 0),
+ClipsDescendants=true,
 Name="TextHolder",
 },{
 textHolderLayout,
@@ -4423,11 +4425,19 @@ textLayout.Padding=UDim.new(0,2)
 if am then
 am.TextSize=13
 am.TextTruncate=Enum.TextTruncate.AtEnd
+am.TextWrapped=false
 end
 if an then
 an.TextSize=11
 an.TextTransparency=0.35
 an.TextTruncate=Enum.TextTruncate.AtEnd
+an.TextWrapped=false
+end
+if textInner then
+textInner.ClipsDescendants=true
+end
+if textHolder then
+textHolder.ClipsDescendants=true
 end
 if textHolder then
 local off=af.TextOffset or af.BaseTextOffset or 0
@@ -4453,11 +4463,19 @@ textLayout.Padding=UDim.new(0,6)
 if am then
 am.TextSize=17
 am.TextTruncate=Enum.TextTruncate.None
+am.TextWrapped=true
 end
 if an then
 an.TextSize=15
 an.TextTransparency=0.3
 an.TextTruncate=Enum.TextTruncate.None
+an.TextWrapped=true
+end
+if textInner then
+textInner.ClipsDescendants=false
+end
+if textHolder then
+textHolder.ClipsDescendants=false
 end
 if textHolder then
 textHolder.Size=UDim2.new(1,-(af.BaseTextOffset or 0),0,0)
@@ -5109,8 +5127,10 @@ UIElements={},
 IsFocusing=false,
 
 Width=(ah.Window and ah.Window.TabLayoutType=="Boxes") and 85 or 130,
-TextBoxWidth=30,
+TextBoxWidth=(ah.Window and ah.Window.TabLayoutType=="Boxes") and 34 or 30,
 }
+local isBoxSliderInit=(ah.Window and ah.Window.TabLayoutType=="Boxes")
+local sliderGap=isBoxSliderInit and 12 or 15
 local aj
 local ak
 local al
@@ -5142,7 +5162,7 @@ ai.SliderFrame=a.load'y'{
 Title=ai.Title,
 Desc=ai.Desc,
 Parent=ah.Parent,
-TextOffset=ai.Width,
+TextOffset=ai.Width+sliderGap,
 Hover=false,
 Tab=ah.Tab,
 Index=ah.Index,
@@ -5193,14 +5213,14 @@ VerticalAlignment="Center",
 ai.UIElements.SliderIcon,
 ac("TextBox",{
 Size=UDim2.new(0,ai.TextBoxWidth,0,0),
-TextXAlignment="Left",
+TextXAlignment="Center",
 Text=FormatValue(am),
 ThemeTag={
 TextColor3="Text"
 },
 TextTransparency=.4,
 AutomaticSize="Y",
-TextSize=15,
+TextSize=isBoxSliderInit and 12 or 15,
 FontFace=Font.new(aa.Font,Enum.FontWeight.Medium),
 BackgroundTransparency=1,
 LayoutOrder=-1,
@@ -5226,8 +5246,18 @@ local ar=ai.SliderFrame.Parent:IsA"ScrollingFrame"and ai.SliderFrame.Parent or a
 
 function ai.SetBoxMode(self,isBoxes)
 ai.Width=isBoxes and 85 or 130
+ai.TextBoxWidth=isBoxes and 34 or 30
+local gap=isBoxes and 12 or 15
+if ai.UIElements.SliderContainer then
+ai.UIElements.SliderContainer.Size=UDim2.new(0,ai.Width,0,0)
+local tb=ai.UIElements.SliderContainer:FindFirstChildWhichIsA("TextBox") or ai.UIElements.SliderContainer:FindFirstChild("TextBox")
+if tb then
+tb.TextSize=isBoxes and 12 or 15
+tb.Size=UDim2.new(0,ai.TextBoxWidth,0,0)
+end
+end
 if ai.SliderFrame and ai.SliderFrame.SetTextOffset then
-ai.SliderFrame:SetTextOffset(isBoxes and 92 or 130)
+ai.SliderFrame:SetTextOffset(ai.Width+gap)
 end
 if ai.SetRowBoxMode then
 ai:SetRowBoxMode(isBoxes)
@@ -7221,11 +7251,13 @@ local ar=true
 
 if ap.Window.NewElements then an.UICorner=14 end
 
+local isBoxCol=(ap.Window and ap.Window.TabLayoutType=="Boxes")
+
 aq.ColorpickerFrame=a.load'y'{
 Title=aq.Title,
 Desc=aq.Desc,
 Parent=ap.Parent,
-TextOffset=40,
+TextOffset=isBoxCol and 34 or 40,
 Hover=false,
 Tab=ap.Tab,
 Index=ap.Index,
@@ -7233,16 +7265,43 @@ Window=ap.Window,
 ElementTable=aq,
 }
 
-aq.UIElements.Colorpicker=aa.NewRoundFrame(an.UICorner,"Squircle",{
+local colSize=isBoxCol and 22 or 30
+local colAnchor=isBoxCol and Vector2.new(1,0.5) or Vector2.new(1,0)
+local colPos=isBoxCol and UDim2.new(1,0,0.5,0) or UDim2.new(1,0,0,0)
+
+aq.UIElements.Colorpicker=aa.NewRoundFrame(isBoxCol and 8 or an.UICorner,"Squircle",{
 ImageTransparency=0,
 Active=true,
 ImageColor3=aq.Default,
 Parent=aq.ColorpickerFrame.UIElements.Main,
-Size=UDim2.new(0,30,0,30),
-AnchorPoint=Vector2.new(1,0),
-Position=UDim2.new(1,0,0,0),
+Size=UDim2.new(0,colSize,0,colSize),
+AnchorPoint=colAnchor,
+Position=colPos,
 ZIndex=2
 },nil,true)
+
+function aq.SetBoxMode(self,isBoxes)
+if aq.UIElements and aq.UIElements.Colorpicker then
+if isBoxes then
+aq.UIElements.Colorpicker.Size=UDim2.new(0,22,0,22)
+aq.UIElements.Colorpicker.AnchorPoint=Vector2.new(1,0.5)
+aq.UIElements.Colorpicker.Position=UDim2.new(1,0,0.5,0)
+if aq.ColorpickerFrame and aq.ColorpickerFrame.SetTextOffset then
+aq.ColorpickerFrame:SetTextOffset(34)
+end
+else
+aq.UIElements.Colorpicker.Size=UDim2.new(0,30,0,30)
+aq.UIElements.Colorpicker.AnchorPoint=Vector2.new(1,0)
+aq.UIElements.Colorpicker.Position=UDim2.new(1,0,0,0)
+if aq.ColorpickerFrame and aq.ColorpickerFrame.SetTextOffset then
+aq.ColorpickerFrame:SetTextOffset(40)
+end
+end
+end
+if aq.ColorpickerFrame and aq.ColorpickerFrame.SetBoxMode then
+aq.ColorpickerFrame:SetBoxMode(isBoxes)
+end
+end
 
 
 function aq.Lock(at)
@@ -9255,7 +9314,7 @@ function WindUI_DualSlider.New(WindUI_af,WindUI_ag)
             Desc=ai.Desc,
             Window=WindUI_ag.Window,
             Parent=WindUI_ag.Parent,
-            TextOffset=rightWidth+(isBoxDual and 6 or 15),
+            TextOffset=rightWidth+(isBoxDual and 12 or 15),
             Hover=false,
             Tab=WindUI_ag.Tab,
             Index=WindUI_ag.Index,
@@ -9478,7 +9537,7 @@ function WindUI_DualSlider.New(WindUI_af,WindUI_ag)
             valueLabel.TextSize=isBoxes and 10 or 11
             rightHolder.Size=UDim2.new(0,rw,1,0)
             if ai.Frame and ai.Frame.SetTextOffset then
-                ai.Frame:SetTextOffset(rw+(isBoxes and 6 or 15))
+                ai.Frame:SetTextOffset(rw+(isBoxes and 12 or 15))
             end
             if ai.SetRowBoxMode then
                 ai:SetRowBoxMode(isBoxes)
@@ -9666,7 +9725,7 @@ function WindUI_ToggleInput.New(WindUI_af,WindUI_ag)
                 textBox.TextSize=isBoxes and 11 or 12
             end
             if ai.Frame and ai.Frame.SetTextOffset then
-                ai.Frame:SetTextOffset(rW+(isBoxes and 6 or 15))
+                ai.Frame:SetTextOffset(rW+(isBoxes and 12 or 15))
             end
             if ai.SetRowBoxMode then
                 ai:SetRowBoxMode(isBoxes)
