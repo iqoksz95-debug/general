@@ -7136,8 +7136,9 @@ ZIndex=2,
 })
 
 local BoxDivider=ac("Frame",{
-Size=UDim2.new(1,-16,0,1),
-Position=UDim2.new(0,8,0,ai.HeaderSize-1),
+Size=UDim2.new(1,-20,0,1),
+Position=UDim2.new(0.5,0,0,ai.HeaderSize-1),
+AnchorPoint=Vector2.new(0.5,0),
 BackgroundTransparency=0.92,
 ThemeTag={BackgroundColor3="Outline"},
 Name="BoxDivider",
@@ -7257,15 +7258,15 @@ end
 
 if isBoxes then
 am.AutomaticSize="None"
-contentPadding.PaddingLeft=UDim.new(0,8)
-contentPadding.PaddingRight=UDim.new(0,8)
-contentPadding.PaddingBottom=UDim.new(0,8)
-contentPadding.PaddingTop=UDim.new(0,6)
+contentPadding.PaddingLeft=UDim.new(0,10)
+contentPadding.PaddingRight=UDim.new(0,10)
+contentPadding.PaddingBottom=UDim.new(0,10)
+contentPadding.PaddingTop=UDim.new(0,8)
 topPadding.PaddingLeft=UDim.new(0,12)
 topPadding.PaddingRight=UDim.new(0,12)
-local cH=am.Content.UIListLayout.AbsoluteContentSize.Y+14
+local cH=am.Content.UIListLayout.AbsoluteContentSize.Y+20
 local totalH=ai.Opened and(ai.HeaderSize+(cH/(ah.UIScale or 1)))or ai.HeaderSize
-am.Size=UDim2.new(0.5,-5,0,totalH)
+am.Size=UDim2.new(0.5,-8,0,totalH)
 if ai.Opened then
 ak.ImageLabel.Rotation=180
 else
@@ -7288,13 +7289,11 @@ function ai.Open(ao)
 if ai.Expandable then
 ai.Opened=true
 local isBoxes=(ah.Window and ah.Window.TabLayoutType=="Boxes")
+local cH=am.Content.UIListLayout.AbsoluteContentSize.Y+20
+local totalH=ai.HeaderSize+(cH/(ah.UIScale or 1))
 if isBoxes then
-local cH=am.Content.UIListLayout.AbsoluteContentSize.Y+14
-local totalH=ai.HeaderSize+(cH/(ah.UIScale or 1))
-ae(am,0.33,{Size=UDim2.new(0.5,-5,0,totalH)},Enum.EasingStyle.Quint,Enum.EasingDirection.Out):Play()
+ae(am,0.33,{Size=UDim2.new(0.5,-8,0,totalH)},Enum.EasingStyle.Quint,Enum.EasingDirection.Out):Play()
 else
-local cH=am.Content.UIListLayout.AbsoluteContentSize.Y
-local totalH=ai.HeaderSize+(cH/(ah.UIScale or 1))
 ae(am,0.33,{Size=UDim2.new(1,0,0,totalH)},Enum.EasingStyle.Quint,Enum.EasingDirection.Out):Play()
 end
 ae(ak.ImageLabel,0.1,{Rotation=180},Enum.EasingStyle.Quint,Enum.EasingDirection.Out):Play()
@@ -7308,7 +7307,7 @@ function ai.Close(ao)
 if ai.Expandable then
 ai.Opened=false
 local isBoxes=(ah.Window and ah.Window.TabLayoutType=="Boxes")
-local targetSize=isBoxes and UDim2.new(0.5,-5,0,ai.HeaderSize) or UDim2.new(1,0,0,ai.HeaderSize)
+local targetSize=isBoxes and UDim2.new(0.5,-8,0,ai.HeaderSize) or UDim2.new(1,0,0,ai.HeaderSize)
 ae(am,0.26,{Size=targetSize},Enum.EasingStyle.Quint,Enum.EasingDirection.Out):Play()
 ae(ak.ImageLabel,0.1,{Rotation=0},Enum.EasingStyle.Quint,Enum.EasingDirection.Out):Play()
 if ah.Tab and ah.Tab.UpdateBoxLayout then
@@ -7329,9 +7328,9 @@ end)
 
 am.Content.UIListLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
 if ah.Window and ah.Window.TabLayoutType=="Boxes" and ai.Opened then
-local cH=am.Content.UIListLayout.AbsoluteContentSize.Y+14
+local cH=am.Content.UIListLayout.AbsoluteContentSize.Y+20
 local totalH=ai.HeaderSize+(cH/(ah.UIScale or 1))
-am.Size=UDim2.new(0.5,-5,0,totalH)
+am.Size=UDim2.new(0.5,-8,0,totalH)
 if ah.Tab and ah.Tab.UpdateBoxLayout then
 ah.Tab:UpdateBoxLayout(true)
 end
@@ -7360,7 +7359,7 @@ local ae={}
 
 function ae.New(af,ag)
 local ah=ac("Frame",{
-Size=UDim2.new(1,0,0,1),
+Size=UDim2.new(1,-24,0,1),
 Position=UDim2.new(0.5,0,0.5,0),
 AnchorPoint=Vector2.new(0.5,0.5),
 BackgroundTransparency=.9,
@@ -7370,7 +7369,7 @@ BackgroundColor3="Text"
 })
 ac("Frame",{
 Parent=ag.Parent,
-Size=UDim2.new(1,-7,0,7),
+Size=UDim2.new(1,0,0,7),
 BackgroundTransparency=1,
 },{
 ah
@@ -7570,24 +7569,49 @@ BackgroundTransparency=.9,
 ThemeTag={BackgroundColor3="Text"},
 })
 end
-WindUI_New("Frame",{
+local leftLineHolder=WindUI_New("Frame",{
+Size=UDim2.new(0.5,-16,0,1),
+BackgroundTransparency=1,
+ClipsDescendants=true,
+},{WindUI_Line()})
+local rightLineHolder=WindUI_New("Frame",{
+Size=UDim2.new(0.5,-16,0,1),
+BackgroundTransparency=1,
+ClipsDescendants=true,
+},{WindUI_Line()})
+local dividerContainer=WindUI_New("Frame",{
 Parent=WindUI_ag.Parent,
-Size=UDim2.new(1,-7,0,20),
+Size=UDim2.new(1,-24,0,20),
+AnchorPoint=Vector2.new(0.5,0),
+Position=UDim2.new(0.5,0,0,0),
 BackgroundTransparency=1,
 },{
 WindUI_New("UIListLayout",{
 FillDirection="Horizontal",
 VerticalAlignment="Center",
 HorizontalAlignment="Center",
-Padding=UDim.new(0,10),
+Padding=UDim.new(0,8),
 }),
-WindUI_New("Frame",{Size=UDim2.new(0.4,0,0,1),BackgroundTransparency=1},{WindUI_Line()}),
+leftLineHolder,
 WindUI_ai,
-WindUI_New("Frame",{Size=UDim2.new(0.4,0,0,1),BackgroundTransparency=1},{WindUI_Line()}),
+rightLineHolder,
 })
+local function UpdateDividerLines()
+task.defer(function()
+local containerW=dividerContainer.AbsoluteSize.X
+local textW=WindUI_ai.AbsoluteSize.X
+local lineW=math.max(10,math.floor((containerW-textW-20)/2))
+leftLineHolder.Size=UDim2.new(0,lineW,0,1)
+rightLineHolder.Size=UDim2.new(0,lineW,0,1)
+end)
+end
+WindUI_ai:GetPropertyChangedSignal("AbsoluteSize"):Connect(UpdateDividerLines)
+dividerContainer:GetPropertyChangedSignal("AbsoluteSize"):Connect(UpdateDividerLines)
+UpdateDividerLines()
 function WindUI_ah.SetTitle(WindUI_aj,WindUI_ak)
 WindUI_ah.Title=WindUI_ak
 WindUI_ai.Text=WindUI_ak
+UpdateDividerLines()
 end
 return"TextDivider",WindUI_ah
 end)
@@ -9970,21 +9994,26 @@ task.defer(function()
 al.LayoutUpdating=false
 local doAnimate=al.NeedAnimate
 al.NeedAnimate=false
-local gap=10
+local gap=14
 local colHeights={[1]=0,[2]=0}
 local colX={
 [1]=UDim2.new(0,0,0,0),
-[2]=UDim2.new(0.5,math.floor(gap/2),0,0)
+[2]=UDim2.new(0.5,8,0,0)
 }
 for _,box in ipairs(al.Boxes) do
 if box.Frame and box.Frame.Visible and box.Frame.Parent then
 local col=(colHeights[1]<=colHeights[2]) and 1 or 2
 local currentY=colHeights[col]
 local targetPos=UDim2.new(colX[col].X.Scale,colX[col].X.Offset,0,currentY)
-local boxH=box.Frame.Size.Y.Offset
-if boxH<=0 or not box.Opened then
-boxH=box.Opened and(box.HeaderSize+box.Frame.Content.UIListLayout.AbsoluteContentSize.Y+14) or box.HeaderSize
+
+local boxH
+if box.Opened then
+local cH=box.Frame.Content.UIListLayout.AbsoluteContentSize.Y+20
+boxH=box.HeaderSize+(cH/(Window.UIScale or 1))
+else
+boxH=box.HeaderSize
 end
+
 if doAnimate then
 af(box.Frame,0.33,{Position=targetPos},Enum.EasingStyle.Quint,Enum.EasingDirection.Out):Play()
 else
