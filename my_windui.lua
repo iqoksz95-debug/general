@@ -437,21 +437,57 @@ if not r or type(r)~="table"then
 r={p}
 end
 
-local function update(H)
-local J=H.Position-C
+local targetPos=nil
+local dragConn=nil
+
+local function StopDragLoop()
+if dragConn then
+dragConn:Disconnect()
+dragConn=nil
+end
+end
+
+local function StartDragLoop()
+if dragConn then return end
+dragConn=b.RenderStepped:Connect(function(dt)
+if not targetPos then
+StopDragLoop()
+return
+end
 local WindUI_smooth=p:GetAttribute("WindUI_SmoothDragging")
 if WindUI_smooth then
-local WindUI_dur=0.06
-local WindUI_style=Enum.EasingStyle.Sine
-j.Tween(p,WindUI_dur,{Position=UDim2.new(
-F.X.Scale,F.X.Offset+J.X,
-F.Y.Scale,F.Y.Offset+J.Y
-)},WindUI_style,Enum.EasingDirection.Out):Play()
+local factor=math.clamp(dt*20,0.05,1)
+p.Position=p.Position:Lerp(targetPos,factor)
+if not A then
+local dx=p.Position.X.Offset-targetPos.X.Offset
+local dy=p.Position.Y.Offset-targetPos.Y.Offset
+if(dx*dx+dy*dy)<0.5 then
+p.Position=targetPos
+targetPos=nil
+StopDragLoop()
+end
+end
 else
-p.Position=UDim2.new(
+p.Position=targetPos
+if not A then
+targetPos=nil
+StopDragLoop()
+end
+end
+end)
+end
+
+local function update(H)
+local J=H.Position-C
+targetPos=UDim2.new(
 F.X.Scale,F.X.Offset+J.X,
 F.Y.Scale,F.Y.Offset+J.Y
 )
+local WindUI_smooth=p:GetAttribute("WindUI_SmoothDragging")
+if not WindUI_smooth then
+p.Position=targetPos
+else
+StartDragLoop()
 end
 end
 
@@ -463,6 +499,12 @@ z=J
 A=true
 C=L.Position
 F=p.Position
+targetPos=p.Position
+p:SetAttribute("WindUI_Dragging",true)
+
+if p:GetAttribute("WindUI_SmoothDragging") then
+StartDragLoop()
+end
 
 if x and type(x)=="function"then
 x(true,z)
@@ -472,7 +514,11 @@ L.Changed:Connect(function()
 if L.UserInputState==Enum.UserInputState.End then
 A=false
 z=nil
-
+p:SetAttribute("WindUI_Dragging",false)
+if not p:GetAttribute("WindUI_SmoothDragging") then
+StopDragLoop()
+targetPos=nil
+end
 if x and type(x)=="function"then
 x(false,z)
 end
@@ -504,6 +550,11 @@ if(L.UserInputType==Enum.UserInputType.MouseButton1 or L.UserInputType==Enum.Use
 A=false
 local oldZ=z
 z=nil
+p:SetAttribute("WindUI_Dragging",false)
+if not p:GetAttribute("WindUI_SmoothDragging") then
+StopDragLoop()
+targetPos=nil
+end
 if x and type(x)=="function"then
 x(false,oldZ)
 end
@@ -11775,7 +11826,11 @@ end
 -- snapping to it) driven by a plain Attribute on Main, which is what af.Drag's update()
 -- reads each move — no changes needed to af.Drag's signature at all.
 function ao.SetSmoothDragging(j,l)
-ao.UIElements.Main:SetAttribute("WindUI_SmoothDragging",l)
+local state=(l~=nil and l)or j
+if type(state)~="boolean"then
+state=(state==true)
+end
+ao.UIElements.Main:SetAttribute("WindUI_SmoothDragging",state)
 end
 
 if not aB and ao.Background and typeof(ao.Background)=="table"then
