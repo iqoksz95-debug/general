@@ -3501,6 +3501,115 @@ ad:Set(ae.value)
 end
 end
 },
+ToggleDropdown={
+Save=function(ad)
+return{
+__type=ad.__type,
+toggle=ad.Value and ad.Value.Toggle,
+dropdown=ad.Value and ad.Value.Dropdown,
+}
+end,
+Load=function(ad,ae)
+if ad then
+if ae.toggle~=nil then ad:SetToggle(ae.toggle) end
+if ae.dropdown~=nil then ad:SetDropdown(ae.dropdown) end
+end
+end
+},
+ToggleMultiDropdown={
+Save=function(ad)
+return{
+__type=ad.__type,
+toggle=ad.Value and ad.Value.Toggle,
+dropdown=ad.Value and ad.Value.Dropdown,
+}
+end,
+Load=function(ad,ae)
+if ad then
+if ae.toggle~=nil then ad:SetToggle(ae.toggle) end
+if ae.dropdown~=nil then ad:SetDropdown(ae.dropdown) end
+end
+end
+},
+ButtonDropdown={
+Save=function(ad)
+return{
+__type=ad.__type,
+value=ad.Value and ad.Value.Dropdown or ad.Value,
+}
+end,
+Load=function(ad,ae)
+if ad and ae.value~=nil then
+ad:Select(ae.value)
+end
+end
+},
+ButtonMultiDropdown={
+Save=function(ad)
+return{
+__type=ad.__type,
+value=ad.Value and ad.Value.Dropdown or ad.Value,
+}
+end,
+Load=function(ad,ae)
+if ad and ae.value~=nil then
+ad:Select(ae.value)
+end
+end
+},
+ButtonColorPicker={
+Save=function(ad)
+return{
+__type=ad.__type,
+value=ad.Default and ad.Default:ToHex(),
+transparency=ad.Transparency,
+}
+end,
+Load=function(ad,ae)
+if ad and ae.value~=nil then
+ad:Update(Color3.fromHex(ae.value),ae.transparency)
+end
+end
+},
+ButtonSlider={
+Save=function(ad)
+return{
+__type=ad.__type,
+value=ad.Value and (ad.Value.Slider or ad.Value.Default or ad.Value),
+}
+end,
+Load=function(ad,ae)
+if ad and ae.value~=nil then
+ad:Set(ae.value)
+end
+end
+},
+ButtonKeybind={
+Save=function(ad)
+return{
+__type=ad.__type,
+value=ad.Value and ad.Value.Key or ad.Value,
+}
+end,
+Load=function(ad,ae)
+if ad and ae.value~=nil then
+ad:Set(ae.value)
+end
+end
+},
+ButtonInput={
+Save=function(ad)
+return{
+__type=ad.__type,
+value=ad.Value and ad.Value.Input or ad.Value,
+}
+end,
+Load=function(ad,ae)
+if ad and ae.value~=nil then
+ad:Set(ae.value)
+end
+end
+},
 }
 }
 
@@ -8643,7 +8752,7 @@ function WindUI_StatCard.New(WindUI_af,WindUI_ag)
             FillDirection=Enum.FillDirection.Horizontal,
             SortOrder=Enum.SortOrder.LayoutOrder,
             CellPadding=UDim2.new(0,8,0,8),
-            CellSize=UDim2.new(1/cols,-((cols-1)*8)/cols,0,50),
+            CellSize=UDim2.new(1/cols,-math.ceil(((cols-1)*8)/cols+1.5),0,50),
             Parent=gridHolder,
         })
 
@@ -10012,6 +10121,1191 @@ function WindUI_ToggleKeybind.New(WindUI_af,WindUI_ag)
     return"ToggleKeybind",{__type="ToggleKeybind",Title=WindUI_ag.Title or"ToggleKeybind"}
 end
 
+
+-- =========================================================================
+-- Action Button Helper for Composite Modules
+-- =========================================================================
+local function WindUI_CreateActionButton(aa,ac,ad,parent,isBox,btnText,onClick)
+    local w=isBox and 46 or 60
+    local h=isBox and 22 or 26
+    local btn=aa.NewRoundFrame(8,"Squircle",{
+        Size=UDim2.new(0,w,0,h),
+        ImageTransparency=0.15,
+        ThemeTag={ImageColor3="Accent"},
+        Active=true,
+        Parent=parent,
+    })
+    local btnLabel=ac("TextLabel",{
+        Size=UDim2.new(1,0,1,0),
+        Text=tostring(btnText or"Action"),
+        TextSize=isBox and 11 or 13,
+        FontFace=Font.new(aa.Font,Enum.FontWeight.SemiBold),
+        TextColor3=Color3.fromRGB(255,255,255),
+        BackgroundTransparency=1,
+        TextXAlignment=Enum.TextXAlignment.Center,
+        TextYAlignment=Enum.TextYAlignment.Center,
+        TextTruncate=Enum.TextTruncate.AtEnd,
+        Parent=btn,
+    })
+    aa.AddSignal(btn.MouseEnter,function() ad(btn,0.08,{ImageTransparency=0}):Play() end)
+    aa.AddSignal(btn.MouseLeave,function() ad(btn,0.08,{ImageTransparency=0.15}):Play() end)
+    aa.AddSignal(btn.MouseButton1Down,function() ad(btn,0.05,{ImageTransparency=0.35}):Play() end)
+    aa.AddSignal(btn.MouseButton1Up,function() ad(btn,0.08,{ImageTransparency=0.15}):Play() end)
+    if onClick then
+        aa.AddSignal(btn.MouseButton1Click,onClick)
+    end
+    return btn,btnLabel
+end
+
+-- =========================================================================
+-- 1. ToggleDropdown & 2. ToggleMultiDropdown
+-- =========================================================================
+local function WindUI_CreateToggleDropdown(WindUI_af,WindUI_ag,isMulti)
+    local aa=a.load'a'
+    local ac=aa.New
+    local createSwitch=a.load'B'.New
+    local dropModule=a.load'H'
+    local isLocked=not WindUI_ag.Locked
+
+    local initToggle=false
+    local initDrop=isMulti and {} or nil
+    if type(WindUI_ag.Value)=="table" then
+        initToggle=WindUI_ag.Value.Toggle or WindUI_ag.Value.toggle or WindUI_ag.Value[1] or false
+        initDrop=WindUI_ag.Value.Dropdown or WindUI_ag.Value.dropdown or WindUI_ag.Value.Value or WindUI_ag.Value.value or WindUI_ag.Value[2] or (isMulti and {} or nil)
+    elseif type(WindUI_ag.Value)=="boolean" then
+        initToggle=WindUI_ag.Value
+        initDrop=WindUI_ag.Dropdown or WindUI_ag.dropdown or (isMulti and {} or nil)
+    elseif type(WindUI_ag.Value)=="string" or type(WindUI_ag.Value)=="table" then
+        initDrop=WindUI_ag.Value
+    end
+
+    local typeName=isMulti and "ToggleMultiDropdown" or "ToggleDropdown"
+    local ai={
+        __type=typeName,
+        Title=WindUI_ag.Title or typeName,
+        Desc=WindUI_ag.Desc or nil,
+        Locked=WindUI_ag.Locked or false,
+        Callback=WindUI_ag.Callback or function()end,
+        UIElements={},
+    }
+
+    local currentToggle=initToggle
+    local currentDrop=initDrop
+    ai.Value={Toggle=currentToggle,Dropdown=currentDrop}
+
+    local isBoxTogDrop=(WindUI_ag.Window and WindUI_ag.Window.TabLayoutType=="Boxes")
+    local dropW=isBoxTogDrop and 72 or 120
+    local swW=isBoxTogDrop and 36 or 42
+    local rightWidth=dropW+swW+6
+
+    ai.Frame=a.load'y'{
+        Title=ai.Title,
+        Desc=ai.Desc,
+        Window=WindUI_ag.Window,
+        Parent=WindUI_ag.Parent,
+        TextOffset=rightWidth+(isBoxTogDrop and 12 or 15),
+        Hover=false,
+        Tab=WindUI_ag.Tab,
+        Index=WindUI_ag.Index,
+        ElementTable=ai,
+    }
+
+    local rightHolder=ac("Frame",{
+        Size=UDim2.new(0,rightWidth,1,0),
+        Position=UDim2.new(1,0,0.5,0),
+        AnchorPoint=Vector2.new(1,0.5),
+        BackgroundTransparency=1,
+        Parent=ai.Frame.UIElements.Main,
+    },{
+        ac("UIListLayout",{
+            FillDirection=Enum.FillDirection.Horizontal,
+            VerticalAlignment=Enum.VerticalAlignment.Center,
+            HorizontalAlignment=Enum.HorizontalAlignment.Right,
+            Padding=UDim.new(0,6),
+        }),
+    })
+
+    -- Dropdown creation via a.load'H' with dummy container
+    local dummyFolder=Instance.new("Folder")
+    local _,dropObj=dropModule.New(dummyFolder,{
+        Title=ai.Title,
+        Window=WindUI_ag.Window,
+        WindUI=WindUI_ag.WindUI,
+        Parent=dummyFolder,
+        Values=WindUI_ag.Values or WindUI_ag.Items or{},
+        Value=currentDrop,
+        Multi=isMulti,
+        AllowNone=WindUI_ag.AllowNone,
+        SearchBarEnabled=WindUI_ag.SearchBarEnabled or false,
+        MenuWidth=WindUI_ag.MenuWidth,
+        Callback=function(val)
+            if isLocked then
+                currentDrop=val
+                ai.Value.Dropdown=val
+                local cb=WindUI_ag.DropdownCallback or WindUI_ag.Callback
+                aa.SafeCallback(cb,ai.Value)
+            end
+        end,
+    })
+
+    local dropBtn=dropObj.UIElements.Dropdown
+    dropBtn.Parent=rightHolder
+    dropBtn.Size=UDim2.new(0,dropW,0,isBoxTogDrop and 22 or 26)
+    local dropLabel=dropBtn.Frame.Frame.TextLabel
+    dropLabel.TextSize=isBoxTogDrop and 11 or 13
+
+    if dropObj.DropdownFrame and dropObj.DropdownFrame.UIElements and dropObj.DropdownFrame.UIElements.Main then
+        dropObj.DropdownFrame.UIElements.Main.Visible=false
+    end
+
+    ai.UIElements.Dropdown=dropObj
+
+    -- Toggle switch creation
+    local switchBtn=ac("TextButton",{
+        Size=UDim2.new(0,swW,0,isBoxTogDrop and 22 or 26),
+        BackgroundTransparency=1,
+        Text="",
+        AutoButtonColor=false,
+        Parent=rightHolder,
+    })
+
+    local switchFr,switchObj=createSwitch(currentToggle,WindUI_ag.Icon,switchBtn,function(st)
+        if isLocked then
+            currentToggle=st
+            ai.Value.Toggle=st
+            local cb=WindUI_ag.ToggleCallback or WindUI_ag.Callback
+            aa.SafeCallback(cb,ai.Value)
+        end
+    end)
+    switchFr.Position=UDim2.new(0.5,0,0.5,0)
+    switchFr.AnchorPoint=Vector2.new(0.5,0.5)
+
+    aa.AddSignal(switchBtn.MouseButton1Click,function()
+        if isLocked then
+            ai:SetToggle(not currentToggle)
+        end
+    end)
+
+    function ai.SetToggle(self,st,triggerCb)
+        if not isLocked then return end
+        currentToggle=st
+        ai.Value.Toggle=st
+        switchObj:Set(st,triggerCb~=false)
+    end
+
+    function ai.SetDropdown(self,val)
+        if not isLocked then return end
+        currentDrop=val
+        ai.Value.Dropdown=val
+        if dropObj and dropObj.Select then
+            dropObj:Select(val)
+        end
+    end
+
+    function ai.Select(self,val)
+        return ai:SetDropdown(val)
+    end
+
+    function ai.Refresh(self,newVals)
+        if dropObj and dropObj.Refresh then
+            dropObj:Refresh(newVals)
+        end
+    end
+
+    function ai.Set(self,valTable,triggerCb)
+        if type(valTable)=="table" then
+            local tVal = valTable.Toggle ~= nil and valTable.Toggle or valTable.toggle
+            local dVal = valTable.Dropdown ~= nil and valTable.Dropdown or valTable.dropdown
+            if tVal~=nil then ai:SetToggle(tVal,triggerCb) end
+            if dVal~=nil then ai:SetDropdown(dVal) end
+        elseif type(valTable)=="boolean" then
+            ai:SetToggle(valTable,triggerCb)
+        else
+            ai:SetDropdown(valTable)
+        end
+    end
+
+    function ai.SetBoxMode(self,isBoxes)
+        isBoxTogDrop=isBoxes
+        local dW=isBoxes and 72 or 120
+        local sW=isBoxes and 36 or 42
+        local sH=isBoxes and 22 or 26
+        local rW=dW+sW+6
+        rightHolder.Size=UDim2.new(0,rW,1,0)
+        dropBtn.Size=UDim2.new(0,dW,0,sH)
+        dropLabel.TextSize=isBoxes and 11 or 13
+        if switchBtn then
+            switchBtn.Size=UDim2.new(0,sW,0,sH)
+        end
+        if switchObj and switchObj.SetBoxMode then
+            switchObj:SetBoxMode(isBoxes)
+        end
+        if ai.Frame and ai.Frame.SetTextOffset then
+            ai.Frame:SetTextOffset(rW+(isBoxes and 12 or 15))
+        end
+        if ai.SetRowBoxMode then
+            ai:SetRowBoxMode(isBoxes)
+        end
+    end
+
+    function ai.Lock(self)
+        ai.Locked=true
+        isLocked=false
+        return ai.Frame:Lock()
+    end
+    function ai.Unlock(self)
+        ai.Locked=false
+        isLocked=true
+        return ai.Frame:Unlock()
+    end
+    if ai.Locked then ai:Lock() end
+
+    return ai.__type,ai
+end
+
+local WindUI_ToggleDropdown={}
+function WindUI_ToggleDropdown.New(WindUI_af,WindUI_ag)
+    local ok,resA,resB=pcall(function() return WindUI_CreateToggleDropdown(WindUI_af,WindUI_ag,false) end)
+    if ok then return resA,resB end
+    warn("[WindUI] ToggleDropdown failed: "..tostring(resA))
+    return"ToggleDropdown",{__type="ToggleDropdown",Title=WindUI_ag.Title or"ToggleDropdown"}
+end
+
+local WindUI_ToggleMultiDropdown={}
+function WindUI_ToggleMultiDropdown.New(WindUI_af,WindUI_ag)
+    local ok,resA,resB=pcall(function() return WindUI_CreateToggleDropdown(WindUI_af,WindUI_ag,true) end)
+    if ok then return resA,resB end
+    warn("[WindUI] ToggleMultiDropdown failed: "..tostring(resA))
+    return"ToggleMultiDropdown",{__type="ToggleMultiDropdown",Title=WindUI_ag.Title or"ToggleMultiDropdown"}
+end
+
+-- =========================================================================
+-- 3. ButtonDropdown & 4. ButtonMultiDropdown
+-- =========================================================================
+local function WindUI_CreateButtonDropdown(WindUI_af,WindUI_ag,isMulti)
+    local aa=a.load'a'
+    local ac=aa.New
+    local ad=aa.Tween
+    local dropModule=a.load'H'
+    local isLocked=not WindUI_ag.Locked
+
+    local initDrop=isMulti and {} or nil
+    if type(WindUI_ag.Value)=="table" then
+        initDrop=WindUI_ag.Value.Dropdown or WindUI_ag.Value.dropdown or WindUI_ag.Value[1] or (isMulti and {} or nil)
+    elseif type(WindUI_ag.Value)=="string" or type(WindUI_ag.Value)=="table" then
+        initDrop=WindUI_ag.Value
+    end
+
+    local typeName=isMulti and "ButtonMultiDropdown" or "ButtonDropdown"
+    local ai={
+        __type=typeName,
+        Title=WindUI_ag.Title or typeName,
+        Desc=WindUI_ag.Desc or nil,
+        Locked=WindUI_ag.Locked or false,
+        Callback=WindUI_ag.Callback or function()end,
+        UIElements={},
+    }
+    local currentDrop=initDrop
+    ai.Value={Dropdown=currentDrop}
+
+    local isBoxBtnDrop=(WindUI_ag.Window and WindUI_ag.Window.TabLayoutType=="Boxes")
+    local dropW=isBoxBtnDrop and 72 or 120
+    local bW=isBoxBtnDrop and 46 or 60
+    local rightWidth=dropW+bW+6
+
+    ai.Frame=a.load'y'{
+        Title=ai.Title,
+        Desc=ai.Desc,
+        Window=WindUI_ag.Window,
+        Parent=WindUI_ag.Parent,
+        TextOffset=rightWidth+(isBoxBtnDrop and 12 or 15),
+        Hover=false,
+        Tab=WindUI_ag.Tab,
+        Index=WindUI_ag.Index,
+        ElementTable=ai,
+    }
+
+    local rightHolder=ac("Frame",{
+        Size=UDim2.new(0,rightWidth,1,0),
+        Position=UDim2.new(1,0,0.5,0),
+        AnchorPoint=Vector2.new(1,0.5),
+        BackgroundTransparency=1,
+        Parent=ai.Frame.UIElements.Main,
+    },{
+        ac("UIListLayout",{
+            FillDirection=Enum.FillDirection.Horizontal,
+            VerticalAlignment=Enum.VerticalAlignment.Center,
+            HorizontalAlignment=Enum.HorizontalAlignment.Right,
+            Padding=UDim.new(0,6),
+        }),
+    })
+
+    local dummyFolder=Instance.new("Folder")
+    local _,dropObj=dropModule.New(dummyFolder,{
+        Title=ai.Title,
+        Window=WindUI_ag.Window,
+        WindUI=WindUI_ag.WindUI,
+        Parent=dummyFolder,
+        Values=WindUI_ag.Values or WindUI_ag.Items or{},
+        Value=currentDrop,
+        Multi=isMulti,
+        AllowNone=WindUI_ag.AllowNone,
+        SearchBarEnabled=WindUI_ag.SearchBarEnabled or false,
+        MenuWidth=WindUI_ag.MenuWidth,
+        Callback=function(val)
+            if isLocked then
+                currentDrop=val
+                ai.Value.Dropdown=val
+                local cb=WindUI_ag.DropdownCallback or WindUI_ag.Callback
+                aa.SafeCallback(cb,ai.Value)
+            end
+        end,
+    })
+
+    local dropBtn=dropObj.UIElements.Dropdown
+    dropBtn.Parent=rightHolder
+    dropBtn.Size=UDim2.new(0,dropW,0,isBoxBtnDrop and 22 or 26)
+    local dropLabel=dropBtn.Frame.Frame.TextLabel
+    dropLabel.TextSize=isBoxBtnDrop and 11 or 13
+
+    if dropObj.DropdownFrame and dropObj.DropdownFrame.UIElements and dropObj.DropdownFrame.UIElements.Main then
+        dropObj.DropdownFrame.UIElements.Main.Visible=false
+    end
+    ai.UIElements.Dropdown=dropObj
+
+    local actionBtn,actionBtnLabel=WindUI_CreateActionButton(aa,ac,ad,rightHolder,isBoxBtnDrop,WindUI_ag.ButtonText,function()
+        if isLocked then
+            local cb=WindUI_ag.ButtonCallback or WindUI_ag.ButtonClick or WindUI_ag.Callback
+            aa.SafeCallback(cb,ai.Value)
+        end
+    end)
+    ai.UIElements.ActionButton=actionBtn
+
+    function ai.SetDropdown(self,val)
+        if not isLocked then return end
+        currentDrop=val
+        ai.Value.Dropdown=val
+        if dropObj and dropObj.Select then dropObj:Select(val) end
+    end
+    function ai.Select(self,val) return ai:SetDropdown(val) end
+    function ai.Refresh(self,newVals) if dropObj and dropObj.Refresh then dropObj:Refresh(newVals) end end
+    function ai.Set(self,val) ai:SetDropdown(val) end
+    function ai.SetButtonText(self,txt) actionBtnLabel.Text=tostring(txt or "Action") end
+
+    function ai.SetBoxMode(self,isBoxes)
+        isBoxBtnDrop=isBoxes
+        local dW=isBoxes and 72 or 120
+        local actW=isBoxes and 46 or 60
+        local h=isBoxes and 22 or 26
+        local rW=dW+actW+6
+        rightHolder.Size=UDim2.new(0,rW,1,0)
+        dropBtn.Size=UDim2.new(0,dW,0,h)
+        dropLabel.TextSize=isBoxes and 11 or 13
+        actionBtn.Size=UDim2.new(0,actW,0,h)
+        actionBtnLabel.TextSize=isBoxes and 11 or 13
+        if ai.Frame and ai.Frame.SetTextOffset then
+            ai.Frame:SetTextOffset(rW+(isBoxes and 12 or 15))
+        end
+        if ai.SetRowBoxMode then
+            ai:SetRowBoxMode(isBoxes)
+        end
+    end
+
+    function ai.Lock(self)
+        ai.Locked=true
+        isLocked=false
+        return ai.Frame:Lock()
+    end
+    function ai.Unlock(self)
+        ai.Locked=false
+        isLocked=true
+        return ai.Frame:Unlock()
+    end
+    if ai.Locked then ai:Lock() end
+
+    return ai.__type,ai
+end
+
+local WindUI_ButtonDropdown={}
+function WindUI_ButtonDropdown.New(WindUI_af,WindUI_ag)
+    local ok,resA,resB=pcall(function() return WindUI_CreateButtonDropdown(WindUI_af,WindUI_ag,false) end)
+    if ok then return resA,resB end
+    warn("[WindUI] ButtonDropdown failed: "..tostring(resA))
+    return"ButtonDropdown",{__type="ButtonDropdown",Title=WindUI_ag.Title or"ButtonDropdown"}
+end
+
+local WindUI_ButtonMultiDropdown={}
+function WindUI_ButtonMultiDropdown.New(WindUI_af,WindUI_ag)
+    local ok,resA,resB=pcall(function() return WindUI_CreateButtonDropdown(WindUI_af,WindUI_ag,true) end)
+    if ok then return resA,resB end
+    warn("[WindUI] ButtonMultiDropdown failed: "..tostring(resA))
+    return"ButtonMultiDropdown",{__type="ButtonMultiDropdown",Title=WindUI_ag.Title or"ButtonMultiDropdown"}
+end
+
+-- =========================================================================
+-- 5. ButtonColorPicker
+-- =========================================================================
+local WindUI_ButtonColorPicker={}
+function WindUI_ButtonColorPicker.New(WindUI_af,WindUI_ag)
+    local ok,resA,resB=pcall(function()
+        local aa=a.load'a'
+        local ac=aa.New
+        local ad=aa.Tween
+        local colorpickerModule=a.load'L'
+
+        local initColor=Color3.fromRGB(255,255,255)
+        local initTransparency=0
+        if type(WindUI_ag.Value)=="table" then
+            if WindUI_ag.Value.Color or WindUI_ag.Value.color then
+                local c=WindUI_ag.Value.Color or WindUI_ag.Value.color
+                if typeof(c)=="string" then c=Color3.fromHex(c) end
+                initColor=c
+            end
+            if WindUI_ag.Value.Transparency or WindUI_ag.Value.transparency then
+                initTransparency=WindUI_ag.Value.Transparency or WindUI_ag.Value.transparency
+            end
+        elseif typeof(WindUI_ag.Value)=="Color3" then
+            initColor=WindUI_ag.Value
+        elseif type(WindUI_ag.Value)=="string" then
+            initColor=Color3.fromHex(WindUI_ag.Value)
+        end
+        if WindUI_ag.Default then initColor=WindUI_ag.Default end
+        if WindUI_ag.Transparency then initTransparency=WindUI_ag.Transparency end
+
+        local ai={
+            __type="ButtonColorPicker",
+            Title=WindUI_ag.Title or"ButtonColorPicker",
+            Desc=WindUI_ag.Desc or nil,
+            Locked=WindUI_ag.Locked or false,
+            Default=initColor,
+            Transparency=initTransparency,
+            Callback=WindUI_ag.Callback or function()end,
+            UIElements={},
+        }
+        ai.Value={Color=initColor,Transparency=initTransparency}
+
+        local isLocked=not ai.Locked
+        local currentColor=initColor
+        local currentTransparency=initTransparency
+
+        local isBoxBtnCol=(WindUI_ag.Window and WindUI_ag.Window.TabLayoutType=="Boxes")
+        local colW=isBoxBtnCol and 22 or 26
+        local btnW=isBoxBtnCol and 46 or 60
+        local rightWidth=colW+btnW+8
+
+        ai.Frame=a.load'y'{
+            Title=ai.Title,
+            Desc=ai.Desc,
+            Window=WindUI_ag.Window,
+            Parent=WindUI_ag.Parent,
+            TextOffset=rightWidth+(isBoxBtnCol and 12 or 15),
+            Hover=false,
+            Tab=WindUI_ag.Tab,
+            Index=WindUI_ag.Index,
+            ElementTable=ai,
+        }
+
+        local rightHolder=ac("Frame",{
+            Size=UDim2.new(0,rightWidth,1,0),
+            Position=UDim2.new(1,0,0.5,0),
+            AnchorPoint=Vector2.new(1,0.5),
+            BackgroundTransparency=1,
+            Parent=ai.Frame.UIElements.Main,
+        },{
+            ac("UIListLayout",{
+                FillDirection=Enum.FillDirection.Horizontal,
+                VerticalAlignment=Enum.VerticalAlignment.Center,
+                HorizontalAlignment=Enum.HorizontalAlignment.Right,
+                Padding=UDim.new(0,8),
+            }),
+        })
+
+        local colorBtn=aa.NewRoundFrame(8,"Squircle",{
+            ImageTransparency=currentTransparency,
+            Active=true,
+            ImageColor3=currentColor,
+            Size=UDim2.new(0,colW,0,colW),
+            Parent=rightHolder,
+            ZIndex=2,
+        },nil,true)
+
+        local actionBtn,actionBtnLabel=WindUI_CreateActionButton(aa,ac,ad,rightHolder,isBoxBtnCol,WindUI_ag.ButtonText,function()
+            if isLocked then
+                local cb=WindUI_ag.ButtonCallback or WindUI_ag.ButtonClick or WindUI_ag.Callback
+                aa.SafeCallback(cb,ai.Value)
+            end
+        end)
+
+        function ai.UpdateColor(self,col,trans)
+            if col then currentColor=col end
+            if trans~=nil then currentTransparency=trans end
+            colorBtn.ImageColor3=currentColor
+            colorBtn.ImageTransparency=currentTransparency
+            ai.Default=currentColor
+            ai.Transparency=currentTransparency
+            ai.Value.Color=currentColor
+            ai.Value.Transparency=currentTransparency
+            local cb=WindUI_ag.ColorCallback or WindUI_ag.Callback
+            aa.SafeCallback(cb,ai.Value)
+        end
+
+        ai.Update=ai.UpdateColor
+        ai.SetColor=ai.UpdateColor
+        ai.UIElements.Colorpicker=colorBtn
+        function ai.SetButtonText(self,txt) actionBtnLabel.Text=tostring(txt or "Action") end
+
+        function ai.Set(self,valTable)
+            if type(valTable)=="table" then
+                local c=valTable.Color or valTable.color or valTable[1]
+                if typeof(c)=="string" then c=Color3.fromHex(c) end
+                ai:UpdateColor(c,valTable.Transparency or valTable.transparency)
+            elseif typeof(valTable)=="Color3" then
+                ai:UpdateColor(valTable)
+            end
+        end
+
+        aa.AddSignal(colorBtn.MouseButton1Click,function()
+            if isLocked then
+                local cp=colorpickerModule:Colorpicker(ai,WindUI_ag.Window,function(newCol,newTrans)
+                    ai:UpdateColor(newCol,newTrans)
+                end)
+                if cp and cp.ColorpickerFrame then
+                    cp.ColorpickerFrame:Open()
+                end
+            end
+        end)
+
+        function ai.SetBoxMode(self,isBoxes)
+            isBoxBtnCol=isBoxes
+            local cW=isBoxes and 22 or 26
+            local bWidth=isBoxes and 46 or 60
+            local rW=cW+bWidth+8
+            rightHolder.Size=UDim2.new(0,rW,1,0)
+            colorBtn.Size=UDim2.new(0,cW,0,cW)
+            actionBtn.Size=UDim2.new(0,bWidth,0,isBoxes and 22 or 26)
+            actionBtnLabel.TextSize=isBoxes and 11 or 13
+            if ai.Frame and ai.Frame.SetTextOffset then
+                ai.Frame:SetTextOffset(rW+(isBoxes and 12 or 15))
+            end
+            if ai.SetRowBoxMode then
+                ai:SetRowBoxMode(isBoxes)
+            end
+        end
+
+        function ai.Lock(self)
+            ai.Locked=true
+            isLocked=false
+            return ai.Frame:Lock()
+        end
+        function ai.Unlock(self)
+            ai.Locked=false
+            isLocked=true
+            return ai.Frame:Unlock()
+        end
+        if ai.Locked then ai:Lock() end
+
+        return ai.__type,ai
+    end)
+    if ok then return resA,resB end
+    warn("[WindUI] ButtonColorPicker failed: "..tostring(resA))
+    return"ButtonColorPicker",{__type="ButtonColorPicker",Title=WindUI_ag.Title or"ButtonColorPicker"}
+end
+
+-- =========================================================================
+-- 6. ButtonSlider
+-- =========================================================================
+local WindUI_ButtonSlider={}
+function WindUI_ButtonSlider.New(WindUI_af,WindUI_ag)
+    local ok,resA,resB=pcall(function()
+        local aa=a.load'a'
+        local ac=aa.New
+        local ad=aa.Tween
+
+        local ai={
+            __type="ButtonSlider",
+            Title=WindUI_ag.Title or"ButtonSlider",
+            Desc=WindUI_ag.Desc or nil,
+            Locked=WindUI_ag.Locked or false,
+            Step=WindUI_ag.Step or 1,
+            Min=WindUI_ag.Min or(WindUI_ag.Value and WindUI_ag.Value.Min)or 0,
+            Max=WindUI_ag.Max or(WindUI_ag.Value and WindUI_ag.Value.Max)or 100,
+            Callback=WindUI_ag.Callback or function()end,
+            UIElements={},
+        }
+
+        local initSlider=ai.Min
+        if type(WindUI_ag.Value)=="table" then
+            initSlider=WindUI_ag.Value.Slider or WindUI_ag.Value.slider or WindUI_ag.Value[1] or ai.Min
+        elseif type(WindUI_ag.Value)=="number" then
+            initSlider=WindUI_ag.Value
+        end
+        ai.Value={Slider=initSlider}
+
+        local isLocked=not ai.Locked
+        local currentVal=initSlider
+
+        local isFloat=ai.Step%1~=0
+        local function FormatVal(v)
+            if isFloat then return string.format("%.2f",v) else return tostring(math.floor(v+0.5)) end
+        end
+        local function CalcVal(v)
+            return math.floor(v/ai.Step+0.5)*ai.Step
+        end
+
+        local isBoxBtnSl=(WindUI_ag.Window and WindUI_ag.Window.TabLayoutType=="Boxes")
+        local trackW=isBoxBtnSl and 38 or 90
+        local valW=isBoxBtnSl and 24 or 34
+        local btnW=isBoxBtnSl and 46 or 60
+        local rightWidth=trackW+valW+btnW+12
+
+        ai.Frame=a.load'y'{
+            Title=ai.Title,
+            Desc=ai.Desc,
+            Window=WindUI_ag.Window,
+            Parent=WindUI_ag.Parent,
+            TextOffset=rightWidth+(isBoxBtnSl and 12 or 15),
+            Hover=false,
+            Tab=WindUI_ag.Tab,
+            Index=WindUI_ag.Index,
+            ElementTable=ai,
+        }
+
+        local rightHolder=ac("Frame",{
+            Size=UDim2.new(0,rightWidth,1,0),
+            Position=UDim2.new(1,0,0.5,0),
+            AnchorPoint=Vector2.new(1,0.5),
+            BackgroundTransparency=1,
+            Parent=ai.Frame.UIElements.Main,
+        },{
+            ac("UIListLayout",{
+                FillDirection=Enum.FillDirection.Horizontal,
+                VerticalAlignment=Enum.VerticalAlignment.Center,
+                HorizontalAlignment=Enum.HorizontalAlignment.Right,
+                Padding=UDim.new(0,6),
+            }),
+        })
+
+        local sliderRow=ac("Frame",{
+            Size=UDim2.new(0,trackW+valW+4,0,isBoxBtnSl and 22 or 26),
+            BackgroundTransparency=1,
+            Parent=rightHolder,
+        },{
+            ac("UIListLayout",{
+                FillDirection=Enum.FillDirection.Horizontal,
+                VerticalAlignment=Enum.VerticalAlignment.Center,
+                Padding=UDim.new(0,6),
+            }),
+        })
+
+        local valueLabel=ac("TextLabel",{
+            Size=UDim2.new(0,valW,0,18),
+            Text=FormatVal(currentVal),
+            TextSize=isBoxBtnSl and 11 or 12,
+            FontFace=Font.new(aa.Font,Enum.FontWeight.Medium),
+            TextTransparency=0.3,
+            TextXAlignment=Enum.TextXAlignment.Center,
+            BackgroundTransparency=1,
+            ThemeTag={TextColor3="Text"},
+            Parent=sliderRow,
+        })
+
+        local sliderFr=ac("Frame",{
+            Size=UDim2.new(0,trackW,0,4),
+            BackgroundColor3=Color3.new(1,1,1),
+            BackgroundTransparency=0.88,
+            ThemeTag={BackgroundColor3="Text"},
+            AnchorPoint=Vector2.new(0,0.5),
+            Position=UDim2.new(0,0,0.5,0),
+            Parent=sliderRow,
+        },{
+            ac("UICorner",{CornerRadius=UDim.new(1,0)}),
+        })
+
+        local fillAlpha=math.clamp((currentVal-ai.Min)/(ai.Max-ai.Min),0,1)
+        local fillFr=ac("Frame",{
+            Size=UDim2.new(fillAlpha,0,1,0),
+            BackgroundColor3=Color3.new(1,1,1),
+            BackgroundTransparency=0,
+            ThemeTag={BackgroundColor3="Accent"},
+            Parent=sliderFr,
+        },{
+            ac("UICorner",{CornerRadius=UDim.new(1,0)}),
+            ac("Frame",{
+                Size=UDim2.new(0,12,0,12),
+                AnchorPoint=Vector2.new(0.5,0.5),
+                Position=UDim2.new(1,0,0.5,0),
+                BackgroundColor3=Color3.new(1,1,1),
+                ThemeTag={BackgroundColor3="Text"},
+                Parent=sliderFr,
+            },{
+                ac("UICorner",{CornerRadius=UDim.new(1,0)}),
+            }),
+        })
+
+        local function SetSliderPos(val,fireCb)
+            val=math.clamp(val,ai.Min,ai.Max)
+            val=CalcVal(val)
+            local pct=math.clamp((val-ai.Min)/(ai.Max-ai.Min),0,1)
+            currentVal=val
+            ai.Value.Slider=val
+            valueLabel.Text=FormatVal(val)
+            ad(fillFr,0.06,{Size=UDim2.new(pct,0,1,0)}):Play()
+            if fireCb~=false then
+                local cb=WindUI_ag.SliderCallback or WindUI_ag.Callback
+                aa.SafeCallback(cb,ai.Value)
+            end
+        end
+
+        local isDragging=false
+        local function StartDrag(inp)
+            isDragging=true
+            local conn
+            conn=game:GetService("RunService").RenderStepped:Connect(function()
+                if not isDragging then conn:Disconnect() return end
+                local mX=game:GetService("UserInputService"):GetMouseLocation().X
+                local sPos=sliderFr.AbsolutePosition.X
+                local sWidth=sliderFr.AbsoluteSize.X
+                local pct=math.clamp((mX-sPos)/sWidth,0,1)
+                SetSliderPos(ai.Min+pct*(ai.Max-ai.Min),true)
+            end)
+            local endConn
+            endConn=game:GetService("UserInputService").InputEnded:Connect(function(endInp)
+                if endInp.UserInputType==Enum.UserInputType.MouseButton1 or endInp.UserInputType==Enum.UserInputType.Touch then
+                    isDragging=false
+                    endConn:Disconnect()
+                end
+            end)
+        end
+
+        aa.AddSignal(sliderFr.InputBegan,function(inp)
+            if (inp.UserInputType==Enum.UserInputType.MouseButton1 or inp.UserInputType==Enum.UserInputType.Touch) and isLocked then
+                StartDrag(inp)
+            end
+        end)
+
+        local actionBtn,actionBtnLabel=WindUI_CreateActionButton(aa,ac,ad,rightHolder,isBoxBtnSl,WindUI_ag.ButtonText,function()
+            if isLocked then
+                local cb=WindUI_ag.ButtonCallback or WindUI_ag.ButtonClick or WindUI_ag.Callback
+                aa.SafeCallback(cb,ai.Value)
+            end
+        end)
+
+        function ai.SetSlider(self,val,fireCb)
+            SetSliderPos(val,fireCb)
+        end
+        function ai.SetButtonText(self,txt) actionBtnLabel.Text=tostring(txt or "Action") end
+        function ai.Set(self,v,fireCb)
+            if type(v)=="table" then
+                local sv=v.Slider ~= nil and v.Slider or v.slider or v[1]
+                if sv~=nil then SetSliderPos(sv,fireCb) end
+            elseif type(v)=="number" then
+                SetSliderPos(v,fireCb)
+            end
+        end
+
+        function ai.SetBoxMode(self,isBoxes)
+            isBoxBtnSl=isBoxes
+            local trW=isBoxes and 38 or 90
+            local vW=isBoxes and 24 or 34
+            local bWidth=isBoxes and 46 or 60
+            local sh=isBoxes and 22 or 26
+            local rW=trW+vW+bWidth+12
+            rightHolder.Size=UDim2.new(0,rW,1,0)
+            sliderFr.Size=UDim2.new(0,trW,0,4)
+            valueLabel.Size=UDim2.new(0,vW,0,18)
+            valueLabel.TextSize=isBoxes and 11 or 12
+            sliderRow.Size=UDim2.new(0,trW+vW+4,0,sh)
+            actionBtn.Size=UDim2.new(0,bWidth,0,sh)
+            actionBtnLabel.TextSize=isBoxes and 11 or 13
+            if ai.Frame and ai.Frame.SetTextOffset then
+                ai.Frame:SetTextOffset(rW+(isBoxes and 12 or 15))
+            end
+            if ai.SetRowBoxMode then
+                ai:SetRowBoxMode(isBoxes)
+            end
+        end
+
+        function ai.Lock(self)
+            ai.Locked=true
+            isLocked=false
+            return ai.Frame:Lock()
+        end
+        function ai.Unlock(self)
+            ai.Locked=false
+            isLocked=true
+            return ai.Frame:Unlock()
+        end
+        if ai.Locked then ai:Lock() end
+
+        return ai.__type,ai
+    end)
+    if ok then return resA,resB end
+    warn("[WindUI] ButtonSlider failed: "..tostring(resA))
+    return"ButtonSlider",{__type="ButtonSlider",Title=WindUI_ag.Title or"ButtonSlider"}
+end
+
+-- =========================================================================
+-- 7. ButtonKeybind
+-- =========================================================================
+local WindUI_ButtonKeybind={}
+function WindUI_ButtonKeybind.New(WindUI_af,WindUI_ag)
+    local ok,resA,resB=pcall(function()
+        local aa=a.load'a'
+        local ac=aa.New
+        local ad=aa.Tween
+        local createKeyBadge=a.load's'.New
+        local isLocked=not WindUI_ag.Locked
+
+        local initKey="F"
+        if type(WindUI_ag.Value)=="table" then
+            initKey=tostring(WindUI_ag.Value.Key or WindUI_ag.Value.key or WindUI_ag.Value[1] or"F")
+        elseif type(WindUI_ag.Value)=="string" then
+            initKey=WindUI_ag.Value
+        elseif WindUI_ag.Key or WindUI_ag.Bind then
+            initKey=tostring(WindUI_ag.Key or WindUI_ag.Bind)
+        end
+
+        local ai={
+            __type="ButtonKeybind",
+            Title=WindUI_ag.Title or"ButtonKeybind",
+            Desc=WindUI_ag.Desc or nil,
+            Locked=WindUI_ag.Locked or false,
+            Callback=WindUI_ag.Callback or function()end,
+            UIElements={},
+        }
+        local currentKey=initKey
+        local isPicking=false
+        ai.Value={Key=currentKey}
+
+        local isBoxBtnKey=(WindUI_ag.Window and WindUI_ag.Window.TabLayoutType=="Boxes")
+        local keyW=isBoxBtnKey and 26 or 34
+        local btnW=isBoxBtnKey and 46 or 60
+        local rightWidth=keyW+btnW+8
+
+        ai.Frame=a.load'y'{
+            Title=ai.Title,
+            Desc=ai.Desc,
+            Window=WindUI_ag.Window,
+            Parent=WindUI_ag.Parent,
+            TextOffset=rightWidth+(isBoxBtnKey and 12 or 15),
+            Hover=false,
+            Tab=WindUI_ag.Tab,
+            Index=WindUI_ag.Index,
+            ElementTable=ai,
+        }
+
+        local rightHolder=ac("Frame",{
+            Size=UDim2.new(0,rightWidth,1,0),
+            Position=UDim2.new(1,0,0.5,0),
+            AnchorPoint=Vector2.new(1,0.5),
+            BackgroundTransparency=1,
+            Parent=ai.Frame.UIElements.Main,
+        },{
+            ac("UIListLayout",{
+                FillDirection=Enum.FillDirection.Horizontal,
+                VerticalAlignment=Enum.VerticalAlignment.Center,
+                HorizontalAlignment=Enum.HorizontalAlignment.Right,
+                Padding=UDim.new(0,8),
+            }),
+        })
+
+        local keyBadge=createKeyBadge(currentKey,nil,rightHolder)
+        ai.UIElements.Keybind=keyBadge
+
+        local togKeyText=keyBadge.Frame.Frame.TextLabel
+        togKeyText.TextXAlignment="Center"
+        togKeyText.TextYAlignment="Center"
+        pcall(function()
+            keyBadge.Frame.Frame.UIListLayout.HorizontalAlignment=Enum.HorizontalAlignment.Center
+        end)
+
+        local togKeyScale=ac("UIScale",{Parent=keyBadge,Scale=isBoxBtnKey and 1 or 0.85})
+
+        local function UpdateKeySize()
+            pcall(function()
+                local textWidth=togKeyText.TextBounds.X
+                if isBoxBtnKey then
+                    keyBadge.Frame.Frame.UIPadding.PaddingLeft=UDim.new(0,0)
+                    keyBadge.Frame.Frame.UIPadding.PaddingRight=UDim.new(0,0)
+                    keyBadge.Size=UDim2.new(0,math.max(26,textWidth+14),0,22)
+                    togKeyScale.Scale=1
+                else
+                    keyBadge.Frame.Frame.UIPadding.PaddingLeft=UDim.new(0,8)
+                    keyBadge.Frame.Frame.UIPadding.PaddingRight=UDim.new(0,8)
+                    keyBadge.Size=UDim2.new(0,24+textWidth,0,30)
+                    togKeyScale.Scale=0.85
+                end
+            end)
+        end
+        UpdateKeySize()
+        aa.AddSignal(togKeyText:GetPropertyChangedSignal("TextBounds"),UpdateKeySize)
+
+        aa.AddSignal(keyBadge.MouseButton1Click,function()
+            if not isLocked or isPicking then return end
+            isPicking=true
+            togKeyText.Text="..."
+            task.wait(0.15)
+            local uis=game:GetService("UserInputService")
+            local connA,connB
+            connA=uis.InputBegan:Connect(function(input)
+                local captured=nil
+                if input.UserInputType==Enum.UserInputType.Keyboard then
+                    captured=input.KeyCode.Name
+                elseif input.UserInputType==Enum.UserInputType.MouseButton1 then
+                    captured="MouseLeft"
+                elseif input.UserInputType==Enum.UserInputType.MouseButton2 then
+                    captured="MouseRight"
+                end
+                if captured then
+                    connB=uis.InputEnded:Connect(function(endedInput)
+                        if (endedInput.UserInputType==Enum.UserInputType.Keyboard and endedInput.KeyCode.Name==captured) or
+                           (captured=="MouseLeft" and endedInput.UserInputType==Enum.UserInputType.MouseButton1) or
+                           (captured=="MouseRight" and endedInput.UserInputType==Enum.UserInputType.MouseButton2) then
+                            connA:Disconnect()
+                            connB:Disconnect()
+                            isPicking=false
+                            currentKey=captured
+                            ai.Value.Key=captured
+                            togKeyText.Text=captured
+                            local cb=WindUI_ag.KeybindCallback or WindUI_ag.Callback
+                            aa.SafeCallback(cb,ai.Value)
+                        end
+                    end)
+                end
+            end)
+        end)
+
+        aa.AddSignal(game:GetService("UserInputService").InputBegan,function(input)
+            if isLocked and not isPicking then
+                local matches=false
+                if input.UserInputType==Enum.UserInputType.Keyboard and input.KeyCode.Name==currentKey then
+                    matches=true
+                elseif currentKey=="MouseLeft" and input.UserInputType==Enum.UserInputType.MouseButton1 then
+                    matches=true
+                elseif currentKey=="MouseRight" and input.UserInputType==Enum.UserInputType.MouseButton2 then
+                    matches=true
+                end
+                if matches then
+                    local cb=WindUI_ag.ButtonCallback or WindUI_ag.ButtonClick or WindUI_ag.Callback
+                    aa.SafeCallback(cb,ai.Value)
+                end
+            end
+        end)
+
+        local actionBtn,actionBtnLabel=WindUI_CreateActionButton(aa,ac,ad,rightHolder,isBoxBtnKey,WindUI_ag.ButtonText,function()
+            if isLocked then
+                local cb=WindUI_ag.ButtonCallback or WindUI_ag.ButtonClick or WindUI_ag.Callback
+                aa.SafeCallback(cb,ai.Value)
+            end
+        end)
+
+        function ai.SetKey(self,key)
+            currentKey=tostring(key)
+            ai.Value.Key=currentKey
+            togKeyText.Text=currentKey
+        end
+        function ai.SetButtonText(self,txt) actionBtnLabel.Text=tostring(txt or "Action") end
+        function ai.Set(self,v)
+            if type(v)=="table" then
+                local k=v.Key or v.key or v[1]
+                if k then ai:SetKey(k) end
+            else
+                ai:SetKey(v)
+            end
+        end
+
+        function ai.SetBoxMode(self,isBoxes)
+            isBoxBtnKey=isBoxes
+            local kW=isBoxes and 26 or 34
+            local bWidth=isBoxes and 46 or 60
+            local rW=kW+bWidth+8
+            rightHolder.Size=UDim2.new(0,rW,1,0)
+            actionBtn.Size=UDim2.new(0,bWidth,0,isBoxes and 22 or 26)
+            actionBtnLabel.TextSize=isBoxes and 11 or 13
+            UpdateKeySize()
+            if ai.Frame and ai.Frame.SetTextOffset then
+                ai.Frame:SetTextOffset(rW+(isBoxes and 12 or 15))
+            end
+            if ai.SetRowBoxMode then
+                ai:SetRowBoxMode(isBoxes)
+            end
+        end
+
+        function ai.Lock(self)
+            ai.Locked=true
+            isLocked=false
+            return ai.Frame:Lock()
+        end
+        function ai.Unlock(self)
+            ai.Locked=false
+            isLocked=true
+            return ai.Frame:Unlock()
+        end
+        if ai.Locked then ai:Lock() end
+
+        return ai.__type,ai
+    end)
+    if ok then return resA,resB end
+    warn("[WindUI] ButtonKeybind failed: "..tostring(resA))
+    return"ButtonKeybind",{__type="ButtonKeybind",Title=WindUI_ag.Title or"ButtonKeybind"}
+end
+
+-- =========================================================================
+-- 8. ButtonInput
+-- =========================================================================
+local WindUI_ButtonInput={}
+function WindUI_ButtonInput.New(WindUI_af,WindUI_ag)
+    local ok,resA,resB=pcall(function()
+        local aa=a.load'a'
+        local ac=aa.New
+        local ad=aa.Tween
+        local isLocked=not WindUI_ag.Locked
+
+        local initInput=""
+        if type(WindUI_ag.Value)=="table" then
+            initInput=tostring(WindUI_ag.Value.Input or WindUI_ag.Value.input or WindUI_ag.Value[1] or"")
+        elseif type(WindUI_ag.Value)=="string" then
+            initInput=WindUI_ag.Value
+        elseif WindUI_ag.Input or WindUI_ag.Text then
+            initInput=tostring(WindUI_ag.Input or WindUI_ag.Text)
+        end
+
+        local ai={
+            __type="ButtonInput",
+            Title=WindUI_ag.Title or"ButtonInput",
+            Desc=WindUI_ag.Desc or nil,
+            Locked=WindUI_ag.Locked or false,
+            Callback=WindUI_ag.Callback or function()end,
+            UIElements={},
+        }
+        local currentInput=initInput
+        ai.Value={Input=currentInput}
+
+        local isBoxBtnIn=(WindUI_ag.Window and WindUI_ag.Window.TabLayoutType=="Boxes")
+        local inputW=isBoxBtnIn and 50 or 105
+        local btnW=isBoxBtnIn and 46 or 60
+        local rightWidth=inputW+btnW+8
+
+        ai.Frame=a.load'y'{
+            Title=ai.Title,
+            Desc=ai.Desc,
+            Window=WindUI_ag.Window,
+            Parent=WindUI_ag.Parent,
+            TextOffset=rightWidth+(isBoxBtnIn and 12 or 15),
+            Hover=false,
+            Tab=WindUI_ag.Tab,
+            Index=WindUI_ag.Index,
+            ElementTable=ai,
+        }
+
+        local rightHolder=ac("Frame",{
+            Size=UDim2.new(0,rightWidth,1,0),
+            Position=UDim2.new(1,0,0.5,0),
+            AnchorPoint=Vector2.new(1,0.5),
+            BackgroundTransparency=1,
+            Parent=ai.Frame.UIElements.Main,
+        },{
+            ac("UIListLayout",{
+                FillDirection=Enum.FillDirection.Horizontal,
+                VerticalAlignment=Enum.VerticalAlignment.Center,
+                HorizontalAlignment=Enum.HorizontalAlignment.Right,
+                Padding=UDim.new(0,8),
+            }),
+        })
+
+        local inputFr=aa.NewRoundFrame(8,"Squircle",{
+            Size=UDim2.new(0,inputW,0,isBoxBtnIn and 22 or 26),
+            ImageTransparency=0.92,
+            ThemeTag={ImageColor3="Text"},
+            Parent=rightHolder,
+        })
+
+        local textBox=ac("TextBox",{
+            Size=UDim2.new(1,-12,1,0),
+            Position=UDim2.new(0,6,0,0),
+            Text=currentInput,
+            PlaceholderText=WindUI_ag.Placeholder or"...",
+            TextSize=isBoxBtnIn and 11 or 13,
+            FontFace=Font.new(aa.Font,Enum.FontWeight.Medium),
+            BackgroundTransparency=1,
+            TextXAlignment=Enum.TextXAlignment.Left,
+            TextTruncate=Enum.TextTruncate.AtEnd,
+            ThemeTag={TextColor3="Text",PlaceholderColor3="Placeholder"},
+            Parent=inputFr,
+        })
+
+        aa.AddSignal(textBox.FocusLost,function()
+            if isLocked then
+                currentInput=textBox.Text
+                ai.Value.Input=currentInput
+                local cb=WindUI_ag.InputCallback or WindUI_ag.Callback
+                aa.SafeCallback(cb,ai.Value)
+            end
+        end)
+
+        local actionBtn,actionBtnLabel=WindUI_CreateActionButton(aa,ac,ad,rightHolder,isBoxBtnIn,WindUI_ag.ButtonText or"Submit",function()
+            if isLocked then
+                currentInput=textBox.Text
+                ai.Value.Input=currentInput
+                local cb=WindUI_ag.ButtonCallback or WindUI_ag.ButtonClick or WindUI_ag.Callback
+                aa.SafeCallback(cb,ai.Value)
+            end
+        end)
+
+        function ai.SetInput(self,txt)
+            currentInput=tostring(txt or"")
+            ai.Value.Input=currentInput
+            textBox.Text=currentInput
+        end
+        function ai.SetButtonText(self,txt) actionBtnLabel.Text=tostring(txt or "Action") end
+        function ai.Set(self,v)
+            if type(v)=="table" then
+                local inp=v.Input or v.input or v[1]
+                if inp~=nil then ai:SetInput(inp) end
+            else
+                ai:SetInput(v)
+            end
+        end
+
+        function ai.SetBoxMode(self,isBoxes)
+            isBoxBtnIn=isBoxes
+            local inW=isBoxes and 50 or 105
+            local bWidth=isBoxes and 46 or 60
+            local h=isBoxes and 22 or 26
+            local rW=inW+bWidth+8
+            rightHolder.Size=UDim2.new(0,rW,1,0)
+            inputFr.Size=UDim2.new(0,inW,0,h)
+            textBox.TextSize=isBoxes and 11 or 13
+            actionBtn.Size=UDim2.new(0,bWidth,0,h)
+            actionBtnLabel.TextSize=isBoxes and 11 or 13
+            if ai.Frame and ai.Frame.SetTextOffset then
+                ai.Frame:SetTextOffset(rW+(isBoxes and 12 or 15))
+            end
+            if ai.SetRowBoxMode then
+                ai:SetRowBoxMode(isBoxes)
+            end
+        end
+
+        function ai.Lock(self)
+            ai.Locked=true
+            isLocked=false
+            return ai.Frame:Lock()
+        end
+        function ai.Unlock(self)
+            ai.Locked=false
+            isLocked=true
+            return ai.Frame:Unlock()
+        end
+        if ai.Locked then ai:Lock() end
+
+        return ai.__type,ai
+    end)
+    if ok then return resA,resB end
+    warn("[WindUI] ButtonInput failed: "..tostring(resA))
+    return"ButtonInput",{__type="ButtonInput",Title=WindUI_ag.Title or"ButtonInput"}
+end
+
+
 return{
 Elements={
 Paragraph=a.load'z',
@@ -10041,6 +11335,17 @@ SocialCard=WindUI_SocialCard,
 DualSlider=WindUI_DualSlider,
 ToggleInput=WindUI_ToggleInput,
 ToggleKeybind=WindUI_ToggleKeybind,
+ToggleDropdown=WindUI_ToggleDropdown,
+ToggleMultiDropdown=WindUI_ToggleMultiDropdown,
+ToggleMultidropdown=WindUI_ToggleMultiDropdown,
+ButtonDropdown=WindUI_ButtonDropdown,
+ButtonMultiDropdown=WindUI_ButtonMultiDropdown,
+ButtonMultidropdown=WindUI_ButtonMultiDropdown,
+ButtonColorPicker=WindUI_ButtonColorPicker,
+ButtonColorpicker=WindUI_ButtonColorPicker,
+ButtonSlider=WindUI_ButtonSlider,
+ButtonKeybind=WindUI_ButtonKeybind,
+ButtonInput=WindUI_ButtonInput,
 },
 Load=function(aa,ac,ae,af,ag,ah,ai,aj)
 for ak,al in next,ae do
