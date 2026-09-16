@@ -1719,7 +1719,7 @@ TextColor3="Text",
 })
 
 local ap=ac("Frame",{
-Size=UDim2.new(1,0,1,0),
+Size=UDim2.new(1,0,0,42),
 Parent=ag,
 BackgroundTransparency=1
 },{
@@ -4159,7 +4159,7 @@ end
 
 return function(ae)
 local isBoxesMode=(ae.Window and ae.Window.TabLayoutType=="Boxes")
-local defaultPad=ae.Window.NewElements and 10 or 13
+local defaultPad=(ae.Window and ae.Window.NewElements) and 10 or 13
 local currentPad=isBoxesMode and 8 or defaultPad
 
 local af={
@@ -4175,7 +4175,7 @@ Color=ae.Color,
 Scalable=ae.Scalable,
 Parent=ae.Parent,
 UIPadding=currentPad,
-UICorner=ae.Window.NewElements and 23 or 12,
+UICorner=ae.Window and (ae.Window.NewElements and 23 or 12) or 12,
 UIElements={},
 
 Index=ae.Index
@@ -4375,7 +4375,8 @@ mainUIPadding,
 },true,true)
 
 local function SetRowBoxMode(self,boxMode)
-local pad=boxMode and 8 or (ae.Window.NewElements and 10 or 13)
+pcall(function()
+local pad=boxMode and 8 or ((ae.Window and ae.Window.NewElements) and 10 or 13)
 af.UIPadding=pad
 mainUIPadding.PaddingTop=UDim.new(0,pad)
 mainUIPadding.PaddingBottom=UDim.new(0,pad)
@@ -4383,6 +4384,7 @@ mainUIPadding.PaddingLeft=UDim.new(0,pad)
 mainUIPadding.PaddingRight=UDim.new(0,pad)
 if am then am.TextSize=boxMode and 14 or 17 end
 if an then an.TextSize=boxMode and 12 or 15 end
+end)
 end
 
 as.SetBoxMode=SetRowBoxMode
@@ -5176,7 +5178,6 @@ keyTextLabel.TextXAlignment="Center"
 keyTextLabel.TextYAlignment="Center"
 keyTextLabel.TextSize=13
 keyTextLabel.Size=UDim2.new(1,0,1,0)
-aj.UIElements.Keybind.Frame.Frame.UIListLayout.HorizontalAlignment="Center"
 
 local function UpdateKeySize()
 local tW=keyTextLabel.TextBounds.X
@@ -7290,18 +7291,6 @@ function ai.SetBoxMode(ao,isBoxes)
 BoxBackground.Visible=isBoxes
 BoxOutline.Visible=isBoxes
 BoxDivider.Visible=isBoxes
-
-if ai.Elements then
-for _,el in pairs(ai.Elements) do
-if type(el)=="table" then
-if el.SetBoxMode then
-pcall(function()el:SetBoxMode(isBoxes)end)
-elseif el.SetRowBoxMode then
-pcall(function()el:SetRowBoxMode(isBoxes)end)
-end
-end
-end
-end
 
 if ai.IsLooseBox then
 am.Top.Visible=isBoxes
@@ -10022,10 +10011,25 @@ FontFace=Font.new(ac.Font,Enum.FontWeight.Medium),
 
 
 
-local aw
-aw=ac.AddSignal(al.UIElements.ContainerFrame.ChildAdded,function()
+local function CheckTabNotEmpty()
+for _,child in ipairs(al.UIElements.ContainerFrame:GetChildren()) do
+if child~=av and not child:IsA("UIListLayout") and not child:IsA("UIPadding") then
+return true
+end
+end
+return false
+end
+
+if CheckTabNotEmpty() then
 av.Visible=false
-aw:Disconnect()
+end
+
+local aw
+aw=ac.AddSignal(al.UIElements.ContainerFrame.ChildAdded,function(ch)
+if ch~=av then
+av.Visible=false
+if aw then aw:Disconnect() end
+end
 end)
 end)
 
