@@ -7352,14 +7352,15 @@ end
 if isBoxes then
 contentPadding.PaddingLeft=UDim.new(0,8)
 contentPadding.PaddingRight=UDim.new(0,8)
-contentPadding.PaddingBottom=UDim.new(0,8)
-contentPadding.PaddingTop=UDim.new(0,ai.IsLooseBox and 8 or 6)
+contentPadding.PaddingBottom=UDim.new(0,6)
+contentPadding.PaddingTop=UDim.new(0,ai.IsLooseBox and 8 or 4)
 topPadding.PaddingLeft=UDim.new(0,10)
 topPadding.PaddingRight=UDim.new(0,10)
-local cH=am.Content.UIListLayout.AbsoluteContentSize.Y+16
+local cH=am.Content.UIListLayout.AbsoluteContentSize.Y
 local hSize=ai.IsLooseBox and 0 or ai.HeaderSize
-local totalH=ai.Opened and(hSize+(cH/(ah.UIScale or 1)))or hSize
-am.Size=UDim2.new(0.5,-12,0,totalH)
+local pad=ai.IsLooseBox and 14 or 10
+local totalH=ai.Opened and(hSize+((cH+pad)/(ah.UIScale or 1)))or hSize
+am.Size=UDim2.new(0.5,-6,0,totalH)
 if ai.Opened then
 ak.ImageLabel.Rotation=180
 else
@@ -7397,9 +7398,10 @@ ai.Opened=true
 local isBoxes=(ah.Window and ah.Window.TabLayoutType=="Boxes")
 local cH=am.Content.UIListLayout.AbsoluteContentSize.Y
 local hSize=ai.IsLooseBox and 0 or ai.HeaderSize
+local pad=ai.IsLooseBox and 14 or 10
 if isBoxes then
-local totalH=hSize+((cH+16)/(ah.UIScale or 1))
-ae(am,0.33,{Size=UDim2.new(0.5,-12,0,totalH)},Enum.EasingStyle.Quint,Enum.EasingDirection.Out):Play()
+local totalH=hSize+((cH+pad)/(ah.UIScale or 1))
+ae(am,0.33,{Size=UDim2.new(0.5,-6,0,totalH)},Enum.EasingStyle.Quint,Enum.EasingDirection.Out):Play()
 if ah.Tab and ah.Tab.UpdateBoxLayout then
 ah.Tab:UpdateBoxLayout(true)
 end
@@ -7416,7 +7418,7 @@ if ai.Expandable then
 ai.Opened=false
 local isBoxes=(ah.Window and ah.Window.TabLayoutType=="Boxes")
 local hSize=ai.IsLooseBox and 0 or ai.HeaderSize
-local targetSize=isBoxes and UDim2.new(0.5,-12,0,hSize) or UDim2.new(1,0,0,hSize)
+local targetSize=isBoxes and UDim2.new(0.5,-6,0,hSize) or UDim2.new(1,0,0,hSize)
 ae(am,0.26,{Size=targetSize},Enum.EasingStyle.Quint,Enum.EasingDirection.Out):Play()
 ae(ak.ImageLabel,0.1,{Rotation=0},Enum.EasingStyle.Quint,Enum.EasingDirection.Out):Play()
 if isBoxes and ah.Tab and ah.Tab.UpdateBoxLayout then
@@ -7440,9 +7442,10 @@ if ai.Opened then
 local isBoxes=(ah.Window and ah.Window.TabLayoutType=="Boxes")
 local cH=am.Content.UIListLayout.AbsoluteContentSize.Y
 local hSize=ai.IsLooseBox and 0 or ai.HeaderSize
+local pad=ai.IsLooseBox and 14 or 10
 if isBoxes then
-local totalH=hSize+((cH+16)/(ah.UIScale or 1))
-am.Size=UDim2.new(0.5,-12,0,totalH)
+local totalH=hSize+((cH+pad)/(ah.UIScale or 1))
+am.Size=UDim2.new(0.5,-6,0,totalH)
 if ah.Tab and ah.Tab.UpdateBoxLayout then
 ah.Tab:UpdateBoxLayout(true)
 end
@@ -7457,13 +7460,14 @@ task.spawn(function()
 task.wait(0.1)
 local isBoxes=(ah.Window and ah.Window.TabLayoutType=="Boxes")
 local hSize=ai.IsLooseBox and 0 or ai.HeaderSize
+local pad=ai.IsLooseBox and 14 or 10
 if ai.Opened then
 local cH=am.Content.UIListLayout.AbsoluteContentSize.Y
-local totalH=hSize+((cH+(isBoxes and 16 or 0))/(ah.UIScale or 1))
-am.Size=isBoxes and UDim2.new(0.5,-12,0,totalH) or UDim2.new(1,0,0,totalH)
+local totalH=hSize+((cH+(isBoxes and pad or 0))/(ah.UIScale or 1))
+am.Size=isBoxes and UDim2.new(0.5,-6,0,totalH) or UDim2.new(1,0,0,totalH)
 ak.ImageLabel.Rotation=180
 else
-am.Size=isBoxes and UDim2.new(0.5,-12,0,hSize) or UDim2.new(1,0,0,hSize)
+am.Size=isBoxes and UDim2.new(0.5,-6,0,hSize) or UDim2.new(1,0,0,hSize)
 ak.ImageLabel.Rotation=0
 end
 end)
@@ -10184,11 +10188,11 @@ task.defer(function()
 al.LayoutUpdating=false
 local doAnimate=al.NeedAnimate
 al.NeedAnimate=false
-local gap=16
+local gap=12
 local colHeights={[1]=0,[2]=0}
 local colX={
 [1]=UDim2.new(0,0,0,0),
-[2]=UDim2.new(0.5,12,0,0)
+[2]=UDim2.new(0.5,-4,0,0)
 }
 for _,box in ipairs(al.Boxes) do
 if box.Frame and box.Frame.Visible and box.Frame.Parent then
@@ -10197,18 +10201,20 @@ local currentY=colHeights[col]
 local targetPos=UDim2.new(colX[col].X.Scale,colX[col].X.Offset,0,currentY)
 
 local boxH
+local hSize=box.IsLooseBox and 0 or box.HeaderSize
+local pad=box.IsLooseBox and 14 or 10
 if box.Opened then
-local cH=box.Frame.Content.UIListLayout.AbsoluteContentSize.Y+16
-boxH=box.HeaderSize+(cH/(Window.UIScale or 1))
+local cH=box.Frame.Content.UIListLayout.AbsoluteContentSize.Y
+boxH=hSize+((cH+pad)/(Window.UIScale or 1))
 else
-boxH=box.HeaderSize
+boxH=hSize
 end
 
 if doAnimate then
-ac.Tween(box.Frame,0.33,{Position=targetPos,Size=UDim2.new(0.5,-12,0,boxH)},Enum.EasingStyle.Quint,Enum.EasingDirection.Out):Play()
+ac.Tween(box.Frame,0.33,{Position=targetPos,Size=UDim2.new(0.5,-6,0,boxH)},Enum.EasingStyle.Quint,Enum.EasingDirection.Out):Play()
 else
 box.Frame.Position=targetPos
-box.Frame.Size=UDim2.new(0.5,-12,0,boxH)
+box.Frame.Size=UDim2.new(0.5,-6,0,boxH)
 end
 colHeights[col]=currentY+boxH+gap
 end
@@ -10224,6 +10230,23 @@ local isBoxes=(target=="Boxes")
 if not al.UIListLayout then
 al.UIListLayout=al.UIElements.ContainerFrame:FindFirstChildWhichIsA("UIListLayout")
 end
+
+local containerPadding=al.UIElements.ContainerFrame:FindFirstChildWhichIsA("UIPadding")
+if containerPadding then
+if isBoxes then
+containerPadding.PaddingLeft=UDim.new(0,10)
+containerPadding.PaddingRight=UDim.new(0,10)
+containerPadding.PaddingTop=UDim.new(0,10)
+containerPadding.PaddingBottom=UDim.new(0,10)
+else
+local defPad=not Window.HidePanelBackground and 20 or 10
+containerPadding.PaddingLeft=UDim.new(0,defPad)
+containerPadding.PaddingRight=UDim.new(0,defPad)
+containerPadding.PaddingTop=UDim.new(0,defPad)
+containerPadding.PaddingBottom=UDim.new(0,defPad)
+end
+end
+
 if isBoxes then
 if al.UIListLayout then
 al.UIListLayout.Parent=nil
@@ -10252,7 +10275,8 @@ if box.Frame then
 box.Frame.Position=UDim2.new(0,0,0,0)
 box.Frame.AutomaticSize="None"
 local cH=(box.Frame.Content.UIListLayout and box.Frame.Content.UIListLayout.AbsoluteContentSize.Y or box.Frame.Content.AbsoluteSize.Y)
-box.Frame.Size=box.Opened and UDim2.new(1,0,0,box.HeaderSize+(cH/(Window.UIScale or 1))) or UDim2.new(1,0,0,box.HeaderSize)
+local hSize=box.IsLooseBox and 0 or box.HeaderSize
+box.Frame.Size=box.Opened and UDim2.new(1,0,0,hSize+(cH/(Window.UIScale or 1))) or UDim2.new(1,0,0,hSize)
 end
 end
 al.UIElements.ContainerFrame.CanvasSize=UDim2.new(0,0,0,0)
