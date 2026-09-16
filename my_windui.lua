@@ -4159,7 +4159,7 @@ end
 return function(ae)
 local isBoxesMode=(ae.Window and ae.Window.TabLayoutType=="Boxes")
 local defaultPad=(ae.Window and ae.Window.NewElements) and 10 or 13
-local currentPad=isBoxesMode and 8 or defaultPad
+local currentPad=isBoxesMode and 6 or defaultPad
 
 local af={
 Title=ae.Title,
@@ -4179,6 +4179,10 @@ UIElements={},
 
 Index=ae.Index
 }
+
+af.TextOffset=ae.TextOffset or 0
+af.BaseTextOffset=ae.TextOffset or 0
+local hasDesc=(af.Desc~=nil and af.Desc~="")
 
 local ag=af.ImageSize
 local ah=af.ThumbnailSize
@@ -4221,87 +4225,110 @@ al.Size=UDim2.new(0,ag,0,ag)
 aj=ag
 end
 
-local function CreateText(am,an)
+local function CreateText(am_txt,an_type)
 local ao=typeof(af.Color)=="string"
 and GetTextColorForHSB(Color3.fromHex(aa.Colors[af.Color]))
 or typeof(af.Color)=="Color3"
 and GetTextColorForHSB(af.Color)
 
-local textSz=an=="Desc"and(isBoxesMode and 11 or 15)or(isBoxesMode and 13 or 17)
+local isDesc=(an_type=="Desc")
+local textSz=isDesc and (isBoxesMode and 11 or 15) or (isBoxesMode and 13 or 17)
+
 return ab("TextLabel",{
 BackgroundTransparency=1,
-Text=am or"",
+Text=am_txt or"",
 TextSize=textSz,
 TextXAlignment="Left",
+TextYAlignment="Center",
 ThemeTag={
 TextColor3=not af.Color and"Text"or nil,
 },
 TextColor3=af.Color and ao or nil,
-TextTransparency=an=="Desc"and.3 or 0,
+TextTransparency=isDesc and (isBoxesMode and 0.35 or 0.3) or 0,
 TextWrapped=true,
+TextTruncate=isBoxesMode and Enum.TextTruncate.AtEnd or Enum.TextTruncate.None,
 Size=UDim2.new(1,0,0,0),
 AutomaticSize="Y",
-FontFace=Font.new(aa.Font,an=="Desc"and Enum.FontWeight.Medium or Enum.FontWeight.SemiBold)
+FontFace=Font.new(aa.Font,isDesc and Enum.FontWeight.Medium or Enum.FontWeight.SemiBold)
 })
 end
 
 local am=CreateText(af.Title,"Title")
 local an=CreateText(af.Desc,"Desc")
-if not af.Desc or af.Desc==""then
+if not hasDesc then
 an.Visible=false
 end
 
+local textInnerPadding=ab("UIPadding",{
+PaddingTop=UDim.new(0,isBoxesMode and 0 or (ae.Window.NewElements and af.UIPadding/2 or 0)),
+PaddingLeft=UDim.new(0,isBoxesMode and 0 or (ae.Window.NewElements and af.UIPadding/2 or 0)),
+PaddingRight=UDim.new(0,0),
+PaddingBottom=UDim.new(0,isBoxesMode and 0 or (ae.Window.NewElements and af.UIPadding/2 or 0)),
+})
+
+local textLayout=ab("UIListLayout",{
+Padding=UDim.new(0,isBoxesMode and 2 or 6),
+FillDirection="Vertical",
+VerticalAlignment=Enum.VerticalAlignment.Center,
+HorizontalAlignment="Left",
+Name="TextLayout",
+})
+
+local textInner=ab("Frame",{
+BackgroundTransparency=1,
+AutomaticSize="Y",
+Size=UDim2.new(1,-aj,1,0),
+Name="TextInner",
+},{
+textInnerPadding,
+textLayout,
+am,
+an
+})
+
+local textHolderLayout=ab("UIListLayout",{
+Padding=UDim.new(0,af.UIPadding),
+FillDirection="Horizontal",
+VerticalAlignment=Enum.VerticalAlignment.Center,
+HorizontalAlignment="Left",
+Name="TextHolderLayout",
+})
+
+local textHolder=ab("Frame",{
+Size=UDim2.new(1,-af.TextOffset,isBoxesMode and (hasDesc and 0 or 1) or 0,0),
+AutomaticSize=isBoxesMode and (hasDesc and "Y" or "None") or "Y",
+BackgroundTransparency=1,
+Position=UDim2.new(0,0,isBoxesMode and (hasDesc and 0 or 0.5) or 0,0),
+AnchorPoint=Vector2.new(0,isBoxesMode and (hasDesc and 0 or 0.5) or 0),
+Name="TextHolder",
+},{
+textHolderLayout,
+al,
+textInner,
+})
+
 af.UIElements.Container=ab("Frame",{
 Size=UDim2.new(1,0,1,0),
-AutomaticSize="Y",
+AutomaticSize=isBoxesMode and (hasDesc and "Y" or "None") or "Y",
 BackgroundTransparency=1,
 },{
 ab("UIListLayout",{
 Padding=UDim.new(0,af.UIPadding),
 FillDirection="Vertical",
-VerticalAlignment=ae.Window.NewElements and"Top"or"Center",
+VerticalAlignment=Enum.VerticalAlignment.Center,
 HorizontalAlignment="Left",
 }),
 ak,
-ab("Frame",{
-Size=UDim2.new(1,-ae.TextOffset,0,0),
-AutomaticSize="Y",
-BackgroundTransparency=1,
-},{
-ab("UIListLayout",{
-Padding=UDim.new(0,af.UIPadding),
-FillDirection="Horizontal",
-VerticalAlignment=ae.Window.NewElements and"Top"or"Center",
-HorizontalAlignment="Left",
-}),
-al,
-ab("Frame",{
-BackgroundTransparency=1,
-AutomaticSize="Y",
-Size=UDim2.new(1,-aj,1,0)
-},{
-ab("UIPadding",{
-PaddingTop=UDim.new(0,ae.Window.NewElements and af.UIPadding/2 or 0),
-PaddingLeft=UDim.new(0,ae.Window.NewElements and af.UIPadding/2 or 0),
-PaddingRight=UDim.new(0,ae.Window.NewElements and af.UIPadding/2 or 0),
-PaddingBottom=UDim.new(0,ae.Window.NewElements and af.UIPadding/2 or 0),
-}),
-ab("UIListLayout",{
-Padding=UDim.new(0,6),
-FillDirection="Vertical",
-VerticalAlignment="Center",
-HorizontalAlignment="Left",
-}),
-am,
-an
-}),
-})
+textHolder,
 })
 
-
-
-
-
+function af.SetTextOffset(self,offset)
+af.TextOffset=offset
+if textHolder then
+local isBox=(ae.Window and ae.Window.TabLayoutType=="Boxes")
+textHolder.Size=UDim2.new(1,-offset,isBox and (hasDesc and 0 or 1) or 0,0)
+end
+end
 
 local ao=aa.Image(
 "lock",
@@ -4344,30 +4371,20 @@ Padding=UDim.new(0,8)
 ao,ap
 },nil,true)
 
-af.TextOffset=ae.TextOffset or 0
-af.BaseTextOffset=ae.TextOffset or 0
-
-local textHolder=af.UIElements.Container:FindFirstChild("TextHolder") or (af.UIElements.Container:GetChildren()[2])
-
-function af.SetTextOffset(self,offset)
-af.TextOffset=offset
-if textHolder then
-textHolder.Size=UDim2.new(1,-offset,0,0)
-end
-end
-
 local mainUIPadding=ab("UIPadding",{
-PaddingTop=UDim.new(0,af.UIPadding),
-PaddingLeft=UDim.new(0,af.UIPadding),
-PaddingRight=UDim.new(0,af.UIPadding),
-PaddingBottom=UDim.new(0,af.UIPadding),
+PaddingTop=UDim.new(0,isBoxesMode and (hasDesc and 6 or 0) or af.UIPadding),
+PaddingBottom=UDim.new(0,isBoxesMode and (hasDesc and 6 or 0) or af.UIPadding),
+PaddingLeft=UDim.new(0,isBoxesMode and 8 or af.UIPadding),
+PaddingRight=UDim.new(0,isBoxesMode and 8 or af.UIPadding),
 })
 
-local as,at=ac(af.UICorner,"Squircle",{
-Size=UDim2.new(1,0,0,0),
-AutomaticSize="Y",
-ImageTransparency=af.Color and.05 or.93,
+local initRowH=isBoxesMode and (hasDesc and 48 or 38) or 0
+local initAutoSz=isBoxesMode and (hasDesc and "Y" or "None") or "Y"
 
+local as,at=ac(af.UICorner,"Squircle",{
+Size=UDim2.new(1,0,0,initRowH),
+AutomaticSize=initAutoSz,
+ImageTransparency=af.Color and.05 or.93,
 Parent=ae.Parent,
 ThemeTag={
 ImageColor3=not af.Color and"Text"or nil
@@ -4387,17 +4404,67 @@ mainUIPadding,
 
 local function SetRowBoxMode(self,boxMode)
 pcall(function()
-local pad=boxMode and 6 or ((ae.Window and ae.Window.NewElements) and 10 or 13)
-af.UIPadding=pad
-mainUIPadding.PaddingTop=UDim.new(0,pad)
-mainUIPadding.PaddingBottom=UDim.new(0,pad)
-mainUIPadding.PaddingLeft=UDim.new(0,pad)
-mainUIPadding.PaddingRight=UDim.new(0,pad)
-if am then am.TextSize=boxMode and 13 or 17 end
-if an then an.TextSize=boxMode and 11 or 15 end
+hasDesc=(af.Desc~=nil and af.Desc~="")
+if boxMode then
+local rowH=hasDesc and 48 or 38
+local autoSz=hasDesc and "Y" or "None"
+as.Size=UDim2.new(1,0,0,rowH)
+as.AutomaticSize=autoSz
+af.UIElements.Container.AutomaticSize=autoSz
+af.UIElements.Container.Size=UDim2.new(1,0,1,0)
+mainUIPadding.PaddingTop=UDim.new(0,hasDesc and 6 or 0)
+mainUIPadding.PaddingBottom=UDim.new(0,hasDesc and 6 or 0)
+mainUIPadding.PaddingLeft=UDim.new(0,8)
+mainUIPadding.PaddingRight=UDim.new(0,8)
+textInnerPadding.PaddingTop=UDim.new(0,0)
+textInnerPadding.PaddingBottom=UDim.new(0,0)
+textInnerPadding.PaddingLeft=UDim.new(0,0)
+textLayout.Padding=UDim.new(0,2)
+if am then
+am.TextSize=13
+am.TextTruncate=Enum.TextTruncate.AtEnd
+end
+if an then
+an.TextSize=11
+an.TextTransparency=0.35
+an.TextTruncate=Enum.TextTruncate.AtEnd
+end
 if textHolder then
-local off=boxMode and math.min(af.TextOffset or af.BaseTextOffset or 0, 85) or (af.BaseTextOffset or 0)
-textHolder.Size=UDim2.new(1,-off,0,0)
+local off=af.TextOffset or af.BaseTextOffset or 0
+textHolder.Size=UDim2.new(1,-off,hasDesc and 0 or 1,0)
+textHolder.AutomaticSize=autoSz
+textHolder.Position=UDim2.new(0,0,hasDesc and 0 or 0.5,0)
+textHolder.AnchorPoint=Vector2.new(0,hasDesc and 0 or 0.5)
+end
+else
+local defPad=(ae.Window and ae.Window.NewElements) and 10 or 13
+as.Size=UDim2.new(1,0,0,0)
+as.AutomaticSize="Y"
+af.UIElements.Container.AutomaticSize="Y"
+af.UIElements.Container.Size=UDim2.new(1,0,1,0)
+mainUIPadding.PaddingTop=UDim.new(0,defPad)
+mainUIPadding.PaddingBottom=UDim.new(0,defPad)
+mainUIPadding.PaddingLeft=UDim.new(0,defPad)
+mainUIPadding.PaddingRight=UDim.new(0,defPad)
+textInnerPadding.PaddingTop=UDim.new(0,(ae.Window and ae.Window.NewElements) and defPad/2 or 0)
+textInnerPadding.PaddingBottom=UDim.new(0,(ae.Window and ae.Window.NewElements) and defPad/2 or 0)
+textInnerPadding.PaddingLeft=UDim.new(0,(ae.Window and ae.Window.NewElements) and defPad/2 or 0)
+textLayout.Padding=UDim.new(0,6)
+if am then
+am.TextSize=17
+am.TextTruncate=Enum.TextTruncate.None
+end
+if an then
+an.TextSize=15
+an.TextTransparency=0.3
+an.TextTruncate=Enum.TextTruncate.None
+end
+if textHolder then
+textHolder.Size=UDim2.new(1,-(af.BaseTextOffset or 0),0,0)
+textHolder.AutomaticSize="Y"
+textHolder.Position=UDim2.new(0,0,0,0)
+textHolder.AnchorPoint=Vector2.new(0,0)
+end
 end
 end)
 end
@@ -4431,10 +4498,15 @@ end
 function af.SetDesc(au,av)
 af.Desc=av
 an.Text=av or""
-if not av then
+if not av or av=="" then
 an.Visible=false
-elseif not an.Visible then
+hasDesc=false
+else
 an.Visible=true
+hasDesc=true
+end
+if (ae.Window and ae.Window.TabLayoutType=="Boxes") then
+SetRowBoxMode(af,true)
 end
 end
 
@@ -4533,6 +4605,12 @@ al.Size=UDim2.new(1,0,0,38)
 end
 end
 
+function ag.SetBoxMode(self,isBoxes)
+if ag.ParagraphFrame and ag.ParagraphFrame.SetBoxMode then
+ag.ParagraphFrame:SetBoxMode(isBoxes)
+end
+end
+
 return ag.__type,ag
 
 end
@@ -4623,6 +4701,15 @@ aa.SafeCallback(af.Callback)
 end)
 end
 end)
+
+function af.SetBoxMode(self,isBoxes)
+if af.ButtonFrame and af.ButtonFrame.SetBoxMode then
+af.ButtonFrame:SetBoxMode(isBoxes)
+end
+if af.UIElements.ButtonIcon then
+af.UIElements.ButtonIcon.Size=isBoxes and UDim2.new(0,18,0,18) or UDim2.new(0,20,0,20)
+end
+end
 return af.__type,af
 end
 
@@ -4636,7 +4723,7 @@ local ad=ab.Tween
 
 function aa.New(ae,af,ag,ah)
 local ai={}
-
+local isBoxMode=false
 
 local aj=13
 local ak
@@ -4701,12 +4788,36 @@ ak,
 })
 })
 
+function ai.SetBoxMode(self,isBoxes)
+isBoxMode=isBoxes
+if isBoxes then
+al.Size=UDim2.new(0,36,0,22)
+al.Frame.Size=UDim2.new(0,14,0,14)
+if ai.Value then
+al.Frame.Position=UDim2.new(1,-17,0.5,0)
+else
+al.Frame.Position=UDim2.new(0,3,0.5,0)
+end
+else
+al.Size=UDim2.new(0,41.6,0,26)
+al.Frame.Size=UDim2.new(0,18,0,18)
+if ai.Value then
+al.Frame.Position=UDim2.new(1,-22,0.5,0)
+else
+al.Frame.Position=UDim2.new(0,4,0.5,0)
+end
+end
+end
+
 function ai.Set(am,an,ao)
+ai.Value=an
 local WindUI_knobDur=_G.WindUI_AnimatedToggles and 0.35 or 0.1
 local WindUI_knobStyle=_G.WindUI_AnimatedToggles and Enum.EasingStyle.Back or Enum.EasingStyle.Quint
+local onPos=isBoxMode and UDim2.new(1,-17,0.5,0) or UDim2.new(1,-22,0.5,0)
+local offPos=isBoxMode and UDim2.new(0,3,0.5,0) or UDim2.new(0,4,0.5,0)
 if an then
 ad(al.Frame,WindUI_knobDur,{
-Position=UDim2.new(1,-22,0.5,0),
+Position=onPos,
 
 },WindUI_knobStyle,Enum.EasingDirection.Out):Play()
 ad(al.Layer,0.1,{
@@ -4723,8 +4834,8 @@ ImageTransparency=0,
 end
 else
 ad(al.Frame,WindUI_knobDur,{
-Position=UDim2.new(0,4,0.5,0),
-Size=UDim2.new(0,18,0,18),
+Position=offPos,
+Size=isBoxMode and UDim2.new(0,14,0,14) or UDim2.new(0,18,0,18),
 },WindUI_knobStyle,Enum.EasingDirection.Out):Play()
 ad(al.Layer,0.1,{
 ImageTransparency=1,
@@ -4814,6 +4925,14 @@ NumberSequenceKeypoint.new(1,1),
 
 ak,
 })
+
+function ai.SetBoxMode(self,isBoxes)
+if isBoxes then
+al.Size=UDim2.new(0,22,0,22)
+else
+al.Size=UDim2.new(0,27,0,27)
+end
+end
 
 function ai.Set(am,an)
 if an then
@@ -4921,8 +5040,35 @@ else
 error("Unknown Toggle Type: "..tostring(ai.Type))
 end
 
+local isBoxToggle=(ah.Window and ah.Window.TabLayoutType=="Boxes")
+if isBoxToggle then
+al.AnchorPoint=Vector2.new(1,0.5)
+al.Position=UDim2.new(1,0,0.5,0)
+if am and am.SetBoxMode then
+am:SetBoxMode(true)
+end
+else
 al.AnchorPoint=Vector2.new(1,0)
 al.Position=UDim2.new(1,0,0,0)
+end
+
+function ai.SetBoxMode(self,isBoxes)
+if isBoxes then
+al.AnchorPoint=Vector2.new(1,0.5)
+al.Position=UDim2.new(1,0,0.5,0)
+ai.ToggleFrame:SetTextOffset(42)
+else
+al.AnchorPoint=Vector2.new(1,0)
+al.Position=UDim2.new(1,0,0,0)
+ai.ToggleFrame:SetTextOffset(44)
+end
+if am and am.SetBoxMode then
+am:SetBoxMode(isBoxes)
+end
+if ai.ToggleFrame and ai.ToggleFrame.SetBoxMode then
+ai.ToggleFrame:SetBoxMode(isBoxes)
+end
+end
 
 function ai.Set(an,ao,ap)
 if aj then
@@ -4962,7 +5108,7 @@ Callback=ah.Callback or function()end,
 UIElements={},
 IsFocusing=false,
 
-Width=(ah.Window and ah.Window.TabLayoutType=="Boxes") and 100 or 130,
+Width=(ah.Window and ah.Window.TabLayoutType=="Boxes") and 85 or 130,
 TextBoxWidth=30,
 }
 local aj
@@ -5079,7 +5225,10 @@ end
 local ar=ai.SliderFrame.Parent:IsA"ScrollingFrame"and ai.SliderFrame.Parent or ai.SliderFrame.Parent.Parent.Parent
 
 function ai.SetBoxMode(self,isBoxes)
-ai.Width=isBoxes and 100 or 130
+ai.Width=isBoxes and 85 or 130
+if ai.SliderFrame and ai.SliderFrame.SetTextOffset then
+ai.SliderFrame:SetTextOffset(isBoxes and 92 or 130)
+end
 if ai.SetRowBoxMode then
 ai:SetRowBoxMode(isBoxes)
 end
@@ -5215,7 +5364,7 @@ local tW=keyTextLabel.TextBounds.X
 if isBoxKey then
 keyInnerFrame.UIPadding.PaddingLeft=UDim.new(0,0)
 keyInnerFrame.UIPadding.PaddingRight=UDim.new(0,0)
-aj.UIElements.Keybind.Size=UDim2.new(0,math.max(26,tW+14),0,26)
+aj.UIElements.Keybind.Size=UDim2.new(0,math.max(26,tW+14),0,24)
 keyScale.Scale=1
 else
 keyInnerFrame.UIPadding.PaddingLeft=UDim.new(0,8)
@@ -5232,6 +5381,9 @@ ac.AddSignal(keyTextLabel:GetPropertyChangedSignal"TextBounds",UpdateKeySize)
 function aj.SetBoxMode(self,isBoxes)
 isBoxKey=isBoxes
 UpdateKeySize()
+if aj.KeybindFrame and aj.KeybindFrame.SetTextOffset then
+aj.KeybindFrame:SetTextOffset(isBoxes and 40 or 44)
+end
 if aj.SetRowBoxMode then
 aj:SetRowBoxMode(isBoxes)
 end
@@ -5362,7 +5514,7 @@ ai.Window.NewElements and 12 or 10
 
 local isBoxInput=(ai.Window and ai.Window.TabLayoutType=="Boxes")
 aj.Width=isBoxInput and 95 or 150
-local inputH=isBoxInput and 26 or 36
+local inputH=isBoxInput and 24 or 36
 
 if aj.Type=="Input"then
 al.Size=UDim2.new(0,aj.Width,0,inputH)
@@ -5374,9 +5526,12 @@ end
 
 function aj.SetBoxMode(self,isBoxes)
 aj.Width=isBoxes and 95 or 150
-local h=isBoxes and 26 or 36
+local h=isBoxes and 24 or 36
 if aj.Type=="Input" then
 al.Size=UDim2.new(0,aj.Width,0,h)
+end
+if aj.InputFrame and aj.InputFrame.SetTextOffset then
+aj.InputFrame:SetTextOffset(isBoxes and 100 or 150)
 end
 if aj.SetRowBoxMode then
 aj:SetRowBoxMode(isBoxes)
@@ -5486,13 +5641,13 @@ ElementTable=an,
 
 local isBoxDrop=(am.Window and am.Window.TabLayoutType=="Boxes")
 an.Width=isBoxDrop and 95 or 150
-local dropH=isBoxDrop and 26 or 36
+local dropH=isBoxDrop and 24 or 36
 
 an.UIElements.Dropdown=ai("",nil,an.DropdownFrame.UIElements.Main)
 
 local dropTextLabel=an.UIElements.Dropdown.Frame.Frame.TextLabel
 dropTextLabel.TextTruncate="AtEnd"
-dropTextLabel.TextSize=isBoxDrop and 13 or 14
+dropTextLabel.TextSize=isBoxDrop and 12 or 14
 dropTextLabel.TextXAlignment="Left"
 dropTextLabel.TextYAlignment="Center"
 dropTextLabel.Size=UDim2.new(1,-24,1,0)
@@ -5503,9 +5658,12 @@ an.UIElements.Dropdown.AnchorPoint=Vector2.new(1,0.5)
 
 function an.SetBoxMode(self,isBoxes)
 an.Width=isBoxes and 95 or 150
-local h=isBoxes and 26 or 36
+local h=isBoxes and 24 or 36
 an.UIElements.Dropdown.Size=UDim2.new(0,an.Width,0,h)
-dropTextLabel.TextSize=isBoxes and 13 or 14
+dropTextLabel.TextSize=isBoxes and 12 or 14
+if an.DropdownFrame and an.DropdownFrame.SetTextOffset then
+an.DropdownFrame:SetTextOffset(isBoxes and 100 or 150)
+end
 if an.SetRowBoxMode then
 an:SetRowBoxMode(isBoxes)
 end
@@ -7144,7 +7302,7 @@ __type="Section",
 Title=ah.Title or"Section",
 Icon=ah.Icon,
 TextXAlignment=ah.TextXAlignment or"Left",
-TextSize=ah.TextSize or (isBoxesMode and 16 or 19),
+TextSize=ah.TextSize or (isBoxesMode and 15 or 19),
 TextTransparency=ah.TextTransparency or 0.05,
 UIElements={},
 Tab=ah.Tab,
@@ -7355,7 +7513,7 @@ BoxDivider.Visible=isBoxes and (not ai.IsLooseBox)
 
 ai.HeaderSize=isBoxes and 38 or 42
 ai.IconSize=isBoxes and 18 or 20
-ai.TextSize=isBoxes and 16 or 19
+ai.TextSize=isBoxes and 15 or 19
 al.TextSize=ai.TextSize
 am.Top.Size=UDim2.new(1,0,0,ai.HeaderSize)
 BoxDivider.Position=UDim2.new(0.5,0,0,ai.HeaderSize-1)
@@ -7402,8 +7560,19 @@ end
 end
 
 for _,elem in ipairs(ai.Elements or{}) do
-if type(elem)=="table" and elem.SetBoxMode then
+if type(elem)=="table" then
+pcall(function()
+if elem.SetBoxMode then
 elem:SetBoxMode(isBoxes)
+elseif elem.SetRowBoxMode then
+elem:SetRowBoxMode(isBoxes)
+end
+for k,v in pairs(elem) do
+if typeof(v)=="table" and k:match("Frame$") and v.SetBoxMode then
+v:SetBoxMode(isBoxes)
+end
+end
+end)
 end
 end
 end
@@ -7639,6 +7808,16 @@ function WindUI_ah.SetText(WindUI_ak,WindUI_al)
 WindUI_ah.Text=WindUI_al
 WindUI_ai.Text=WindUI_al
 end
+function WindUI_ah.SetBoxMode(WindUI_self,isBoxes)
+WindUI_ai.TextSize=isBoxes and 12 or 14
+local pad=WindUI_aj:FindFirstChildWhichIsA("UIPadding")
+if pad then
+pad.PaddingLeft=UDim.new(0,isBoxes and 8 or 14)
+pad.PaddingRight=UDim.new(0,isBoxes and 8 or 14)
+pad.PaddingTop=UDim.new(0,isBoxes and 6 or 12)
+pad.PaddingBottom=UDim.new(0,isBoxes and 6 or 12)
+end
+end
 return WindUI_ah.__type,WindUI_ah
 end)
 if WindUI_ok then return WindUI_a,WindUI_b end
@@ -7689,6 +7868,16 @@ WindUI_ah.UIElements.TextLabel=WindUI_ai
 function WindUI_ah.SetText(WindUI_ak,WindUI_al)
 WindUI_ah.Text=WindUI_al
 WindUI_ai.Text=WindUI_al
+end
+function WindUI_ah.SetBoxMode(WindUI_self,isBoxes)
+WindUI_ai.TextSize=isBoxes and 12 or 14
+local pad=WindUI_aj:FindFirstChildWhichIsA("UIPadding")
+if pad then
+pad.PaddingLeft=UDim.new(0,isBoxes and 8 or 12)
+pad.PaddingRight=UDim.new(0,isBoxes and 8 or 12)
+pad.PaddingTop=UDim.new(0,isBoxes and 4 or 9)
+pad.PaddingBottom=UDim.new(0,isBoxes and 4 or 9)
+end
 end
 return WindUI_ah.__type,WindUI_ah
 end)
@@ -7813,9 +8002,9 @@ function WindUI_ToggleSlider.New(WindUI_af,WindUI_ag)
 
         local isBoxTogSl=(WindUI_ag.Window and WindUI_ag.Window.TabLayoutType=="Boxes")
         local trackWidth=isBoxTogSl and 38 or 90
-        local valWidth=isBoxTogSl and 24 or 34
+        local valWidth=isBoxTogSl and 22 or 34
         local switchWidth=isBoxTogSl and 36 or 42
-        local rightWidth=isBoxTogSl and (trackWidth+valWidth+switchWidth+12) or (90+38+46+10)
+        local rightWidth=isBoxTogSl and (trackWidth+valWidth+switchWidth+10) or (90+38+46+10)
 
         ai.Frame=a.load'y'{
             Title=ai.Title,
@@ -7992,30 +8181,11 @@ function WindUI_ToggleSlider.New(WindUI_af,WindUI_ag)
         end
 
         function ai.SetBoxMode(self,isBoxes)
-            local inW=isBoxes and 52 or 105
-            local inH=isBoxes and 22 or 28
-            local sw=isBoxes and 36 or 42
-            local sh=isBoxes and 22 or 26
-            local rW=inW+sw+(isBoxes and 6 or 8)
-            rightHolder.Size=UDim2.new(0,rW,1,0)
-            inputContainer.Size=UDim2.new(0,inW,0,inH)
-            if switchBtn then
-                switchBtn.Size=UDim2.new(0,sw,0,sh)
-            end
-            if ai.Frame and ai.Frame.SetTextOffset then
-                ai.Frame:SetTextOffset(rW+(isBoxes and 6 or 15))
-            end
-            if ai.SetRowBoxMode then
-                ai:SetRowBoxMode(isBoxes)
-            end
-        end
-
-        function ai.SetBoxMode(self,isBoxes)
             local trW=isBoxes and 38 or 90
-            local vW=isBoxes and 24 or 34
+            local vW=isBoxes and 22 or 34
             local sw=isBoxes and 36 or 42
             local sh=isBoxes and 22 or 26
-            local rW=isBoxes and (trW+vW+sw+12) or (90+38+46+10)
+            local rW=isBoxes and (trW+vW+sw+10) or (90+38+46+10)
             rightHolder.Size=UDim2.new(0,rW,1,0)
             sliderFr.Size=UDim2.new(0,trW,0,4)
             if valueLabel then
@@ -8027,6 +8197,9 @@ function WindUI_ToggleSlider.New(WindUI_af,WindUI_ag)
             end
             if switchBtn then
                 switchBtn.Size=UDim2.new(0,sw,0,sh)
+            end
+            if switchObj and switchObj.SetBoxMode then
+                switchObj:SetBoxMode(isBoxes)
             end
             if ai.Frame and ai.Frame.SetTextOffset then
                 ai.Frame:SetTextOffset(rW+(isBoxes and 6 or 15))
@@ -8120,14 +8293,15 @@ function WindUI_ToggleColorpicker.New(WindUI_af,WindUI_ag)
         local currentColor=initColor
         local currentTransparency=initTransparency
 
-        local rightWidth=85
+        local isBoxTogCol=(WindUI_ag.Window and WindUI_ag.Window.TabLayoutType=="Boxes")
+        local rightWidth=isBoxTogCol and 64 or 85
 
         ai.Frame=a.load'y'{
             Title=ai.Title,
             Desc=ai.Desc,
             Window=WindUI_ag.Window,
             Parent=WindUI_ag.Parent,
-            TextOffset=rightWidth+15,
+            TextOffset=rightWidth+(isBoxTogCol and 6 or 15),
             Hover=false,
             Tab=WindUI_ag.Tab,
             Index=WindUI_ag.Index,
@@ -8212,6 +8386,24 @@ function WindUI_ToggleColorpicker.New(WindUI_af,WindUI_ag)
                 end
             elseif type(valTable)=="boolean" then
                 ai:SetToggle(valTable,triggerCb)
+            end
+        end
+
+        function ai.SetBoxMode(self,isBoxes)
+            local rW=isBoxes and 64 or 85
+            rightHolder.Size=UDim2.new(0,rW,1,0)
+            colorBtn.Size=UDim2.new(0,isBoxes and 22 or 26,0,isBoxes and 22 or 26)
+            if switchBtn then
+                switchBtn.Size=UDim2.new(0,isBoxes and 36 or 42,0,isBoxes and 22 or 26)
+            end
+            if switchObj and switchObj.SetBoxMode then
+                switchObj:SetBoxMode(isBoxes)
+            end
+            if ai.Frame and ai.Frame.SetTextOffset then
+                ai.Frame:SetTextOffset(rW+(isBoxes and 6 or 15))
+            end
+            if ai.SetRowBoxMode then
+                ai:SetRowBoxMode(isBoxes)
             end
         end
 
@@ -8329,6 +8521,21 @@ function WindUI_ProgressBar.New(WindUI_af,WindUI_ag)
         end
         function ai.SetStatus(self,stat)
             ai:Set(ai.Progress,stat)
+        end
+
+        function ai.SetBoxMode(self,isBoxes)
+            if statusLabel then
+                statusLabel.TextSize=isBoxes and 11 or 13
+            end
+            if track then
+                track.Size=UDim2.new(1,0,0,isBoxes and 4 or 8)
+            end
+            if ai.Frame and ai.Frame.SetTextOffset then
+                ai.Frame:SetTextOffset(isBoxes and 50 or 80)
+            end
+            if ai.SetRowBoxMode then
+                ai:SetRowBoxMode(isBoxes)
+            end
         end
 
         return ai.__type,ai
@@ -8501,6 +8708,12 @@ function WindUI_StatCard.New(WindUI_af,WindUI_ag)
             RefreshAll()
         end
 
+        function ai.SetBoxMode(self,isBoxes)
+            if ai.SetRowBoxMode then
+                ai:SetRowBoxMode(isBoxes)
+            end
+        end
+
         return ai.__type,ai
     end)
     if WindUI_ok then return WindUI_resA,WindUI_resB end
@@ -8610,6 +8823,18 @@ function WindUI_ButtonGroup.New(WindUI_af,WindUI_ag)
             local b=ai.UIElements.Buttons[idx]
             if b and b.Label then
                 b.Label.Text=tostring(newTitle)
+            end
+        end
+
+        function ai.SetBoxMode(self,isBoxes)
+            btnRow.Size=UDim2.new(1,0,0,isBoxes and 26 or 32)
+            for _,b in pairs(ai.UIElements.Buttons) do
+                if b.Label then
+                    b.Label.TextSize=isBoxes and 12 or 14
+                end
+            end
+            if ai.SetRowBoxMode then
+                ai:SetRowBoxMode(isBoxes)
             end
         end
 
@@ -8792,6 +9017,18 @@ function WindUI_ToggleGroup.New(WindUI_af,WindUI_ag)
             ai:Set(val)
         end
 
+        function ai.SetBoxMode(self,isBoxes)
+            groupContainer.Size=UDim2.new(1,0,0,isBoxes and 26 or 34)
+            for _,b in pairs(ai.UIElements.Buttons) do
+                if b.Label then
+                    b.Label.TextSize=isBoxes and 11 or 13
+                end
+            end
+            if ai.SetRowBoxMode then
+                ai:SetRowBoxMode(isBoxes)
+            end
+        end
+
         function ai.Lock(self)
             ai.Locked=true
             isLocked=false
@@ -8834,7 +9071,7 @@ function WindUI_SocialCard.New(WindUI_af,WindUI_ag)
         }
 
         local isBoxSoc=(WindUI_ag.Window and WindUI_ag.Window.TabLayoutType=="Boxes")
-        local btnWidth=isBoxSoc and 55 or 90
+        local btnWidth=isBoxSoc and 54 or 90
         ai.Frame=a.load'y'{
             Title=ai.Title,
             Desc=ai.Desc,
@@ -8937,7 +9174,7 @@ function WindUI_SocialCard.New(WindUI_af,WindUI_ag)
             ai.Frame:SetDesc(d)
         end
         function ai.SetBoxMode(self,isBoxes)
-            local bw=isBoxes and 55 or 90
+            local bw=isBoxes and 54 or 90
             actionBtn.Size=UDim2.new(0,bw,0,isBoxes and 24 or 30)
             if btnLbl then btnLbl.TextSize=isBoxes and 11 or 12 end
             if ai.Frame and ai.Frame.SetTextOffset then
@@ -9010,7 +9247,7 @@ function WindUI_DualSlider.New(WindUI_af,WindUI_ag)
 
         local isBoxDual=(WindUI_ag.Window and WindUI_ag.Window.TabLayoutType=="Boxes")
         local trackWidth=isBoxDual and 45 or 105
-        local valWidth=isBoxDual and 44 or 68
+        local valWidth=isBoxDual and 40 or 68
         local rightWidth=trackWidth+valWidth+(isBoxDual and 6 or 8)
 
         ai.Frame=a.load'y'{
@@ -9234,7 +9471,7 @@ function WindUI_DualSlider.New(WindUI_af,WindUI_ag)
 
         function ai.SetBoxMode(self,isBoxes)
             local tw=isBoxes and 45 or 105
-            local vw=isBoxes and 44 or 68
+            local vw=isBoxes and 40 or 68
             local rw=tw+vw+(isBoxes and 6 or 8)
             sliderFr.Size=UDim2.new(0,tw,0,4)
             valueLabel.Size=UDim2.new(0,vw,0,18)
@@ -9304,7 +9541,7 @@ function WindUI_ToggleInput.New(WindUI_af,WindUI_ag)
         ai.Value={Toggle=currentToggle,Input=currentInput}
 
         local isBoxTogIn=(WindUI_ag.Window and WindUI_ag.Window.TabLayoutType=="Boxes")
-        local inputWidth=isBoxTogIn and 52 or 105
+        local inputWidth=isBoxTogIn and 50 or 105
         local switchWidth=isBoxTogIn and 36 or 42
         local rightWidth=inputWidth+switchWidth+(isBoxTogIn and 6 or 8)
         local inputH=isBoxTogIn and 22 or 28
@@ -9411,6 +9648,31 @@ function WindUI_ToggleInput.New(WindUI_af,WindUI_ag)
             end
         end
 
+        function ai.SetBoxMode(self,isBoxes)
+            local inW=isBoxes and 50 or 105
+            local inH=isBoxes and 22 or 28
+            local sw=isBoxes and 36 or 42
+            local sh=isBoxes and 22 or 26
+            local rW=inW+sw+(isBoxes and 6 or 8)
+            rightHolder.Size=UDim2.new(0,rW,1,0)
+            inputContainer.Size=UDim2.new(0,inW,0,inH)
+            if switchBtn then
+                switchBtn.Size=UDim2.new(0,sw,0,sh)
+            end
+            if switchObj and switchObj.SetBoxMode then
+                switchObj:SetBoxMode(isBoxes)
+            end
+            if textBox then
+                textBox.TextSize=isBoxes and 11 or 12
+            end
+            if ai.Frame and ai.Frame.SetTextOffset then
+                ai.Frame:SetTextOffset(rW+(isBoxes and 6 or 15))
+            end
+            if ai.SetRowBoxMode then
+                ai:SetRowBoxMode(isBoxes)
+            end
+        end
+
         function ai.Set(self,valTable,triggerCb)
             if type(valTable)=="table" then
                 local t=valTable.Toggle~=nil and valTable.Toggle or valTable.toggle
@@ -9484,14 +9746,14 @@ function WindUI_ToggleKeybind.New(WindUI_af,WindUI_ag)
         ai.Value={Toggle=currentToggle,Key=currentKey}
 
         local isBoxTogKey=(WindUI_ag.Window and WindUI_ag.Window.TabLayoutType=="Boxes")
-        local rightWidth=isBoxTogKey and 90 or 120
+        local rightWidth=isBoxTogKey and 68 or 120
 
         ai.Frame=a.load'y'{
             Title=ai.Title,
             Desc=ai.Desc,
             Window=WindUI_ag.Window,
             Parent=WindUI_ag.Parent,
-            TextOffset=rightWidth+15,
+            TextOffset=rightWidth+(isBoxTogKey and 6 or 15),
             Hover=false,
             Tab=WindUI_ag.Tab,
             Index=WindUI_ag.Index,
@@ -9509,7 +9771,7 @@ function WindUI_ToggleKeybind.New(WindUI_af,WindUI_ag)
                 FillDirection=Enum.FillDirection.Horizontal,
                 VerticalAlignment=Enum.VerticalAlignment.Center,
                 HorizontalAlignment=Enum.HorizontalAlignment.Right,
-                Padding=UDim.new(0,8),
+                Padding=UDim.new(0,6),
             }),
         })
 
@@ -9531,7 +9793,7 @@ function WindUI_ToggleKeybind.New(WindUI_af,WindUI_ag)
                 if isBoxTogKey then
                     keyBadge.Frame.Frame.UIPadding.PaddingLeft=UDim.new(0,0)
                     keyBadge.Frame.Frame.UIPadding.PaddingRight=UDim.new(0,0)
-                    keyBadge.Size=UDim2.new(0,math.max(26,textWidth+14),0,26)
+                    keyBadge.Size=UDim2.new(0,math.max(26,textWidth+14),0,24)
                     togKeyScale.Scale=1
                 else
                     keyBadge.Frame.Frame.UIPadding.PaddingLeft=UDim.new(0,8)
@@ -9551,6 +9813,9 @@ function WindUI_ToggleKeybind.New(WindUI_af,WindUI_ag)
             rightHolder.Size=UDim2.new(0,rightWidth,1,0)
             if switchBtn then
                 switchBtn.Size=UDim2.new(0,isBoxes and 36 or 42,0,isBoxes and 22 or 26)
+            end
+            if switchObj and switchObj.SetBoxMode then
+                switchObj:SetBoxMode(isBoxes)
             end
             UpdateKeySize()
             if ai.Frame and ai.Frame.SetTextOffset then
@@ -9785,6 +10050,26 @@ end
 
 table.insert(af.AllElements,ap)
 table.insert(aa.Elements,ap)
+
+if type(ap)=="table" and not ap.SetBoxMode and aq and aq.SetBoxMode then
+ap.SetBoxMode=function(self,isBoxes)
+aq:SetBoxMode(isBoxes)
+end
+end
+
+if af.TabLayoutType=="Boxes" then
+task.defer(function()
+pcall(function()
+if ap.SetBoxMode then
+ap:SetBoxMode(true)
+elseif ap.SetRowBoxMode then
+ap:SetRowBoxMode(true)
+elseif aq and aq.SetBoxMode then
+aq:SetBoxMode(true)
+end
+end)
+end)
+end
 
 aa:UpdateAllElementShapes(aa)
 
