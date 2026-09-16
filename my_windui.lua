@@ -8399,8 +8399,8 @@ function WindUI_ToggleGroup.New(WindUI_af,WindUI_ag)
 
             local function UpdateBtnVisual()
                 local act=IsActive(opt)
+                aa.AddThemeObject(btn,{ImageColor3=act and"Accent" or"Text"})
                 ad(btn,0.12,{ImageTransparency=act and 0.2 or 1}):Play()
-                btn.ThemeTag={ImageColor3=act and"Accent" or"Text"}
                 lbl.TextTransparency=act and 0 or 0.4
                 lbl.FontFace=Font.new(aa.Font,act and Enum.FontWeight.SemiBold or Enum.FontWeight.Medium)
             end
@@ -8444,8 +8444,6 @@ function WindUI_ToggleGroup.New(WindUI_af,WindUI_ag)
             end
 
             aa.AddSignal(clickBtn.MouseButton1Click,HandleClick)
-            aa.AddSignal(clickBtn.Activated,HandleClick)
-            aa.AddSignal(btn.MouseButton1Click,HandleClick)
         end
 
         function ai.Set(self,val)
