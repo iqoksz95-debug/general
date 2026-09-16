@@ -1719,7 +1719,7 @@ TextColor3="Text",
 })
 
 local ap=ac("Frame",{
-Size=UDim2.new(1,0,0,42),
+Size=UDim2.new(1,0,1,0),
 Parent=ag,
 BackgroundTransparency=1
 },{
@@ -3015,7 +3015,8 @@ BackgroundTransparency=1,
 TextSize=13,
 FontFace=Font.new(ab.Font,Enum.FontWeight.Regular),
 Size=UDim2.new(1,ai and-24 or 0,1,0),
-TextXAlignment="Left",
+TextXAlignment=ai and"Left"or"Center",
+TextYAlignment="Center",
 ThemeTag={
 TextColor3="Text",
 },
@@ -3074,7 +3075,7 @@ ac("UIListLayout",{
 FillDirection="Horizontal",
 Padding=UDim.new(0,8),
 VerticalAlignment="Center",
-HorizontalAlignment="Left",
+HorizontalAlignment=ai and"Left"or"Center",
 }),
 ai,
 aj,
@@ -4157,6 +4158,10 @@ end
 
 
 return function(ae)
+local isBoxesMode=(ae.Window and ae.Window.TabLayoutType=="Boxes")
+local defaultPad=ae.Window.NewElements and 10 or 13
+local currentPad=isBoxesMode and 8 or defaultPad
+
 local af={
 Title=ae.Title,
 Desc=ae.Desc or nil,
@@ -4169,7 +4174,7 @@ ImageSize=ae.ImageSize or 30,
 Color=ae.Color,
 Scalable=ae.Scalable,
 Parent=ae.Parent,
-UIPadding=8,
+UIPadding=currentPad,
 UICorner=ae.Window.NewElements and 23 or 12,
 UIElements={},
 
@@ -4223,10 +4228,11 @@ and GetTextColorForHSB(Color3.fromHex(aa.Colors[af.Color]))
 or typeof(af.Color)=="Color3"
 and GetTextColorForHSB(af.Color)
 
+local textSz=an=="Desc"and(isBoxesMode and 12 or 15)or(isBoxesMode and 14 or 17)
 return ab("TextLabel",{
 BackgroundTransparency=1,
 Text=am or"",
-TextSize=an=="Desc"and 12 or 14,
+TextSize=textSz,
 TextXAlignment="Left",
 ThemeTag={
 TextColor3=not af.Color and"Text"or nil,
@@ -4339,12 +4345,17 @@ Padding=UDim.new(0,8)
 ao,ap
 },nil,true)
 
+local mainUIPadding=ab("UIPadding",{
+PaddingTop=UDim.new(0,af.UIPadding),
+PaddingLeft=UDim.new(0,af.UIPadding),
+PaddingRight=UDim.new(0,af.UIPadding),
+PaddingBottom=UDim.new(0,af.UIPadding),
+})
+
 local as,at=ac(af.UICorner,"Squircle",{
 Size=UDim2.new(1,0,0,0),
 AutomaticSize="Y",
 ImageTransparency=af.Color and.05 or.93,
-
-
 
 Parent=ae.Parent,
 ThemeTag={
@@ -4360,13 +4371,25 @@ and af.Color
 },{
 af.UIElements.Container,
 aq,
-ab("UIPadding",{
-PaddingTop=UDim.new(0,af.UIPadding),
-PaddingLeft=UDim.new(0,af.UIPadding),
-PaddingRight=UDim.new(0,af.UIPadding),
-PaddingBottom=UDim.new(0,af.UIPadding),
-}),
+mainUIPadding,
 },true,true)
+
+local function SetRowBoxMode(self,boxMode)
+local pad=boxMode and 8 or (ae.Window.NewElements and 10 or 13)
+af.UIPadding=pad
+mainUIPadding.PaddingTop=UDim.new(0,pad)
+mainUIPadding.PaddingBottom=UDim.new(0,pad)
+mainUIPadding.PaddingLeft=UDim.new(0,pad)
+mainUIPadding.PaddingRight=UDim.new(0,pad)
+if am then am.TextSize=boxMode and 14 or 17 end
+if an then an.TextSize=boxMode and 12 or 15 end
+end
+
+as.SetBoxMode=SetRowBoxMode
+af.SetBoxMode=SetRowBoxMode
+if ae.ElementTable then
+ae.ElementTable.SetRowBoxMode=SetRowBoxMode
+end
 
 af.UIElements.Main=as
 af.UIElements.Locked=aq
@@ -5145,29 +5168,23 @@ ElementTable=aj,
 }
 
 aj.UIElements.Keybind=ag(aj.Value,nil,aj.KeybindFrame.UIElements.Main)
-
-aj.UIElements.Keybind.Size=UDim2.new(
-0,24
-+aj.UIElements.Keybind.Frame.Frame.TextLabel.TextBounds.X,
-0,
-42
-)
 aj.UIElements.Keybind.AnchorPoint=Vector2.new(1,0.5)
 aj.UIElements.Keybind.Position=UDim2.new(1,0,0.5,0)
 
-ad("UIScale",{
-Parent=aj.UIElements.Keybind,
-Scale=.85,
-})
+local keyTextLabel=aj.UIElements.Keybind.Frame.Frame.TextLabel
+keyTextLabel.TextXAlignment="Center"
+keyTextLabel.TextYAlignment="Center"
+keyTextLabel.TextSize=13
+keyTextLabel.Size=UDim2.new(1,0,1,0)
+aj.UIElements.Keybind.Frame.Frame.UIListLayout.HorizontalAlignment="Center"
 
-ac.AddSignal(aj.UIElements.Keybind.Frame.Frame.TextLabel:GetPropertyChangedSignal"TextBounds",function()
-aj.UIElements.Keybind.Size=UDim2.new(
-0,24
-+aj.UIElements.Keybind.Frame.Frame.TextLabel.TextBounds.X,
-0,
-42
-)
-end)
+local function UpdateKeySize()
+local tW=keyTextLabel.TextBounds.X
+aj.UIElements.Keybind.Size=UDim2.new(0,math.max(26,tW+16),0,26)
+end
+UpdateKeySize()
+
+ac.AddSignal(keyTextLabel:GetPropertyChangedSignal"TextBounds",UpdateKeySize)
 
 function aj.Lock(al)
 aj.Locked=true
@@ -5292,12 +5309,25 @@ nil,
 ai.Window.NewElements and 12 or 10
 )
 
+local isBoxInput=(ai.Window and ai.Window.TabLayoutType=="Boxes")
+aj.Width=isBoxInput and 95 or 140
+
 if aj.Type=="Input"then
-al.Size=UDim2.new(0,aj.Width,0,28)
+al.Size=UDim2.new(0,aj.Width,0,26)
 al.Position=UDim2.new(1,0,0.5,0)
 al.AnchorPoint=Vector2.new(1,0.5)
 else
 al.Size=UDim2.new(1,0,0,148)
+end
+
+function aj.SetBoxMode(self,isBoxes)
+aj.Width=isBoxes and 95 or 140
+if aj.Type=="Input" then
+al.Size=UDim2.new(0,aj.Width,0,26)
+end
+if aj.SetRowBoxMode then
+aj:SetRowBoxMode(isBoxes)
+end
 end
 
 ac("UIScale",{
@@ -5401,13 +5431,19 @@ ElementTable=an,
 }
 
 
+local isBoxDrop=(am.Window and am.Window.TabLayoutType=="Boxes")
+an.Width=isBoxDrop and 95 or 140
+
 an.UIElements.Dropdown=ai("",nil,an.DropdownFrame.UIElements.Main)
 
-an.UIElements.Dropdown.Frame.Frame.TextLabel.TextTruncate="AtEnd"
-an.UIElements.Dropdown.Frame.Frame.TextLabel.TextSize=13
-an.UIElements.Dropdown.Frame.Frame.TextLabel.Size=UDim2.new(1,-24,1,0)
+local dropTextLabel=an.UIElements.Dropdown.Frame.Frame.TextLabel
+dropTextLabel.TextTruncate="AtEnd"
+dropTextLabel.TextSize=13
+dropTextLabel.TextXAlignment="Left"
+dropTextLabel.TextYAlignment="Center"
+dropTextLabel.Size=UDim2.new(1,-24,1,0)
 
-an.UIElements.Dropdown.Size=UDim2.new(0,an.Width,0,28)
+an.UIElements.Dropdown.Size=UDim2.new(0,an.Width,0,26)
 an.UIElements.Dropdown.Position=UDim2.new(1,0,0.5,0)
 an.UIElements.Dropdown.AnchorPoint=Vector2.new(1,0.5)
 
@@ -5423,6 +5459,14 @@ ImageColor3="Icon"
 AnchorPoint=Vector2.new(1,0.5),
 Parent=an.UIElements.Dropdown.Frame
 })
+
+function an.SetBoxMode(self,isBoxes)
+an.Width=isBoxes and 95 or 140
+an.UIElements.Dropdown.Size=UDim2.new(0,an.Width,0,26)
+if an.SetRowBoxMode then
+an:SetRowBoxMode(isBoxes)
+end
+end
 
 an.UIElements.UIListLayout=ag("UIListLayout",{
 Padding=UDim.new(0,ak.MenuPadding),
@@ -7246,6 +7290,18 @@ function ai.SetBoxMode(ao,isBoxes)
 BoxBackground.Visible=isBoxes
 BoxOutline.Visible=isBoxes
 BoxDivider.Visible=isBoxes
+
+if ai.Elements then
+for _,el in pairs(ai.Elements) do
+if type(el)=="table" then
+if el.SetBoxMode then
+pcall(function()el:SetBoxMode(isBoxes)end)
+elseif el.SetRowBoxMode then
+pcall(function()el:SetRowBoxMode(isBoxes)end)
+end
+end
+end
+end
 
 if ai.IsLooseBox then
 am.Top.Visible=isBoxes
