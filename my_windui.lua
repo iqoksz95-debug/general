@@ -1701,9 +1701,9 @@ local an=ah~="Input"
 
 local ao=ac("TextBox",{
 BackgroundTransparency=1,
-TextSize=13,
+TextSize=17,
 FontFace=Font.new(ab.Font,Enum.FontWeight.Regular),
-Size=UDim2.new(1,am and-22 or 0,1,0),
+Size=UDim2.new(1,am and-29 or 0,1,0),
 PlaceholderText=ae,
 ClearTextOnFocus=false,
 ClipsDescendants=true,
@@ -3012,9 +3012,9 @@ end
 
 local aj=ac("TextLabel",{
 BackgroundTransparency=1,
-TextSize=13,
+TextSize=17,
 FontFace=Font.new(ab.Font,Enum.FontWeight.Regular),
-Size=UDim2.new(1,ai and-24 or 0,1,0),
+Size=UDim2.new(1,ai and-29 or 0,1,0),
 TextXAlignment="Left",
 ThemeTag={
 TextColor3="Text",
@@ -3067,8 +3067,8 @@ ImageColor3=Color3.new(1,1,1),
 ImageTransparency=.95
 },{
 ac("UIPadding",{
-PaddingLeft=UDim.new(0,8),
-PaddingRight=UDim.new(0,8),
+PaddingLeft=UDim.new(0,12),
+PaddingRight=UDim.new(0,12),
 }),
 ac("UIListLayout",{
 FillDirection="Horizontal",
@@ -3765,8 +3765,8 @@ VerticalAlignment="Center",
 }),
 ah,
 ac("UIPadding",{
-PaddingLeft=UDim.new(0,8),
-PaddingRight=UDim.new(0,8),
+PaddingLeft=UDim.new(0,12),
+PaddingRight=UDim.new(0,12),
 }),
 }),
 ac("UIPadding",{
@@ -4157,10 +4157,6 @@ end
 
 
 return function(ae)
-local isBoxesMode=(ae.Window and ae.Window.TabLayoutType=="Boxes")
-local defaultPad=(ae.Window and ae.Window.NewElements) and 10 or 13
-local currentPad=isBoxesMode and 8 or defaultPad
-
 local af={
 Title=ae.Title,
 Desc=ae.Desc or nil,
@@ -4173,8 +4169,8 @@ ImageSize=ae.ImageSize or 30,
 Color=ae.Color,
 Scalable=ae.Scalable,
 Parent=ae.Parent,
-UIPadding=currentPad,
-UICorner=ae.Window and (ae.Window.NewElements and 23 or 12) or 12,
+UIPadding=ae.Window.NewElements and 10 or 13,
+UICorner=ae.Window.NewElements and 23 or 12,
 UIElements={},
 
 Index=ae.Index
@@ -4227,11 +4223,10 @@ and GetTextColorForHSB(Color3.fromHex(aa.Colors[af.Color]))
 or typeof(af.Color)=="Color3"
 and GetTextColorForHSB(af.Color)
 
-local textSz=an=="Desc"and(isBoxesMode and 12 or 15)or(isBoxesMode and 14 or 17)
 return ab("TextLabel",{
 BackgroundTransparency=1,
 Text=am or"",
-TextSize=textSz,
+TextSize=an=="Desc"and 15 or 17,
 TextXAlignment="Left",
 ThemeTag={
 TextColor3=not af.Color and"Text"or nil,
@@ -4344,17 +4339,12 @@ Padding=UDim.new(0,8)
 ao,ap
 },nil,true)
 
-local mainUIPadding=ab("UIPadding",{
-PaddingTop=UDim.new(0,af.UIPadding),
-PaddingLeft=UDim.new(0,af.UIPadding),
-PaddingRight=UDim.new(0,af.UIPadding),
-PaddingBottom=UDim.new(0,af.UIPadding),
-})
-
 local as,at=ac(af.UICorner,"Squircle",{
 Size=UDim2.new(1,0,0,0),
 AutomaticSize="Y",
 ImageTransparency=af.Color and.05 or.93,
+
+
 
 Parent=ae.Parent,
 ThemeTag={
@@ -4370,26 +4360,13 @@ and af.Color
 },{
 af.UIElements.Container,
 aq,
-mainUIPadding,
+ab("UIPadding",{
+PaddingTop=UDim.new(0,af.UIPadding),
+PaddingLeft=UDim.new(0,af.UIPadding),
+PaddingRight=UDim.new(0,af.UIPadding),
+PaddingBottom=UDim.new(0,af.UIPadding),
+}),
 },true,true)
-
-local function SetRowBoxMode(self,boxMode)
-pcall(function()
-local pad=boxMode and 8 or ((ae.Window and ae.Window.NewElements) and 10 or 13)
-af.UIPadding=pad
-mainUIPadding.PaddingTop=UDim.new(0,pad)
-mainUIPadding.PaddingBottom=UDim.new(0,pad)
-mainUIPadding.PaddingLeft=UDim.new(0,pad)
-mainUIPadding.PaddingRight=UDim.new(0,pad)
-if am then am.TextSize=boxMode and 14 or 17 end
-if an then an.TextSize=boxMode and 12 or 15 end
-end)
-end
-
-af.SetBoxMode=SetRowBoxMode
-if ae.ElementTable then
-ae.ElementTable.SetRowBoxMode=SetRowBoxMode
-end
 
 af.UIElements.Main=as
 af.UIElements.Locked=aq
@@ -5168,30 +5145,29 @@ ElementTable=aj,
 }
 
 aj.UIElements.Keybind=ag(aj.Value,nil,aj.KeybindFrame.UIElements.Main)
+
+aj.UIElements.Keybind.Size=UDim2.new(
+0,24
++aj.UIElements.Keybind.Frame.Frame.TextLabel.TextBounds.X,
+0,
+42
+)
 aj.UIElements.Keybind.AnchorPoint=Vector2.new(1,0.5)
 aj.UIElements.Keybind.Position=UDim2.new(1,0,0.5,0)
 
-local keyInnerFrame=aj.UIElements.Keybind.Frame.Frame
-local keyTextLabel=keyInnerFrame.TextLabel
-pcall(function()
-keyInnerFrame.UIPadding.PaddingLeft=UDim.new(0,0)
-keyInnerFrame.UIPadding.PaddingRight=UDim.new(0,0)
-keyInnerFrame.UIListLayout.HorizontalAlignment=Enum.HorizontalAlignment.Center
-end)
-keyTextLabel.TextXAlignment="Center"
-keyTextLabel.TextYAlignment="Center"
-keyTextLabel.TextSize=13
-keyTextLabel.Size=UDim2.new(1,0,1,0)
+ad("UIScale",{
+Parent=aj.UIElements.Keybind,
+Scale=.85,
+})
 
-local function UpdateKeySize()
-pcall(function()
-local tW=keyTextLabel.TextBounds.X
-aj.UIElements.Keybind.Size=UDim2.new(0,math.max(26,tW+14),0,26)
+ac.AddSignal(aj.UIElements.Keybind.Frame.Frame.TextLabel:GetPropertyChangedSignal"TextBounds",function()
+aj.UIElements.Keybind.Size=UDim2.new(
+0,24
++aj.UIElements.Keybind.Frame.Frame.TextLabel.TextBounds.X,
+0,
+42
+)
 end)
-end
-UpdateKeySize()
-
-ac.AddSignal(keyTextLabel:GetPropertyChangedSignal"TextBounds",UpdateKeySize)
 
 function aj.Lock(al)
 aj.Locked=true
@@ -5287,7 +5263,7 @@ Callback=ai.Callback or function()end,
 ClearTextOnFocus=ai.ClearTextOnFocus or false,
 UIElements={},
 
-Width=100,
+Width=150,
 }
 
 local ak=true
@@ -5296,7 +5272,7 @@ aj.InputFrame=a.load'y'{
 Title=aj.Title,
 Desc=aj.Desc,
 Parent=ai.Parent,
-TextOffset=aj.Width+8,
+TextOffset=aj.Width,
 Hover=false,
 Tab=ai.Tab,
 Index=ai.Index,
@@ -5316,25 +5292,12 @@ nil,
 ai.Window.NewElements and 12 or 10
 )
 
-local isBoxInput=(ai.Window and ai.Window.TabLayoutType=="Boxes")
-aj.Width=isBoxInput and 95 or 140
-
 if aj.Type=="Input"then
-al.Size=UDim2.new(0,aj.Width,0,26)
+al.Size=UDim2.new(0,aj.Width,0,36)
 al.Position=UDim2.new(1,0,0.5,0)
 al.AnchorPoint=Vector2.new(1,0.5)
 else
 al.Size=UDim2.new(1,0,0,148)
-end
-
-function aj.SetBoxMode(self,isBoxes)
-aj.Width=isBoxes and 95 or 140
-if aj.Type=="Input" then
-al.Size=UDim2.new(0,aj.Width,0,26)
-end
-if aj.SetRowBoxMode then
-aj:SetRowBoxMode(isBoxes)
-end
 end
 
 ac("UIScale",{
@@ -5416,7 +5379,7 @@ UIElements={},
 Opened=false,
 Tabs={},
 
-Width=100,
+Width=150,
 }
 
 if an.Multi and not an.Value then
@@ -5429,7 +5392,7 @@ an.DropdownFrame=a.load'y'{
 Title=an.Title,
 Desc=an.Desc,
 Parent=am.Parent,
-TextOffset=an.Width+8,
+TextOffset=an.Width,
 Hover=false,
 Tab=am.Tab,
 Index=am.Index,
@@ -5438,42 +5401,32 @@ ElementTable=an,
 }
 
 
-local isBoxDrop=(am.Window and am.Window.TabLayoutType=="Boxes")
-an.Width=isBoxDrop and 95 or 140
-
 an.UIElements.Dropdown=ai("",nil,an.DropdownFrame.UIElements.Main)
 
-local dropTextLabel=an.UIElements.Dropdown.Frame.Frame.TextLabel
-dropTextLabel.TextTruncate="AtEnd"
-dropTextLabel.TextSize=13
-dropTextLabel.TextXAlignment="Left"
-dropTextLabel.TextYAlignment="Center"
-dropTextLabel.Size=UDim2.new(1,-24,1,0)
+an.UIElements.Dropdown.Frame.Frame.TextLabel.TextTruncate="AtEnd"
+an.UIElements.Dropdown.Frame.Frame.TextLabel.Size=UDim2.new(1,an.UIElements.Dropdown.Frame.Frame.TextLabel.Size.X.Offset-18-12-12,0,0)
 
-an.UIElements.Dropdown.Size=UDim2.new(0,an.Width,0,26)
+an.UIElements.Dropdown.Size=UDim2.new(0,an.Width,0,36)
 an.UIElements.Dropdown.Position=UDim2.new(1,0,0.5,0)
 an.UIElements.Dropdown.AnchorPoint=Vector2.new(1,0.5)
+
+
+
+
+
 
 ag("ImageLabel",{
 Image=af.Icon"chevrons-up-down"[1],
 ImageRectOffset=af.Icon"chevrons-up-down"[2].ImageRectPosition,
 ImageRectSize=af.Icon"chevrons-up-down"[2].ImageRectSize,
-Size=UDim2.new(0,14,0,14),
-Position=UDim2.new(1,-6,0.5,0),
+Size=UDim2.new(0,18,0,18),
+Position=UDim2.new(1,-12,0.5,0),
 ThemeTag={
 ImageColor3="Icon"
 },
 AnchorPoint=Vector2.new(1,0.5),
 Parent=an.UIElements.Dropdown.Frame
 })
-
-function an.SetBoxMode(self,isBoxes)
-an.Width=isBoxes and 95 or 140
-an.UIElements.Dropdown.Size=UDim2.new(0,an.Width,0,26)
-if an.SetRowBoxMode then
-an:SetRowBoxMode(isBoxes)
-end
-end
 
 an.UIElements.UIListLayout=ag("UIListLayout",{
 Padding=UDim.new(0,ak.MenuPadding),
@@ -7089,23 +7042,22 @@ __type="Section",
 Title=ah.Title or"Section",
 Icon=ah.Icon,
 TextXAlignment=ah.TextXAlignment or"Left",
-TextSize=ah.TextSize or 16,
+TextSize=ah.TextSize or 19,
 TextTransparency=ah.TextTransparency or 0.05,
 UIElements={},
 Tab=ah.Tab,
 
-HeaderSize=38,
-IconSize=18,
-Padding=8,
+HeaderSize=42,
+IconSize=20,
+Padding=10,
 
 Elements={},
 
 Expandable=false,
-Opened=ah.Opened~=nil and ah.Opened or true,
-IsLooseBox=ah.IsLooseBox or false,
 }
 
 local aj
+
 
 function ai.SetIcon(ak,al)
 ai.Icon=al or nil
@@ -7125,11 +7077,8 @@ end
 
 local ak=ac("Frame",{
 Size=UDim2.new(0,ai.IconSize,0,ai.IconSize),
-AnchorPoint=Vector2.new(1,0.5),
-Position=UDim2.new(1,-8,0.5,0),
 BackgroundTransparency=1,
-Visible=false,
-ZIndex=4,
+Visible=false
 },{
 ac("ImageLabel",{
 Size=UDim2.new(1,0,1,0),
@@ -7143,6 +7092,7 @@ ImageColor3="Icon",
 ImageTransparency=.7,
 })
 })
+
 
 if ai.Icon then
 ai:SetIcon(ai.Icon)
@@ -7158,51 +7108,18 @@ ThemeTag={
 TextColor3="Text",
 },
 FontFace=Font.new(aa.Font,Enum.FontWeight.SemiBold),
-TextTruncate="AtEnd",
+
+
 Text=ai.Title,
-Size=UDim2.new(1,0,0,0),
+Size=UDim2.new(
+1,
+aj and(-ai.IconSize-8)*2
+or(-ai.IconSize-8),
+
+0,
+0
+),
 TextWrapped=true,
-})
-
-local BoxBackground=aa.NewRoundFrame(ah.Tab and ah.Tab.UICorner or 10,"Squircle",{
-Size=UDim2.new(1,0,1,0),
-ThemeTag={ImageColor3="Dialog"},
-ImageTransparency=0.35,
-Name="BoxBackground",
-Visible=false,
-ZIndex=1,
-})
-
-local BoxOutline=aa.NewRoundFrame(ah.Tab and ah.Tab.UICorner or 10,"SquircleOutline",{
-Size=UDim2.new(1,0,1,0),
-ThemeTag={ImageColor3="Outline"},
-ImageTransparency=0.92,
-Name="BoxOutline",
-Visible=false,
-ZIndex=2,
-})
-
-local BoxDivider=ac("Frame",{
-Size=UDim2.new(1,-20,0,1),
-Position=UDim2.new(0.5,0,0,ai.HeaderSize-1),
-AnchorPoint=Vector2.new(0.5,0),
-BackgroundTransparency=0.92,
-ThemeTag={BackgroundColor3="Outline"},
-Name="BoxDivider",
-Visible=false,
-ZIndex=2,
-})
-
-local topPadding=ac("UIPadding",{
-PaddingLeft=UDim.new(0,0),
-PaddingRight=UDim.new(0,0),
-})
-
-local contentPadding=ac("UIPadding",{
-PaddingLeft=UDim.new(0,0),
-PaddingRight=UDim.new(0,0),
-PaddingBottom=UDim.new(0,0),
-PaddingTop=UDim.new(0,0),
 })
 
 local am=ac("Frame",{
@@ -7212,32 +7129,20 @@ Parent=ah.Parent,
 ClipsDescendants=true,
 AutomaticSize="Y",
 },{
-BoxBackground,
-BoxOutline,
-BoxDivider,
 ac("TextButton",{
-Size=UDim2.new(1,0,0,ai.HeaderSize),
+Size=UDim2.new(1,0,0,0),
 BackgroundTransparency=1,
-AutomaticSize="None",
+AutomaticSize="Y",
 Text="",
 Name="Top",
-Visible=not ai.IsLooseBox,
-ZIndex=3,
 },{
-topPadding,
-ac("Frame",{
-Size=UDim2.new(1,-30,1,0),
-BackgroundTransparency=1,
-Name="TitleHolder",
-},{
+aj,
+al,
 ac("UIListLayout",{
-Padding=UDim.new(0,6),
+Padding=UDim.new(0,8),
 FillDirection="Horizontal",
 VerticalAlignment="Center",
 HorizontalAlignment=not aj and ai.TextXAlignment or"Left",
-}),
-aj,
-al,
 }),
 ak,
 }),
@@ -7246,14 +7151,12 @@ BackgroundTransparency=1,
 Size=UDim2.new(1,0,0,0),
 AutomaticSize="Y",
 Name="Content",
-Visible=true,
-Position=ai.IsLooseBox and UDim2.new(0,0,0,0) or UDim2.new(0,0,0,ai.HeaderSize),
-ZIndex=3,
+Visible=false,
+Position=UDim2.new(0,0,0,ai.HeaderSize)
 },{
-contentPadding,
 ac("UIListLayout",{
 FillDirection="Vertical",
-Padding=UDim.new(0,4),
+Padding=UDim.new(0,ah.Tab.Gap),
 VerticalAlignment="Bottom",
 }),
 })
@@ -7271,101 +7174,43 @@ ak.Visible=true
 end
 end)
 
+
 function ai.SetTitle(ao,ap)
 al.Text=ap
 end
 
 function ai.Destroy(ao)
-if ah.Tab and ah.Tab.Boxes then
-for idx,bx in ipairs(ah.Tab.Boxes) do
-if bx==ai then
-table.remove(ah.Tab.Boxes,idx)
-break
-end
-end
-if ah.Tab.UpdateBoxLayout then
-ah.Tab:UpdateBoxLayout(true)
-end
-end
 for ap,aq in next,ai.Elements do
 aq:Destroy()
 end
+
+
+
+
+
+
+
+
 am:Destroy()
-end
-
-function ai.SetBoxMode(ao,isBoxes)
-BoxBackground.Visible=isBoxes
-BoxOutline.Visible=isBoxes
-BoxDivider.Visible=isBoxes
-
-if ai.IsLooseBox then
-am.Top.Visible=isBoxes
-am.Content.Position=isBoxes and UDim2.new(0,0,0,ai.HeaderSize) or UDim2.new(0,0,0,0)
-end
-
-if isBoxes then
-am.AutomaticSize="None"
-contentPadding.PaddingLeft=UDim.new(0,8)
-contentPadding.PaddingRight=UDim.new(0,8)
-contentPadding.PaddingBottom=UDim.new(0,8)
-contentPadding.PaddingTop=UDim.new(0,6)
-topPadding.PaddingLeft=UDim.new(0,10)
-topPadding.PaddingRight=UDim.new(0,10)
-local cH=am.Content.UIListLayout.AbsoluteContentSize.Y+16
-local totalH=ai.Opened and(ai.HeaderSize+(cH/(ah.UIScale or 1)))or ai.HeaderSize
-am.Size=UDim2.new(0.5,-12,0,totalH)
-if ai.Opened then
-ak.ImageLabel.Rotation=180
-else
-ak.ImageLabel.Rotation=0
-end
-else
-am.AutomaticSize="Y"
-contentPadding.PaddingLeft=UDim.new(0,0)
-contentPadding.PaddingRight=UDim.new(0,0)
-contentPadding.PaddingBottom=UDim.new(0,0)
-contentPadding.PaddingTop=UDim.new(0,0)
-topPadding.PaddingLeft=UDim.new(0,0)
-topPadding.PaddingRight=UDim.new(0,0)
-am.Size=UDim2.new(1,0,0,0)
-am.Position=UDim2.new(0,0,0,0)
-end
-
-for _,elem in ipairs(ai.Elements or{}) do
-if type(elem)=="table" and elem.SetBoxMode then
-elem:SetBoxMode(isBoxes)
-end
-end
 end
 
 function ai.Open(ao)
 if ai.Expandable then
 ai.Opened=true
-local isBoxes=(ah.Window and ah.Window.TabLayoutType=="Boxes")
-local cH=am.Content.UIListLayout.AbsoluteContentSize.Y+16
-local totalH=ai.HeaderSize+(cH/(ah.UIScale or 1))
-if isBoxes then
-ae(am,0.33,{Size=UDim2.new(0.5,-12,0,totalH)},Enum.EasingStyle.Quint,Enum.EasingDirection.Out):Play()
-else
-ae(am,0.33,{Size=UDim2.new(1,0,0,totalH)},Enum.EasingStyle.Quint,Enum.EasingDirection.Out):Play()
-end
-ae(ak.ImageLabel,0.1,{Rotation=180},Enum.EasingStyle.Quint,Enum.EasingDirection.Out):Play()
-if ah.Tab and ah.Tab.UpdateBoxLayout then
-ah.Tab:UpdateBoxLayout(true)
-end
-end
-end
+ae(am,0.33,{
+Size=UDim2.new(1,0,0,ai.HeaderSize+(am.Content.AbsoluteSize.Y/ah.UIScale))
+},Enum.EasingStyle.Quint,Enum.EasingDirection.Out):Play()
 
+ae(ak.ImageLabel,0.1,{Rotation=180},Enum.EasingStyle.Quint,Enum.EasingDirection.Out):Play()
+end
+end
 function ai.Close(ao)
 if ai.Expandable then
 ai.Opened=false
-local isBoxes=(ah.Window and ah.Window.TabLayoutType=="Boxes")
-local targetSize=isBoxes and UDim2.new(0.5,-12,0,ai.HeaderSize) or UDim2.new(1,0,0,ai.HeaderSize)
-ae(am,0.26,{Size=targetSize},Enum.EasingStyle.Quint,Enum.EasingDirection.Out):Play()
+ae(am,0.26,{
+Size=UDim2.new(1,0,0,ai.HeaderSize)
+},Enum.EasingStyle.Quint,Enum.EasingDirection.Out):Play()
 ae(ak.ImageLabel,0.1,{Rotation=0},Enum.EasingStyle.Quint,Enum.EasingDirection.Out):Play()
-if ah.Tab and ah.Tab.UpdateBoxLayout then
-ah.Tab:UpdateBoxLayout(true)
-end
 end
 end
 
@@ -7379,27 +7224,31 @@ end
 end
 end)
 
-am.Content.UIListLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-if ah.Window and ah.Window.TabLayoutType=="Boxes" and ai.Opened then
-local cH=am.Content.UIListLayout.AbsoluteContentSize.Y+16
-local totalH=ai.HeaderSize+(cH/(ah.UIScale or 1))
-am.Size=UDim2.new(0.5,-12,0,totalH)
-if ah.Tab and ah.Tab.UpdateBoxLayout then
-ah.Tab:UpdateBoxLayout(true)
+if ai.Opened then
+task.spawn(function()
+task.wait()
+ai:Open()
+end)
 end
+
+task.spawn(function()
+task.wait()
+if ai.Expandable then
+
+
+
+
+
+
+
+
+am.Size=UDim2.new(1,0,0,ai.HeaderSize)
+am.AutomaticSize="None"
+am.Top.Size=UDim2.new(1,0,0,ai.HeaderSize)
+am.Top.AutomaticSize="None"
+am.Content.Visible=true
 end
 end)
-
-if ah.Tab then
-if not ah.Tab.Boxes then
-ah.Tab.Boxes={}
-end
-table.insert(ah.Tab.Boxes,ai)
-end
-
-if ah.Window and ah.Window.TabLayoutType=="Boxes" then
-ai:SetBoxMode(true)
-end
 
 return ai.__type,ai
 end
@@ -7412,7 +7261,7 @@ local ae={}
 
 function ae.New(af,ag)
 local ah=ac("Frame",{
-Size=UDim2.new(1,-24,0,1),
+Size=UDim2.new(1,0,0,1),
 Position=UDim2.new(0.5,0,0.5,0),
 AnchorPoint=Vector2.new(0.5,0.5),
 BackgroundTransparency=.9,
@@ -7422,7 +7271,7 @@ BackgroundColor3="Text"
 })
 ac("Frame",{
 Parent=ag.Parent,
-Size=UDim2.new(1,0,0,7),
+Size=UDim2.new(1,-7,0,7),
 BackgroundTransparency=1,
 },{
 ah
@@ -7603,63 +7452,43 @@ local WindUI_ah={
 __type="TextDivider",
 Title=WindUI_ag.Title or"Divider",
 }
-local dividerContainer=WindUI_New("Frame",{
-Parent=WindUI_ag.Parent,
-Size=UDim2.new(1,0,0,18),
-BackgroundTransparency=1,
-})
 local WindUI_ai=WindUI_New("TextLabel",{
-Parent=dividerContainer,
-AnchorPoint=Vector2.new(0.5,0.5),
-Position=UDim2.new(0.5,0,0.5,0),
 BackgroundTransparency=1,
 Text=WindUI_ah.Title,
-TextSize=12,
+TextSize=13,
 TextTransparency=.35,
 AutomaticSize="X",
 Size=UDim2.new(0,0,1,0),
 ThemeTag={TextColor3="Text"},
 FontFace=Font.new(a.load'a'.Font,Enum.FontWeight.Medium),
 })
-local leftLine=WindUI_New("Frame",{
-Parent=dividerContainer,
-AnchorPoint=Vector2.new(0,0.5),
-Position=UDim2.new(0,12,0.5,0),
-Size=UDim2.new(0,20,0,1),
+local function WindUI_Line()
+return WindUI_New("Frame",{
+Size=UDim2.new(1,0,0,1),
+AnchorPoint=Vector2.new(0.5,0.5),
+Position=UDim2.new(0.5,0,0.5,0),
 BackgroundTransparency=.9,
 ThemeTag={BackgroundColor3="Text"},
 })
-local rightLine=WindUI_New("Frame",{
-Parent=dividerContainer,
-AnchorPoint=Vector2.new(1,0.5),
-Position=UDim2.new(1,-12,0.5,0),
-Size=UDim2.new(0,20,0,1),
-BackgroundTransparency=.9,
-ThemeTag={BackgroundColor3="Text"},
-})
-local function UpdateDividerLines()
-task.defer(function()
-if not dividerContainer or not dividerContainer.Parent then return end
-local containerW=dividerContainer.AbsoluteSize.X
-local textW=WindUI_ai.AbsoluteSize.X
-local halfText=math.floor(textW/2)
-local margin=12
-local gap=6
-local maxLineW=math.floor(containerW/2)-margin-gap-halfText
-local lineW=math.max(4,maxLineW)
-leftLine.Size=UDim2.new(0,lineW,0,1)
-rightLine.Size=UDim2.new(0,lineW,0,1)
-leftLine.Visible=(maxLineW>=4)
-rightLine.Visible=(maxLineW>=4)
-end)
 end
-WindUI_ai:GetPropertyChangedSignal("AbsoluteSize"):Connect(UpdateDividerLines)
-dividerContainer:GetPropertyChangedSignal("AbsoluteSize"):Connect(UpdateDividerLines)
-UpdateDividerLines()
+WindUI_New("Frame",{
+Parent=WindUI_ag.Parent,
+Size=UDim2.new(1,-7,0,20),
+BackgroundTransparency=1,
+},{
+WindUI_New("UIListLayout",{
+FillDirection="Horizontal",
+VerticalAlignment="Center",
+HorizontalAlignment="Center",
+Padding=UDim.new(0,10),
+}),
+WindUI_New("Frame",{Size=UDim2.new(0.4,0,0,1),BackgroundTransparency=1},{WindUI_Line()}),
+WindUI_ai,
+WindUI_New("Frame",{Size=UDim2.new(0.4,0,0,1),BackgroundTransparency=1},{WindUI_Line()}),
+})
 function WindUI_ah.SetTitle(WindUI_aj,WindUI_ak)
 WindUI_ah.Title=WindUI_ak
 WindUI_ai.Text=WindUI_ak
-UpdateDividerLines()
 end
 return"TextDivider",WindUI_ah
 end)
@@ -7713,15 +7542,15 @@ function WindUI_ToggleSlider.New(WindUI_af,WindUI_ag)
             return math.floor(v/ai.Step+0.5)*ai.Step
         end
 
-        local trackWidth=55
-        local rightWidth=trackWidth+28+38+8
+        local trackWidth=90
+        local rightWidth=trackWidth+38+46+10
 
         ai.Frame=a.load'y'{
             Title=ai.Title,
             Desc=ai.Desc,
             Window=WindUI_ag.Window,
             Parent=WindUI_ag.Parent,
-            TextOffset=rightWidth+10,
+            TextOffset=rightWidth+15,
             Hover=false,
             Tab=WindUI_ag.Tab,
             Index=WindUI_ag.Index,
@@ -8850,15 +8679,15 @@ function WindUI_DualSlider.New(WindUI_af,WindUI_ag)
             return math.floor(v/ai.Step+0.5)*ai.Step
         end
 
-        local trackWidth=60
-        local rightWidth=trackWidth+50
+        local trackWidth=105
+        local rightWidth=trackWidth+65
 
         ai.Frame=a.load'y'{
             Title=ai.Title,
             Desc=ai.Desc,
             Window=WindUI_ag.Window,
             Parent=WindUI_ag.Parent,
-            TextOffset=rightWidth+10,
+            TextOffset=rightWidth+15,
             Hover=false,
             Tab=WindUI_ag.Tab,
             Index=WindUI_ag.Index,
@@ -9127,15 +8956,15 @@ function WindUI_ToggleInput.New(WindUI_af,WindUI_ag)
         local currentInput=initInput
         ai.Value={Toggle=currentToggle,Input=currentInput}
 
-        local inputWidth=70
-        local rightWidth=inputWidth+38+6
+        local inputWidth=105
+        local rightWidth=inputWidth+46+8
 
         ai.Frame=a.load'y'{
             Title=ai.Title,
             Desc=ai.Desc,
             Window=WindUI_ag.Window,
             Parent=WindUI_ag.Parent,
-            TextOffset=rightWidth+10,
+            TextOffset=rightWidth+15,
             Hover=false,
             Tab=WindUI_ag.Tab,
             Index=WindUI_ag.Index,
@@ -9484,7 +9313,6 @@ Dropdown=a.load'H',
 Code=a.load'K',
 Colorpicker=a.load'L',
 Section=a.load'M',
-Box=a.load'M',
 Divider=a.load'N',
 Space=a.load'O',
 Multidropdown=WindUI_Multidropdown,
@@ -9507,17 +9335,6 @@ Load=function(aa,ac,ae,af,ag,ah,ai,aj)
 for ak,al in next,ae do
 aa[ak]=function(am,an)
 an=an or{}
-local isElement=(ak~="Section" and ak~="Box")
-if aa.__type=="Tab" and isElement then
-if not aa.LooseBox then
-aa.LooseBox=aa:Section({
-Title=aa.Title or"General",
-Opened=true,
-IsLooseBox=true,
-})
-end
-return aa.LooseBox[ak](aa.LooseBox,an)
-end
 an.Tab=aa
 an.Index=#aa.Elements+1
 an.GlobalIndex=#af.AllElements+1
@@ -10023,125 +9840,12 @@ FontFace=Font.new(ac.Font,Enum.FontWeight.Medium),
 
 
 
-local function CheckTabNotEmpty()
-for _,child in ipairs(al.UIElements.ContainerFrame:GetChildren()) do
-if child~=av and not child:IsA("UIListLayout") and not child:IsA("UIPadding") then
-return true
-end
-end
-return false
-end
-
-if CheckTabNotEmpty() then
-av.Visible=false
-end
-
 local aw
-aw=ac.AddSignal(al.UIElements.ContainerFrame.ChildAdded,function(ch)
-if ch~=av then
+aw=ac.AddSignal(al.UIElements.ContainerFrame.ChildAdded,function()
 av.Visible=false
-if aw then aw:Disconnect() end
-end
+aw:Disconnect()
 end)
 end)
-
-al.Boxes={}
-
-function al.UpdateBoxLayout(self,animate)
-if not Window or Window.TabLayoutType~="Boxes" then return end
-if not al.Boxes then return end
-if animate then al.NeedAnimate=true end
-if al.LayoutUpdating then return end
-al.LayoutUpdating=true
-task.defer(function()
-al.LayoutUpdating=false
-local doAnimate=al.NeedAnimate
-al.NeedAnimate=false
-local gap=16
-local colHeights={[1]=0,[2]=0}
-local colX={
-[1]=UDim2.new(0,0,0,0),
-[2]=UDim2.new(0.5,12,0,0)
-}
-for _,box in ipairs(al.Boxes) do
-if box.Frame and box.Frame.Visible and box.Frame.Parent then
-local col=(colHeights[1]<=colHeights[2]) and 1 or 2
-local currentY=colHeights[col]
-local targetPos=UDim2.new(colX[col].X.Scale,colX[col].X.Offset,0,currentY)
-
-local boxH
-if box.Opened then
-local cH=box.Frame.Content.UIListLayout.AbsoluteContentSize.Y+16
-boxH=box.HeaderSize+(cH/(Window.UIScale or 1))
-else
-boxH=box.HeaderSize
-end
-
-if doAnimate then
-af(box.Frame,0.33,{Position=targetPos},Enum.EasingStyle.Quint,Enum.EasingDirection.Out):Play()
-else
-box.Frame.Position=targetPos
-end
-colHeights[col]=currentY+boxH+gap
-end
-end
-local totalH=math.max(colHeights[1],colHeights[2])
-al.UIElements.ContainerFrame.CanvasSize=UDim2.new(0,0,0,totalH+20)
-end)
-end
-
-function al.SetLayoutType(self,layoutType)
-local isBoxes=(layoutType=="Boxes")
-if not al.UIListLayout then
-al.UIListLayout=al.UIElements.ContainerFrame:FindFirstChildWhichIsA("UIListLayout")
-end
-if isBoxes then
-if al.UIListLayout then
-al.UIListLayout.Parent=nil
-end
-else
-if al.UIListLayout and al.UIListLayout.Parent~=al.UIElements.ContainerFrame then
-al.UIListLayout.Parent=al.UIElements.ContainerFrame
-end
-end
-
-if al.Boxes then
-for _,box in ipairs(al.Boxes) do
-if box.SetBoxMode then
-box:SetBoxMode(isBoxes)
-end
-end
-end
-
-if isBoxes then
-task.defer(function()
-al:UpdateBoxLayout(false)
-end)
-else
-for _,box in ipairs(al.Boxes or{}) do
-if box.Frame then
-box.Frame.Position=UDim2.new(0,0,0,0)
-box.Frame.AutomaticSize="Y"
-box.Frame.Size=UDim2.new(1,0,0,0)
-end
-end
-al.UIElements.ContainerFrame.CanvasSize=UDim2.new(0,0,0,0)
-end
-end
-
-al.Box=function(self,arg)
-return al:Section(arg)
-end
-
-al.UIElements.ContainerFrame:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
-if Window and Window.TabLayoutType=="Boxes" then
-al:UpdateBoxLayout(false)
-end
-end)
-
-if Window and Window.TabLayoutType=="Boxes" then
-al:SetLayoutType("Boxes")
-end
 
 return al
 end
@@ -10172,11 +9876,6 @@ if ai.Tabs[ak].UIElements.Icon then
 af(ai.Tabs[ak].UIElements.Icon.ImageLabel,0.15,{ImageTransparency=0.1}):Play()
 end
 ai.Tabs[ak].Selected=true
-if Window and Window.TabLayoutType=="Boxes" and ai.Tabs[ak] and ai.Tabs[ak].UpdateBoxLayout then
-task.defer(function()
-ai.Tabs[ak]:UpdateBoxLayout(false)
-end)
-end
 
 
 task.spawn(function()
@@ -12994,26 +12693,6 @@ ao.TabModule=m
 -- ao.TabManager is a runtime table lookup, not a lexical upvalue capture, so the textual
 -- order of the two doesn't matter the way it would for a plain local reference.
 ao.TabManager=r
-
-ao.TabLayoutType=an.TabLayoutType or"Default"
-
-function ao.SetTabLayoutType(x,z)
-if z~="Default" and z~="Boxes" then return end
-ao.TabLayoutType=z
-if r and r.Tabs then
-for _,tab in pairs(r.Tabs) do
-if tab.SetLayoutType then
-pcall(function()
-tab:SetLayoutType(z)
-end)
-end
-end
-end
-end
-
-function ao.GetTabLayoutType(x)
-return ao.TabLayoutType
-end
 
 function ao.Tab(x,z)
 z.Parent=ao.UIElements.SideBar.Frame
