@@ -7054,10 +7054,11 @@ Padding=10,
 Elements={},
 
 Expandable=false,
+Opened=ah.Opened or false,
+IsAutoBox=ah.IsAutoBox or false,
 }
 
 local aj
-
 
 function ai.SetIcon(ak,al)
 ai.Icon=al or nil
@@ -7077,8 +7078,11 @@ end
 
 local ak=ac("Frame",{
 Size=UDim2.new(0,ai.IconSize,0,ai.IconSize),
+AnchorPoint=Vector2.new(1,0.5),
+Position=UDim2.new(1,-8,0.5,0),
 BackgroundTransparency=1,
-Visible=false
+Visible=false,
+ZIndex=4,
 },{
 ac("ImageLabel",{
 Size=UDim2.new(1,0,1,0),
@@ -7092,7 +7096,6 @@ ImageColor3="Icon",
 ImageTransparency=.7,
 })
 })
-
 
 if ai.Icon then
 ai:SetIcon(ai.Icon)
@@ -7108,18 +7111,50 @@ ThemeTag={
 TextColor3="Text",
 },
 FontFace=Font.new(aa.Font,Enum.FontWeight.SemiBold),
-
-
+TextTruncate="AtEnd",
 Text=ai.Title,
-Size=UDim2.new(
-1,
-aj and(-ai.IconSize-8)*2
-or(-ai.IconSize-8),
-
-0,
-0
-),
+Size=UDim2.new(1,0,0,0),
 TextWrapped=true,
+})
+
+local BoxBackground=aa.NewRoundFrame(ah.Tab and ah.Tab.UICorner or 12,"Squircle",{
+Size=UDim2.new(1,0,1,0),
+ThemeTag={ImageColor3="Accent"},
+ImageTransparency=0.88,
+Name="BoxBackground",
+Visible=false,
+ZIndex=1,
+})
+
+local BoxOutline=aa.NewRoundFrame(ah.Tab and ah.Tab.UICorner or 12,"SquircleOutline",{
+Size=UDim2.new(1,0,1,0),
+ThemeTag={ImageColor3="Outline"},
+ImageTransparency=0.93,
+Name="BoxOutline",
+Visible=false,
+ZIndex=2,
+})
+
+local BoxDivider=ac("Frame",{
+Size=UDim2.new(1,-16,0,1),
+Position=UDim2.new(0,8,0,ai.HeaderSize-1),
+BackgroundTransparency=0.9,
+ThemeTag={BackgroundColor3="Outline"},
+Name="BoxDivider",
+Visible=false,
+ZIndex=2,
+})
+
+local topPadding=ac("UIPadding",{
+PaddingLeft=UDim.new(0,0),
+PaddingRight=UDim.new(0,0),
+})
+
+local contentPadding=ac("UIPadding",{
+PaddingLeft=UDim.new(0,0),
+PaddingRight=UDim.new(0,0),
+PaddingBottom=UDim.new(0,0),
+PaddingTop=UDim.new(0,0),
 })
 
 local am=ac("Frame",{
@@ -7129,20 +7164,32 @@ Parent=ah.Parent,
 ClipsDescendants=true,
 AutomaticSize="Y",
 },{
+BoxBackground,
+BoxOutline,
+BoxDivider,
 ac("TextButton",{
-Size=UDim2.new(1,0,0,0),
+Size=UDim2.new(1,0,0,ai.HeaderSize),
 BackgroundTransparency=1,
-AutomaticSize="Y",
+AutomaticSize="None",
 Text="",
 Name="Top",
+Visible=not ai.IsAutoBox,
+ZIndex=3,
 },{
-aj,
-al,
+topPadding,
+ac("Frame",{
+Size=UDim2.new(1,-30,1,0),
+BackgroundTransparency=1,
+Name="TitleHolder",
+},{
 ac("UIListLayout",{
 Padding=UDim.new(0,8),
 FillDirection="Horizontal",
 VerticalAlignment="Center",
 HorizontalAlignment=not aj and ai.TextXAlignment or"Left",
+}),
+aj,
+al,
 }),
 ak,
 }),
@@ -7152,11 +7199,13 @@ Size=UDim2.new(1,0,0,0),
 AutomaticSize="Y",
 Name="Content",
 Visible=false,
-Position=UDim2.new(0,0,0,ai.HeaderSize)
+Position=UDim2.new(0,0,0,ai.HeaderSize),
+ZIndex=3,
 },{
+contentPadding,
 ac("UIListLayout",{
 FillDirection="Vertical",
-Padding=UDim.new(0,ah.Tab.Gap),
+Padding=UDim.new(0,ah.Tab and ah.Tab.Gap or 6),
 VerticalAlignment="Bottom",
 }),
 })
@@ -7172,45 +7221,98 @@ if not ai.Expandable then
 ai.Expandable=true
 ak.Visible=true
 end
+if ai.Opened then
+task.defer(function()
+if ai.Opened then
+local isBoxes=(ah.Window and ah.Window.TabLayoutType=="Boxes")
+local cH=am.Content.UIListLayout.AbsoluteContentSize.Y+(isBoxes and 14 or 0)
+local totalH=ai.HeaderSize+(cH/(ah.UIScale or 1))
+am.Size=isBoxes and UDim2.new(0.5,-5,0,totalH) or UDim2.new(1,0,0,totalH)
+if ah.Tab and ah.Tab.UpdateBoxLayout then
+ah.Tab:UpdateBoxLayout(false)
+end
+end
 end)
-
+end
+end)
 
 function ai.SetTitle(ao,ap)
 al.Text=ap
 end
 
 function ai.Destroy(ao)
+if ah.Tab and ah.Tab.Boxes then
+for idx,bx in ipairs(ah.Tab.Boxes) do
+if bx==ai then
+table.remove(ah.Tab.Boxes,idx)
+break
+end
+end
+if ah.Tab.UpdateBoxLayout then
+ah.Tab:UpdateBoxLayout(true)
+end
+end
 for ap,aq in next,ai.Elements do
 aq:Destroy()
 end
-
-
-
-
-
-
-
-
 am:Destroy()
+end
+
+function ai.SetBoxMode(ao,isBoxes)
+BoxBackground.Visible=isBoxes
+BoxOutline.Visible=isBoxes
+BoxDivider.Visible=isBoxes
+if ai.IsAutoBox then
+am.Top.Visible=isBoxes
+end
+if isBoxes then
+contentPadding.PaddingLeft=UDim.new(0,8)
+contentPadding.PaddingRight=UDim.new(0,8)
+contentPadding.PaddingBottom=UDim.new(0,8)
+contentPadding.PaddingTop=UDim.new(0,6)
+topPadding.PaddingLeft=UDim.new(0,12)
+topPadding.PaddingRight=UDim.new(0,12)
+local cH=am.Content.UIListLayout.AbsoluteContentSize.Y+14
+local totalH=ai.Opened and(ai.HeaderSize+(cH/(ah.UIScale or 1)))or ai.HeaderSize
+am.Size=UDim2.new(0.5,-5,0,totalH)
+else
+contentPadding.PaddingLeft=UDim.new(0,0)
+contentPadding.PaddingRight=UDim.new(0,0)
+contentPadding.PaddingBottom=UDim.new(0,0)
+contentPadding.PaddingTop=UDim.new(0,0)
+topPadding.PaddingLeft=UDim.new(0,0)
+topPadding.PaddingRight=UDim.new(0,0)
+local cH=am.Content.UIListLayout.AbsoluteContentSize.Y
+local totalH=ai.Opened and(ai.HeaderSize+(cH/(ah.UIScale or 1)))or ai.HeaderSize
+am.Size=UDim2.new(1,0,0,totalH)
+end
 end
 
 function ai.Open(ao)
 if ai.Expandable then
 ai.Opened=true
-ae(am,0.33,{
-Size=UDim2.new(1,0,0,ai.HeaderSize+(am.Content.AbsoluteSize.Y/ah.UIScale))
-},Enum.EasingStyle.Quint,Enum.EasingDirection.Out):Play()
-
+local isBoxes=(ah.Window and ah.Window.TabLayoutType=="Boxes")
+local cH=am.Content.UIListLayout.AbsoluteContentSize.Y+(isBoxes and 14 or 0)
+local totalH=ai.HeaderSize+(cH/(ah.UIScale or 1))
+local targetSize=isBoxes and UDim2.new(0.5,-5,0,totalH) or UDim2.new(1,0,0,totalH)
+ae(am,0.33,{Size=targetSize},Enum.EasingStyle.Quint,Enum.EasingDirection.Out):Play()
 ae(ak.ImageLabel,0.1,{Rotation=180},Enum.EasingStyle.Quint,Enum.EasingDirection.Out):Play()
+if ah.Tab and ah.Tab.UpdateBoxLayout then
+ah.Tab:UpdateBoxLayout(true)
 end
 end
+end
+
 function ai.Close(ao)
 if ai.Expandable then
 ai.Opened=false
-ae(am,0.26,{
-Size=UDim2.new(1,0,0,ai.HeaderSize)
-},Enum.EasingStyle.Quint,Enum.EasingDirection.Out):Play()
+local isBoxes=(ah.Window and ah.Window.TabLayoutType=="Boxes")
+local targetSize=isBoxes and UDim2.new(0.5,-5,0,ai.HeaderSize) or UDim2.new(1,0,0,ai.HeaderSize)
+ae(am,0.26,{Size=targetSize},Enum.EasingStyle.Quint,Enum.EasingDirection.Out):Play()
 ae(ak.ImageLabel,0.1,{Rotation=0},Enum.EasingStyle.Quint,Enum.EasingDirection.Out):Play()
+if ah.Tab and ah.Tab.UpdateBoxLayout then
+ah.Tab:UpdateBoxLayout(true)
+end
 end
 end
 
@@ -7234,21 +7336,38 @@ end
 task.spawn(function()
 task.wait()
 if ai.Expandable then
-
-
-
-
-
-
-
-
-am.Size=UDim2.new(1,0,0,ai.HeaderSize)
+local isBoxes=(ah.Window and ah.Window.TabLayoutType=="Boxes")
+local initH=ai.Opened and(ai.HeaderSize+am.Content.UIListLayout.AbsoluteContentSize.Y+(isBoxes and 14 or 0))or ai.HeaderSize
+am.Size=isBoxes and UDim2.new(0.5,-5,0,initH) or UDim2.new(1,0,0,initH)
 am.AutomaticSize="None"
 am.Top.Size=UDim2.new(1,0,0,ai.HeaderSize)
 am.Top.AutomaticSize="None"
 am.Content.Visible=true
 end
 end)
+
+am.Content.UIListLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+if ai.Opened and am.Content.Visible then
+local isBoxes=(ah.Window and ah.Window.TabLayoutType=="Boxes")
+local cH=am.Content.UIListLayout.AbsoluteContentSize.Y+(isBoxes and 14 or 0)
+local totalH=ai.HeaderSize+(cH/(ah.UIScale or 1))
+am.Size=isBoxes and UDim2.new(0.5,-5,0,totalH) or UDim2.new(1,0,0,totalH)
+if ah.Tab and ah.Tab.UpdateBoxLayout then
+ah.Tab:UpdateBoxLayout(true)
+end
+end
+end)
+
+if ah.Tab then
+if not ah.Tab.Boxes then
+ah.Tab.Boxes={}
+end
+table.insert(ah.Tab.Boxes,ai)
+end
+
+if ah.Window and ah.Window.TabLayoutType=="Boxes" then
+ai:SetBoxMode(true)
+end
 
 return ai.__type,ai
 end
@@ -9313,6 +9432,7 @@ Dropdown=a.load'H',
 Code=a.load'K',
 Colorpicker=a.load'L',
 Section=a.load'M',
+Box=a.load'M',
 Divider=a.load'N',
 Space=a.load'O',
 Multidropdown=WindUI_Multidropdown,
@@ -9335,6 +9455,17 @@ Load=function(aa,ac,ae,af,ag,ah,ai,aj)
 for ak,al in next,ae do
 aa[ak]=function(am,an)
 an=an or{}
+local isElement=(ak~="Section" and ak~="Box" and ak~="Divider" and ak~="Space")
+if aa.__type=="Tab" and isElement then
+if not aa.DefaultSection then
+aa.DefaultSection=aa:Section({
+Title=aa.Title or"General",
+Opened=true,
+IsAutoBox=true,
+})
+end
+return aa.DefaultSection[ak](aa.DefaultSection,an)
+end
 an.Tab=aa
 an.Index=#aa.Elements+1
 an.GlobalIndex=#af.AllElements+1
@@ -9847,6 +9978,80 @@ aw:Disconnect()
 end)
 end)
 
+al.Boxes={}
+
+function al.UpdateBoxLayout(self,animate)
+if not Window or Window.TabLayoutType~="Boxes" then return end
+if not al.Boxes then return end
+local gap=10
+local colHeights={[1]=0,[2]=0}
+local colX={
+[1]=UDim2.new(0,0,0,0),
+[2]=UDim2.new(0.5,math.floor(gap/2),0,0)
+}
+for _,box in ipairs(al.Boxes) do
+if box.Frame and box.Frame.Visible and box.Frame.Parent then
+local col=(colHeights[1]<=colHeights[2]) and 1 or 2
+local currentY=colHeights[col]
+local targetPos=UDim2.new(colX[col].X.Scale,colX[col].X.Offset,0,currentY)
+local boxH=box.Frame.Size.Y.Offset
+if boxH<=0 then
+local cH=box.Frame.Content.UIListLayout.AbsoluteContentSize.Y+14
+boxH=box.Opened and(box.HeaderSize+cH) or box.HeaderSize
+end
+if animate then
+af(box.Frame,0.33,{Position=targetPos},Enum.EasingStyle.Quint,Enum.EasingDirection.Out):Play()
+else
+box.Frame.Position=targetPos
+end
+colHeights[col]=currentY+boxH+gap
+end
+end
+local totalH=math.max(colHeights[1],colHeights[2])
+al.UIElements.ContainerFrame.CanvasSize=UDim2.new(0,0,0,totalH+20)
+end
+
+function al.SetLayoutType(self,layoutType)
+local isBoxes=(layoutType=="Boxes")
+al.UIElements.ContainerFrame.UIListLayout.Enabled=not isBoxes
+if al.Boxes then
+for _,box in ipairs(al.Boxes) do
+if box.SetBoxMode then
+box:SetBoxMode(isBoxes)
+end
+end
+end
+if isBoxes then
+task.defer(function()
+al:UpdateBoxLayout(false)
+end)
+else
+for _,box in ipairs(al.Boxes or{}) do
+if box.Frame then
+box.Frame.Position=UDim2.new(0,0,0,0)
+local cH=box.Frame.Content.UIListLayout.AbsoluteContentSize.Y
+local totalH=box.Opened and(box.HeaderSize+cH) or box.HeaderSize
+box.Frame.Size=UDim2.new(1,0,0,totalH)
+end
+end
+al.UIElements.ContainerFrame.CanvasSize=UDim2.new(0,0,0,0)
+end
+end
+
+al.Box=function(self,arg)
+return al:Section(arg)
+end
+
+al.UIElements.ContainerFrame:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
+if Window and Window.TabLayoutType=="Boxes" then
+al:UpdateBoxLayout(false)
+end
+end)
+
+if Window and Window.TabLayoutType=="Boxes" then
+al:SetLayoutType("Boxes")
+end
+
 return al
 end
 
@@ -9876,6 +10081,11 @@ if ai.Tabs[ak].UIElements.Icon then
 af(ai.Tabs[ak].UIElements.Icon.ImageLabel,0.15,{ImageTransparency=0.1}):Play()
 end
 ai.Tabs[ak].Selected=true
+if Window and Window.TabLayoutType=="Boxes" and ai.Tabs[ak] and ai.Tabs[ak].UpdateBoxLayout then
+task.defer(function()
+ai.Tabs[ak]:UpdateBoxLayout(false)
+end)
+end
 
 
 task.spawn(function()
@@ -12693,6 +12903,24 @@ ao.TabModule=m
 -- ao.TabManager is a runtime table lookup, not a lexical upvalue capture, so the textual
 -- order of the two doesn't matter the way it would for a plain local reference.
 ao.TabManager=r
+
+ao.TabLayoutType=an.TabLayoutType or"Default"
+
+function ao.SetTabLayoutType(x,z)
+if z~="Default" and z~="Boxes" then return end
+ao.TabLayoutType=z
+if r and r.Tabs then
+for _,tab in pairs(r.Tabs) do
+if tab.SetLayoutType then
+tab:SetLayoutType(z)
+end
+end
+end
+end
+
+function ao.GetTabLayoutType(x)
+return ao.TabLayoutType
+end
 
 function ao.Tab(x,z)
 z.Parent=ao.UIElements.SideBar.Frame
