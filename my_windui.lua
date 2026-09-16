@@ -7360,7 +7360,7 @@ local cH=am.Content.UIListLayout.AbsoluteContentSize.Y
 local hSize=ai.IsLooseBox and 0 or ai.HeaderSize
 local pad=ai.IsLooseBox and 14 or 10
 local totalH=ai.Opened and(hSize+((cH+pad)/(ah.UIScale or 1)))or hSize
-am.Size=UDim2.new(0.5,-16,0,totalH)
+am.Size=UDim2.new(0.5,-8,0,totalH)
 if ai.Opened then
 ak.ImageLabel.Rotation=180
 else
@@ -7401,7 +7401,7 @@ local hSize=ai.IsLooseBox and 0 or ai.HeaderSize
 local pad=ai.IsLooseBox and 14 or 10
 if isBoxes then
 local totalH=hSize+((cH+pad)/(ah.UIScale or 1))
-ae(am,0.33,{Size=UDim2.new(0.5,-16,0,totalH)},Enum.EasingStyle.Quint,Enum.EasingDirection.Out):Play()
+ae(am,0.33,{Size=UDim2.new(0.5,-8,0,totalH)},Enum.EasingStyle.Quint,Enum.EasingDirection.Out):Play()
 if ah.Tab and ah.Tab.UpdateBoxLayout then
 ah.Tab:UpdateBoxLayout(true)
 end
@@ -7418,7 +7418,7 @@ if ai.Expandable then
 ai.Opened=false
 local isBoxes=(ah.Window and ah.Window.TabLayoutType=="Boxes")
 local hSize=ai.IsLooseBox and 0 or ai.HeaderSize
-local targetSize=isBoxes and UDim2.new(0.5,-16,0,hSize) or UDim2.new(1,0,0,hSize)
+local targetSize=isBoxes and UDim2.new(0.5,-8,0,hSize) or UDim2.new(1,0,0,hSize)
 ae(am,0.26,{Size=targetSize},Enum.EasingStyle.Quint,Enum.EasingDirection.Out):Play()
 ae(ak.ImageLabel,0.1,{Rotation=0},Enum.EasingStyle.Quint,Enum.EasingDirection.Out):Play()
 if isBoxes and ah.Tab and ah.Tab.UpdateBoxLayout then
@@ -7445,7 +7445,7 @@ local hSize=ai.IsLooseBox and 0 or ai.HeaderSize
 local pad=ai.IsLooseBox and 14 or 10
 if isBoxes then
 local totalH=hSize+((cH+pad)/(ah.UIScale or 1))
-am.Size=UDim2.new(0.5,-16,0,totalH)
+am.Size=UDim2.new(0.5,-8,0,totalH)
 if ah.Tab and ah.Tab.UpdateBoxLayout then
 ah.Tab:UpdateBoxLayout(true)
 end
@@ -7464,10 +7464,10 @@ local pad=ai.IsLooseBox and 14 or 10
 if ai.Opened then
 local cH=am.Content.UIListLayout.AbsoluteContentSize.Y
 local totalH=hSize+((cH+(isBoxes and pad or 0))/(ah.UIScale or 1))
-am.Size=isBoxes and UDim2.new(0.5,-16,0,totalH) or UDim2.new(1,0,0,totalH)
+am.Size=isBoxes and UDim2.new(0.5,-8,0,totalH) or UDim2.new(1,0,0,totalH)
 ak.ImageLabel.Rotation=180
 else
-am.Size=isBoxes and UDim2.new(0.5,-16,0,hSize) or UDim2.new(1,0,0,hSize)
+am.Size=isBoxes and UDim2.new(0.5,-8,0,hSize) or UDim2.new(1,0,0,hSize)
 ak.ImageLabel.Rotation=0
 end
 end)
@@ -7481,6 +7481,11 @@ end
 
 if isBoxesMode then
 ai:SetBoxMode(true)
+if ah.Tab and ah.Tab.UpdateBoxLayout then
+task.defer(function()
+ah.Tab:UpdateBoxLayout(false)
+end)
+end
 end
 
 return ai.__type,ai
@@ -10191,8 +10196,8 @@ al.NeedAnimate=false
 local gap=12
 local colHeights={[1]=0,[2]=0}
 local colX={
-[1]=UDim2.new(0,10,0,0),
-[2]=UDim2.new(0.5,6,0,0)
+[1]=UDim2.new(0,0,0,0),
+[2]=UDim2.new(0.5,8,0,0)
 }
 for _,box in ipairs(al.Boxes) do
 if box.Frame and box.Frame.Visible and box.Frame.Parent then
@@ -10211,10 +10216,10 @@ boxH=hSize
 end
 
 if doAnimate then
-ac.Tween(box.Frame,0.33,{Position=targetPos,Size=UDim2.new(0.5,-16,0,boxH)},Enum.EasingStyle.Quint,Enum.EasingDirection.Out):Play()
+ac.Tween(box.Frame,0.33,{Position=targetPos,Size=UDim2.new(0.5,-8,0,boxH)},Enum.EasingStyle.Quint,Enum.EasingDirection.Out):Play()
 else
 box.Frame.Position=targetPos
-box.Frame.Size=UDim2.new(0.5,-16,0,boxH)
+box.Frame.Size=UDim2.new(0.5,-8,0,boxH)
 end
 colHeights[col]=currentY+boxH+gap
 end
@@ -10234,8 +10239,8 @@ end
 local containerPadding=al.UIElements.ContainerFrame:FindFirstChildWhichIsA("UIPadding")
 if containerPadding then
 if isBoxes then
-containerPadding.PaddingLeft=UDim.new(0,0)
-containerPadding.PaddingRight=UDim.new(0,0)
+containerPadding.PaddingLeft=UDim.new(0,10)
+containerPadding.PaddingRight=UDim.new(0,10)
 containerPadding.PaddingTop=UDim.new(0,10)
 containerPadding.PaddingBottom=UDim.new(0,10)
 else
@@ -10331,6 +10336,11 @@ ao.Visible=false
 end
 ai.Containers[ak].Visible=true
 af(ai.Containers[ak],0.15,{AnchorPoint=Vector2.new(0,0)},Enum.EasingStyle.Quart,Enum.EasingDirection.Out):Play()
+if Window and Window.TabLayoutType=="Boxes" and ai.Tabs[ak] and ai.Tabs[ak].UpdateBoxLayout then
+task.defer(function()
+ai.Tabs[ak]:UpdateBoxLayout(false)
+end)
+end
 end)
 
 ai.OnChangeFunc(ak)
