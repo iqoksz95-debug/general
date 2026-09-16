@@ -1701,9 +1701,9 @@ local an=ah~="Input"
 
 local ao=ac("TextBox",{
 BackgroundTransparency=1,
-TextSize=17,
+TextSize=13,
 FontFace=Font.new(ab.Font,Enum.FontWeight.Regular),
-Size=UDim2.new(1,am and-29 or 0,1,0),
+Size=UDim2.new(1,am and-22 or 0,1,0),
 PlaceholderText=ae,
 ClearTextOnFocus=false,
 ClipsDescendants=true,
@@ -3012,9 +3012,9 @@ end
 
 local aj=ac("TextLabel",{
 BackgroundTransparency=1,
-TextSize=17,
+TextSize=13,
 FontFace=Font.new(ab.Font,Enum.FontWeight.Regular),
-Size=UDim2.new(1,ai and-29 or 0,1,0),
+Size=UDim2.new(1,ai and-24 or 0,1,0),
 TextXAlignment="Left",
 ThemeTag={
 TextColor3="Text",
@@ -3067,8 +3067,8 @@ ImageColor3=Color3.new(1,1,1),
 ImageTransparency=.95
 },{
 ac("UIPadding",{
-PaddingLeft=UDim.new(0,12),
-PaddingRight=UDim.new(0,12),
+PaddingLeft=UDim.new(0,8),
+PaddingRight=UDim.new(0,8),
 }),
 ac("UIListLayout",{
 FillDirection="Horizontal",
@@ -3765,8 +3765,8 @@ VerticalAlignment="Center",
 }),
 ah,
 ac("UIPadding",{
-PaddingLeft=UDim.new(0,12),
-PaddingRight=UDim.new(0,12),
+PaddingLeft=UDim.new(0,8),
+PaddingRight=UDim.new(0,8),
 }),
 }),
 ac("UIPadding",{
@@ -5263,7 +5263,7 @@ Callback=ai.Callback or function()end,
 ClearTextOnFocus=ai.ClearTextOnFocus or false,
 UIElements={},
 
-Width=150,
+Width=100,
 }
 
 local ak=true
@@ -5272,7 +5272,7 @@ aj.InputFrame=a.load'y'{
 Title=aj.Title,
 Desc=aj.Desc,
 Parent=ai.Parent,
-TextOffset=aj.Width,
+TextOffset=aj.Width+8,
 Hover=false,
 Tab=ai.Tab,
 Index=ai.Index,
@@ -5293,7 +5293,7 @@ ai.Window.NewElements and 12 or 10
 )
 
 if aj.Type=="Input"then
-al.Size=UDim2.new(0,aj.Width,0,36)
+al.Size=UDim2.new(0,aj.Width,0,28)
 al.Position=UDim2.new(1,0,0.5,0)
 al.AnchorPoint=Vector2.new(1,0.5)
 else
@@ -5379,7 +5379,7 @@ UIElements={},
 Opened=false,
 Tabs={},
 
-Width=150,
+Width=100,
 }
 
 if an.Multi and not an.Value then
@@ -5392,7 +5392,7 @@ an.DropdownFrame=a.load'y'{
 Title=an.Title,
 Desc=an.Desc,
 Parent=am.Parent,
-TextOffset=an.Width,
+TextOffset=an.Width+8,
 Hover=false,
 Tab=am.Tab,
 Index=am.Index,
@@ -5404,23 +5404,19 @@ ElementTable=an,
 an.UIElements.Dropdown=ai("",nil,an.DropdownFrame.UIElements.Main)
 
 an.UIElements.Dropdown.Frame.Frame.TextLabel.TextTruncate="AtEnd"
-an.UIElements.Dropdown.Frame.Frame.TextLabel.Size=UDim2.new(1,an.UIElements.Dropdown.Frame.Frame.TextLabel.Size.X.Offset-18-12-12,0,0)
+an.UIElements.Dropdown.Frame.Frame.TextLabel.TextSize=13
+an.UIElements.Dropdown.Frame.Frame.TextLabel.Size=UDim2.new(1,-24,1,0)
 
-an.UIElements.Dropdown.Size=UDim2.new(0,an.Width,0,36)
+an.UIElements.Dropdown.Size=UDim2.new(0,an.Width,0,28)
 an.UIElements.Dropdown.Position=UDim2.new(1,0,0.5,0)
 an.UIElements.Dropdown.AnchorPoint=Vector2.new(1,0.5)
-
-
-
-
-
 
 ag("ImageLabel",{
 Image=af.Icon"chevrons-up-down"[1],
 ImageRectOffset=af.Icon"chevrons-up-down"[2].ImageRectPosition,
 ImageRectSize=af.Icon"chevrons-up-down"[2].ImageRectSize,
-Size=UDim2.new(0,18,0,18),
-Position=UDim2.new(1,-12,0.5,0),
+Size=UDim2.new(0,14,0,14),
+Position=UDim2.new(1,-6,0.5,0),
 ThemeTag={
 ImageColor3="Icon"
 },
@@ -7359,7 +7355,7 @@ local ae={}
 
 function ae.New(af,ag)
 local ah=ac("Frame",{
-Size=UDim2.new(1,-20,0,1),
+Size=UDim2.new(1,-24,0,1),
 Position=UDim2.new(0.5,0,0.5,0),
 AnchorPoint=Vector2.new(0.5,0.5),
 BackgroundTransparency=.9,
@@ -7550,7 +7546,15 @@ local WindUI_ah={
 __type="TextDivider",
 Title=WindUI_ag.Title or"Divider",
 }
+local dividerContainer=WindUI_New("Frame",{
+Parent=WindUI_ag.Parent,
+Size=UDim2.new(1,0,0,18),
+BackgroundTransparency=1,
+})
 local WindUI_ai=WindUI_New("TextLabel",{
+Parent=dividerContainer,
+AnchorPoint=Vector2.new(0.5,0.5),
+Position=UDim2.new(0.5,0,0.5,0),
 BackgroundTransparency=1,
 Text=WindUI_ah.Title,
 TextSize=12,
@@ -7560,49 +7564,36 @@ Size=UDim2.new(0,0,1,0),
 ThemeTag={TextColor3="Text"},
 FontFace=Font.new(a.load'a'.Font,Enum.FontWeight.Medium),
 })
-local function WindUI_Line()
-return WindUI_New("Frame",{
-Size=UDim2.new(1,0,0,1),
-AnchorPoint=Vector2.new(0.5,0.5),
-Position=UDim2.new(0.5,0,0.5,0),
+local leftLine=WindUI_New("Frame",{
+Parent=dividerContainer,
+AnchorPoint=Vector2.new(0,0.5),
+Position=UDim2.new(0,12,0.5,0),
+Size=UDim2.new(0,20,0,1),
 BackgroundTransparency=.9,
 ThemeTag={BackgroundColor3="Text"},
 })
-end
-local leftLineHolder=WindUI_New("Frame",{
-Size=UDim2.new(0.5,-16,0,1),
-BackgroundTransparency=1,
-ClipsDescendants=true,
-},{WindUI_Line()})
-local rightLineHolder=WindUI_New("Frame",{
-Size=UDim2.new(0.5,-16,0,1),
-BackgroundTransparency=1,
-ClipsDescendants=true,
-},{WindUI_Line()})
-local dividerContainer=WindUI_New("Frame",{
-Parent=WindUI_ag.Parent,
-Size=UDim2.new(1,-20,0,18),
-AnchorPoint=Vector2.new(0.5,0),
-Position=UDim2.new(0.5,0,0,0),
-BackgroundTransparency=1,
-},{
-WindUI_New("UIListLayout",{
-FillDirection="Horizontal",
-VerticalAlignment="Center",
-HorizontalAlignment="Center",
-Padding=UDim.new(0,6),
-}),
-leftLineHolder,
-WindUI_ai,
-rightLineHolder,
+local rightLine=WindUI_New("Frame",{
+Parent=dividerContainer,
+AnchorPoint=Vector2.new(1,0.5),
+Position=UDim2.new(1,-12,0.5,0),
+Size=UDim2.new(0,20,0,1),
+BackgroundTransparency=.9,
+ThemeTag={BackgroundColor3="Text"},
 })
 local function UpdateDividerLines()
 task.defer(function()
+if not dividerContainer or not dividerContainer.Parent then return end
 local containerW=dividerContainer.AbsoluteSize.X
 local textW=WindUI_ai.AbsoluteSize.X
-local lineW=math.max(8,math.floor((containerW-textW-16)/2))
-leftLineHolder.Size=UDim2.new(0,lineW,0,1)
-rightLineHolder.Size=UDim2.new(0,lineW,0,1)
+local halfText=math.floor(textW/2)
+local margin=12
+local gap=6
+local maxLineW=math.floor(containerW/2)-margin-gap-halfText
+local lineW=math.max(4,maxLineW)
+leftLine.Size=UDim2.new(0,lineW,0,1)
+rightLine.Size=UDim2.new(0,lineW,0,1)
+leftLine.Visible=(maxLineW>=4)
+rightLine.Visible=(maxLineW>=4)
 end)
 end
 WindUI_ai:GetPropertyChangedSignal("AbsoluteSize"):Connect(UpdateDividerLines)
@@ -9459,7 +9450,7 @@ Load=function(aa,ac,ae,af,ag,ah,ai,aj)
 for ak,al in next,ae do
 aa[ak]=function(am,an)
 an=an or{}
-local isElement=(ak~="Section" and ak~="Box" and ak~="Divider" and ak~="Space")
+local isElement=(ak~="Section" and ak~="Box")
 if aa.__type=="Tab" and isElement then
 if not aa.LooseBox then
 aa.LooseBox=aa:Section({
