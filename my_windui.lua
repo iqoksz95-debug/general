@@ -4157,6 +4157,10 @@ end
 
 
 return function(ae)
+local isBoxesMode=(ae.Window and ae.Window.TabLayoutType=="Boxes")
+local defaultPad=(ae.Window and ae.Window.NewElements) and 10 or 13
+local currentPad=isBoxesMode and 8 or defaultPad
+
 local af={
 Title=ae.Title,
 Desc=ae.Desc or nil,
@@ -4169,8 +4173,8 @@ ImageSize=ae.ImageSize or 30,
 Color=ae.Color,
 Scalable=ae.Scalable,
 Parent=ae.Parent,
-UIPadding=ae.Window.NewElements and 10 or 13,
-UICorner=ae.Window.NewElements and 23 or 12,
+UIPadding=currentPad,
+UICorner=ae.Window and (ae.Window.NewElements and 23 or 12) or 12,
 UIElements={},
 
 Index=ae.Index
@@ -4223,10 +4227,11 @@ and GetTextColorForHSB(Color3.fromHex(aa.Colors[af.Color]))
 or typeof(af.Color)=="Color3"
 and GetTextColorForHSB(af.Color)
 
+local textSz=an=="Desc"and(isBoxesMode and 12 or 15)or(isBoxesMode and 14 or 17)
 return ab("TextLabel",{
 BackgroundTransparency=1,
 Text=am or"",
-TextSize=an=="Desc"and 15 or 17,
+TextSize=textSz,
 TextXAlignment="Left",
 ThemeTag={
 TextColor3=not af.Color and"Text"or nil,
@@ -4339,12 +4344,17 @@ Padding=UDim.new(0,8)
 ao,ap
 },nil,true)
 
+local mainUIPadding=ab("UIPadding",{
+PaddingTop=UDim.new(0,af.UIPadding),
+PaddingLeft=UDim.new(0,af.UIPadding),
+PaddingRight=UDim.new(0,af.UIPadding),
+PaddingBottom=UDim.new(0,af.UIPadding),
+})
+
 local as,at=ac(af.UICorner,"Squircle",{
 Size=UDim2.new(1,0,0,0),
 AutomaticSize="Y",
 ImageTransparency=af.Color and.05 or.93,
-
-
 
 Parent=ae.Parent,
 ThemeTag={
@@ -4360,13 +4370,26 @@ and af.Color
 },{
 af.UIElements.Container,
 aq,
-ab("UIPadding",{
-PaddingTop=UDim.new(0,af.UIPadding),
-PaddingLeft=UDim.new(0,af.UIPadding),
-PaddingRight=UDim.new(0,af.UIPadding),
-PaddingBottom=UDim.new(0,af.UIPadding),
-}),
+mainUIPadding,
 },true,true)
+
+local function SetRowBoxMode(self,boxMode)
+pcall(function()
+local pad=boxMode and 8 or ((ae.Window and ae.Window.NewElements) and 10 or 13)
+af.UIPadding=pad
+mainUIPadding.PaddingTop=UDim.new(0,pad)
+mainUIPadding.PaddingBottom=UDim.new(0,pad)
+mainUIPadding.PaddingLeft=UDim.new(0,pad)
+mainUIPadding.PaddingRight=UDim.new(0,pad)
+if am then am.TextSize=boxMode and 14 or 17 end
+if an then an.TextSize=boxMode and 12 or 15 end
+end)
+end
+
+af.SetBoxMode=SetRowBoxMode
+if ae.ElementTable then
+ae.ElementTable.SetRowBoxMode=SetRowBoxMode
+end
 
 af.UIElements.Main=as
 af.UIElements.Locked=aq
@@ -4923,7 +4946,7 @@ Callback=ah.Callback or function()end,
 UIElements={},
 IsFocusing=false,
 
-Width=130,
+Width=(ah.Window and ah.Window.TabLayoutType=="Boxes") and 100 or 130,
 TextBoxWidth=30,
 }
 local aj
@@ -5039,6 +5062,13 @@ end
 
 local ar=ai.SliderFrame.Parent:IsA"ScrollingFrame"and ai.SliderFrame.Parent or ai.SliderFrame.Parent.Parent.Parent
 
+function ai.SetBoxMode(self,isBoxes)
+ai.Width=isBoxes and 100 or 130
+if ai.SetRowBoxMode then
+ai:SetRowBoxMode(isBoxes)
+end
+end
+
 function ai.Set(as,at,au)
 if ap then
 if not ai.IsFocusing and not af and(not au or(au.UserInputType==Enum.UserInputType.MouseButton1 or au.UserInputType==Enum.UserInputType.Touch))then
@@ -5144,30 +5174,52 @@ Window=ai.Window,
 ElementTable=aj,
 }
 
-aj.UIElements.Keybind=ag(aj.Value,nil,aj.KeybindFrame.UIElements.Main)
+local isBoxKey=(ai.Window and ai.Window.TabLayoutType=="Boxes")
 
-aj.UIElements.Keybind.Size=UDim2.new(
-0,24
-+aj.UIElements.Keybind.Frame.Frame.TextLabel.TextBounds.X,
-0,
-42
-)
+aj.UIElements.Keybind=ag(aj.Value,nil,aj.KeybindFrame.UIElements.Main)
 aj.UIElements.Keybind.AnchorPoint=Vector2.new(1,0.5)
 aj.UIElements.Keybind.Position=UDim2.new(1,0,0.5,0)
 
-ad("UIScale",{
+local keyInnerFrame=aj.UIElements.Keybind.Frame.Frame
+local keyTextLabel=keyInnerFrame.TextLabel
+keyTextLabel.TextXAlignment="Center"
+keyTextLabel.TextYAlignment="Center"
+pcall(function()
+keyInnerFrame.UIListLayout.HorizontalAlignment=Enum.HorizontalAlignment.Center
+end)
+
+local keyScale=ad("UIScale",{
 Parent=aj.UIElements.Keybind,
-Scale=.85,
+Scale=isBoxKey and 1 or 0.85,
 })
 
-ac.AddSignal(aj.UIElements.Keybind.Frame.Frame.TextLabel:GetPropertyChangedSignal"TextBounds",function()
-aj.UIElements.Keybind.Size=UDim2.new(
-0,24
-+aj.UIElements.Keybind.Frame.Frame.TextLabel.TextBounds.X,
-0,
-42
-)
+local function UpdateKeySize()
+pcall(function()
+local tW=keyTextLabel.TextBounds.X
+if isBoxKey then
+keyInnerFrame.UIPadding.PaddingLeft=UDim.new(0,0)
+keyInnerFrame.UIPadding.PaddingRight=UDim.new(0,0)
+aj.UIElements.Keybind.Size=UDim2.new(0,math.max(26,tW+14),0,26)
+keyScale.Scale=1
+else
+keyInnerFrame.UIPadding.PaddingLeft=UDim.new(0,8)
+keyInnerFrame.UIPadding.PaddingRight=UDim.new(0,8)
+aj.UIElements.Keybind.Size=UDim2.new(0,24+tW,0,42)
+keyScale.Scale=0.85
+end
 end)
+end
+UpdateKeySize()
+
+ac.AddSignal(keyTextLabel:GetPropertyChangedSignal"TextBounds",UpdateKeySize)
+
+function aj.SetBoxMode(self,isBoxes)
+isBoxKey=isBoxes
+UpdateKeySize()
+if aj.SetRowBoxMode then
+aj:SetRowBoxMode(isBoxes)
+end
+end
 
 function aj.Lock(al)
 aj.Locked=true
@@ -5292,12 +5344,27 @@ nil,
 ai.Window.NewElements and 12 or 10
 )
 
+local isBoxInput=(ai.Window and ai.Window.TabLayoutType=="Boxes")
+aj.Width=isBoxInput and 95 or 150
+local inputH=isBoxInput and 26 or 36
+
 if aj.Type=="Input"then
-al.Size=UDim2.new(0,aj.Width,0,36)
+al.Size=UDim2.new(0,aj.Width,0,inputH)
 al.Position=UDim2.new(1,0,0.5,0)
 al.AnchorPoint=Vector2.new(1,0.5)
 else
 al.Size=UDim2.new(1,0,0,148)
+end
+
+function aj.SetBoxMode(self,isBoxes)
+aj.Width=isBoxes and 95 or 150
+local h=isBoxes and 26 or 36
+if aj.Type=="Input" then
+al.Size=UDim2.new(0,aj.Width,0,h)
+end
+if aj.SetRowBoxMode then
+aj:SetRowBoxMode(isBoxes)
+end
 end
 
 ac("UIScale",{
@@ -5401,14 +5468,32 @@ ElementTable=an,
 }
 
 
+local isBoxDrop=(am.Window and am.Window.TabLayoutType=="Boxes")
+an.Width=isBoxDrop and 95 or 150
+local dropH=isBoxDrop and 26 or 36
+
 an.UIElements.Dropdown=ai("",nil,an.DropdownFrame.UIElements.Main)
 
-an.UIElements.Dropdown.Frame.Frame.TextLabel.TextTruncate="AtEnd"
-an.UIElements.Dropdown.Frame.Frame.TextLabel.Size=UDim2.new(1,an.UIElements.Dropdown.Frame.Frame.TextLabel.Size.X.Offset-18-12-12,0,0)
+local dropTextLabel=an.UIElements.Dropdown.Frame.Frame.TextLabel
+dropTextLabel.TextTruncate="AtEnd"
+dropTextLabel.TextSize=isBoxDrop and 13 or 14
+dropTextLabel.TextXAlignment="Left"
+dropTextLabel.TextYAlignment="Center"
+dropTextLabel.Size=UDim2.new(1,-24,1,0)
 
-an.UIElements.Dropdown.Size=UDim2.new(0,an.Width,0,36)
+an.UIElements.Dropdown.Size=UDim2.new(0,an.Width,0,dropH)
 an.UIElements.Dropdown.Position=UDim2.new(1,0,0.5,0)
 an.UIElements.Dropdown.AnchorPoint=Vector2.new(1,0.5)
+
+function an.SetBoxMode(self,isBoxes)
+an.Width=isBoxes and 95 or 150
+local h=isBoxes and 26 or 36
+an.UIElements.Dropdown.Size=UDim2.new(0,an.Width,0,h)
+dropTextLabel.TextSize=isBoxes and 13 or 14
+if an.SetRowBoxMode then
+an:SetRowBoxMode(isBoxes)
+end
+end
 
 
 
@@ -7037,27 +7122,29 @@ local ae=aa.Tween
 local af={}
 
 function af.New(ag,ah)
+local isBoxesMode=(ah.Window and ah.Window.TabLayoutType=="Boxes")
 local ai={
 __type="Section",
 Title=ah.Title or"Section",
 Icon=ah.Icon,
 TextXAlignment=ah.TextXAlignment or"Left",
-TextSize=ah.TextSize or 19,
+TextSize=ah.TextSize or (isBoxesMode and 16 or 19),
 TextTransparency=ah.TextTransparency or 0.05,
 UIElements={},
 Tab=ah.Tab,
 
-HeaderSize=42,
-IconSize=20,
-Padding=10,
+HeaderSize=isBoxesMode and 38 or 42,
+IconSize=isBoxesMode and 18 or 20,
+Padding=isBoxesMode and 8 or 10,
 
 Elements={},
 
 Expandable=false,
+Opened=ah.Opened~=nil and ah.Opened or (isBoxesMode and true or false),
+IsLooseBox=ah.IsLooseBox or false,
 }
 
 local aj
-
 
 function ai.SetIcon(ak,al)
 ai.Icon=al or nil
@@ -7077,8 +7164,11 @@ end
 
 local ak=ac("Frame",{
 Size=UDim2.new(0,ai.IconSize,0,ai.IconSize),
+AnchorPoint=Vector2.new(1,0.5),
+Position=UDim2.new(1,-8,0.5,0),
 BackgroundTransparency=1,
-Visible=false
+Visible=false,
+ZIndex=4,
 },{
 ac("ImageLabel",{
 Size=UDim2.new(1,0,1,0),
@@ -7092,7 +7182,6 @@ ImageColor3="Icon",
 ImageTransparency=.7,
 })
 })
-
 
 if ai.Icon then
 ai:SetIcon(ai.Icon)
@@ -7108,18 +7197,51 @@ ThemeTag={
 TextColor3="Text",
 },
 FontFace=Font.new(aa.Font,Enum.FontWeight.SemiBold),
-
-
+TextTruncate="AtEnd",
 Text=ai.Title,
-Size=UDim2.new(
-1,
-aj and(-ai.IconSize-8)*2
-or(-ai.IconSize-8),
-
-0,
-0
-),
+Size=UDim2.new(1,0,0,0),
 TextWrapped=true,
+})
+
+local BoxBackground=aa.NewRoundFrame(ah.Tab and ah.Tab.UICorner or 10,"Squircle",{
+Size=UDim2.new(1,0,1,0),
+ThemeTag={ImageColor3="Dialog"},
+ImageTransparency=0.35,
+Name="BoxBackground",
+Visible=false,
+ZIndex=1,
+})
+
+local BoxOutline=aa.NewRoundFrame(ah.Tab and ah.Tab.UICorner or 10,"SquircleOutline",{
+Size=UDim2.new(1,0,1,0),
+ThemeTag={ImageColor3="Outline"},
+ImageTransparency=0.92,
+Name="BoxOutline",
+Visible=false,
+ZIndex=2,
+})
+
+local BoxDivider=ac("Frame",{
+Size=UDim2.new(1,-20,0,1),
+Position=UDim2.new(0.5,0,0,ai.HeaderSize-1),
+AnchorPoint=Vector2.new(0.5,0),
+BackgroundTransparency=0.92,
+ThemeTag={BackgroundColor3="Outline"},
+Name="BoxDivider",
+Visible=false,
+ZIndex=2,
+})
+
+local topPadding=ac("UIPadding",{
+PaddingLeft=UDim.new(0,0),
+PaddingRight=UDim.new(0,0),
+})
+
+local contentPadding=ac("UIPadding",{
+PaddingLeft=UDim.new(0,0),
+PaddingRight=UDim.new(0,0),
+PaddingBottom=UDim.new(0,0),
+PaddingTop=UDim.new(0,0),
 })
 
 local am=ac("Frame",{
@@ -7127,22 +7249,34 @@ Size=UDim2.new(1,0,0,0),
 BackgroundTransparency=1,
 Parent=ah.Parent,
 ClipsDescendants=true,
-AutomaticSize="Y",
+AutomaticSize="None",
 },{
+BoxBackground,
+BoxOutline,
+BoxDivider,
 ac("TextButton",{
-Size=UDim2.new(1,0,0,0),
+Size=UDim2.new(1,0,0,ai.HeaderSize),
 BackgroundTransparency=1,
-AutomaticSize="Y",
+AutomaticSize="None",
 Text="",
 Name="Top",
+Visible=not ai.IsLooseBox,
+ZIndex=3,
 },{
-aj,
-al,
+topPadding,
+ac("Frame",{
+Size=UDim2.new(1,-30,1,0),
+BackgroundTransparency=1,
+Name="TitleHolder",
+},{
 ac("UIListLayout",{
-Padding=UDim.new(0,8),
+Padding=UDim.new(0,6),
 FillDirection="Horizontal",
 VerticalAlignment="Center",
 HorizontalAlignment=not aj and ai.TextXAlignment or"Left",
+}),
+aj,
+al,
 }),
 ak,
 }),
@@ -7151,12 +7285,14 @@ BackgroundTransparency=1,
 Size=UDim2.new(1,0,0,0),
 AutomaticSize="Y",
 Name="Content",
-Visible=false,
-Position=UDim2.new(0,0,0,ai.HeaderSize)
+Visible=true,
+Position=ai.IsLooseBox and UDim2.new(0,0,0,0) or UDim2.new(0,0,0,ai.HeaderSize),
+ZIndex=3,
 },{
+contentPadding,
 ac("UIListLayout",{
 FillDirection="Vertical",
-Padding=UDim.new(0,ah.Tab.Gap),
+Padding=UDim.new(0,isBoxesMode and 4 or(ah.Tab and ah.Tab.Gap or 6)),
 VerticalAlignment="Bottom",
 }),
 })
@@ -7174,43 +7310,118 @@ ak.Visible=true
 end
 end)
 
-
 function ai.SetTitle(ao,ap)
 al.Text=ap
 end
 
 function ai.Destroy(ao)
+if ah.Tab and ah.Tab.Boxes then
+for idx,bx in ipairs(ah.Tab.Boxes) do
+if bx==ai then
+table.remove(ah.Tab.Boxes,idx)
+break
+end
+end
+if ah.Tab.UpdateBoxLayout then
+ah.Tab:UpdateBoxLayout(true)
+end
+end
 for ap,aq in next,ai.Elements do
 aq:Destroy()
 end
-
-
-
-
-
-
-
-
 am:Destroy()
+end
+
+function ai.SetBoxMode(ao,isBoxes)
+BoxBackground.Visible=isBoxes
+BoxOutline.Visible=isBoxes
+BoxDivider.Visible=isBoxes and (not ai.IsLooseBox)
+
+ai.HeaderSize=isBoxes and 38 or 42
+ai.IconSize=isBoxes and 18 or 20
+ai.TextSize=isBoxes and 16 or 19
+al.TextSize=ai.TextSize
+am.Top.Size=UDim2.new(1,0,0,ai.HeaderSize)
+BoxDivider.Position=UDim2.new(0.5,0,0,ai.HeaderSize-1)
+
+if ai.IsLooseBox then
+am.Top.Visible=false
+am.Content.Position=UDim2.new(0,0,0,0)
+end
+
+if isBoxes then
+contentPadding.PaddingLeft=UDim.new(0,8)
+contentPadding.PaddingRight=UDim.new(0,8)
+contentPadding.PaddingBottom=UDim.new(0,8)
+contentPadding.PaddingTop=UDim.new(0,ai.IsLooseBox and 8 or 6)
+topPadding.PaddingLeft=UDim.new(0,10)
+topPadding.PaddingRight=UDim.new(0,10)
+local cH=am.Content.UIListLayout.AbsoluteContentSize.Y+16
+local hSize=ai.IsLooseBox and 0 or ai.HeaderSize
+local totalH=ai.Opened and(hSize+(cH/(ah.UIScale or 1)))or hSize
+am.Size=UDim2.new(0.5,-12,0,totalH)
+if ai.Opened then
+ak.ImageLabel.Rotation=180
+else
+ak.ImageLabel.Rotation=0
+end
+else
+contentPadding.PaddingLeft=UDim.new(0,0)
+contentPadding.PaddingRight=UDim.new(0,0)
+contentPadding.PaddingBottom=UDim.new(0,0)
+contentPadding.PaddingTop=UDim.new(0,0)
+topPadding.PaddingLeft=UDim.new(0,0)
+topPadding.PaddingRight=UDim.new(0,0)
+local cH=am.Content.UIListLayout.AbsoluteContentSize.Y
+local hSize=ai.IsLooseBox and 0 or ai.HeaderSize
+local totalH=ai.Opened and(hSize+(cH/(ah.UIScale or 1)))or hSize
+am.Size=UDim2.new(1,0,0,totalH)
+am.Position=UDim2.new(0,0,0,0)
+if ai.Opened then
+ak.ImageLabel.Rotation=180
+else
+ak.ImageLabel.Rotation=0
+end
+end
+
+for _,elem in ipairs(ai.Elements or{}) do
+if type(elem)=="table" and elem.SetBoxMode then
+elem:SetBoxMode(isBoxes)
+end
+end
 end
 
 function ai.Open(ao)
 if ai.Expandable then
 ai.Opened=true
-ae(am,0.33,{
-Size=UDim2.new(1,0,0,ai.HeaderSize+(am.Content.AbsoluteSize.Y/ah.UIScale))
-},Enum.EasingStyle.Quint,Enum.EasingDirection.Out):Play()
-
+local isBoxes=(ah.Window and ah.Window.TabLayoutType=="Boxes")
+local cH=am.Content.UIListLayout.AbsoluteContentSize.Y
+local hSize=ai.IsLooseBox and 0 or ai.HeaderSize
+if isBoxes then
+local totalH=hSize+((cH+16)/(ah.UIScale or 1))
+ae(am,0.33,{Size=UDim2.new(0.5,-12,0,totalH)},Enum.EasingStyle.Quint,Enum.EasingDirection.Out):Play()
+if ah.Tab and ah.Tab.UpdateBoxLayout then
+ah.Tab:UpdateBoxLayout(true)
+end
+else
+local totalH=hSize+(cH/(ah.UIScale or 1))
+ae(am,0.33,{Size=UDim2.new(1,0,0,totalH)},Enum.EasingStyle.Quint,Enum.EasingDirection.Out):Play()
+end
 ae(ak.ImageLabel,0.1,{Rotation=180},Enum.EasingStyle.Quint,Enum.EasingDirection.Out):Play()
 end
 end
+
 function ai.Close(ao)
 if ai.Expandable then
 ai.Opened=false
-ae(am,0.26,{
-Size=UDim2.new(1,0,0,ai.HeaderSize)
-},Enum.EasingStyle.Quint,Enum.EasingDirection.Out):Play()
+local isBoxes=(ah.Window and ah.Window.TabLayoutType=="Boxes")
+local hSize=ai.IsLooseBox and 0 or ai.HeaderSize
+local targetSize=isBoxes and UDim2.new(0.5,-12,0,hSize) or UDim2.new(1,0,0,hSize)
+ae(am,0.26,{Size=targetSize},Enum.EasingStyle.Quint,Enum.EasingDirection.Out):Play()
 ae(ak.ImageLabel,0.1,{Rotation=0},Enum.EasingStyle.Quint,Enum.EasingDirection.Out):Play()
+if isBoxes and ah.Tab and ah.Tab.UpdateBoxLayout then
+ah.Tab:UpdateBoxLayout(true)
+end
 end
 end
 
@@ -7224,31 +7435,49 @@ end
 end
 end)
 
+am.Content.UIListLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
 if ai.Opened then
-task.spawn(function()
-task.wait()
-ai:Open()
-end)
+local isBoxes=(ah.Window and ah.Window.TabLayoutType=="Boxes")
+local cH=am.Content.UIListLayout.AbsoluteContentSize.Y
+local hSize=ai.IsLooseBox and 0 or ai.HeaderSize
+if isBoxes then
+local totalH=hSize+((cH+16)/(ah.UIScale or 1))
+am.Size=UDim2.new(0.5,-12,0,totalH)
+if ah.Tab and ah.Tab.UpdateBoxLayout then
+ah.Tab:UpdateBoxLayout(true)
 end
-
-task.spawn(function()
-task.wait()
-if ai.Expandable then
-
-
-
-
-
-
-
-
-am.Size=UDim2.new(1,0,0,ai.HeaderSize)
-am.AutomaticSize="None"
-am.Top.Size=UDim2.new(1,0,0,ai.HeaderSize)
-am.Top.AutomaticSize="None"
-am.Content.Visible=true
+else
+local totalH=hSize+(cH/(ah.UIScale or 1))
+am.Size=UDim2.new(1,0,0,totalH)
+end
 end
 end)
+
+task.spawn(function()
+task.wait(0.1)
+local isBoxes=(ah.Window and ah.Window.TabLayoutType=="Boxes")
+local hSize=ai.IsLooseBox and 0 or ai.HeaderSize
+if ai.Opened then
+local cH=am.Content.UIListLayout.AbsoluteContentSize.Y
+local totalH=hSize+((cH+(isBoxes and 16 or 0))/(ah.UIScale or 1))
+am.Size=isBoxes and UDim2.new(0.5,-12,0,totalH) or UDim2.new(1,0,0,totalH)
+ak.ImageLabel.Rotation=180
+else
+am.Size=isBoxes and UDim2.new(0.5,-12,0,hSize) or UDim2.new(1,0,0,hSize)
+ak.ImageLabel.Rotation=0
+end
+end)
+
+if ah.Tab then
+if not ah.Tab.Boxes then
+ah.Tab.Boxes={}
+end
+table.insert(ah.Tab.Boxes,ai)
+end
+
+if isBoxesMode then
+ai:SetBoxMode(true)
+end
 
 return ai.__type,ai
 end
@@ -7271,7 +7500,7 @@ BackgroundColor3="Text"
 })
 ac("Frame",{
 Parent=ag.Parent,
-Size=UDim2.new(1,-7,0,7),
+Size=UDim2.new(1,0,0,7),
 BackgroundTransparency=1,
 },{
 ah
@@ -7471,21 +7700,36 @@ BackgroundTransparency=.9,
 ThemeTag={BackgroundColor3="Text"},
 })
 end
-WindUI_New("Frame",{
+local leftBox=WindUI_New("Frame",{Size=UDim2.new(0.5,-10,0,1),BackgroundTransparency=1},{WindUI_Line()})
+local rightBox=WindUI_New("Frame",{Size=UDim2.new(0.5,-10,0,1),BackgroundTransparency=1},{WindUI_Line()})
+
+local divHolder=WindUI_New("Frame",{
 Parent=WindUI_ag.Parent,
-Size=UDim2.new(1,-7,0,20),
+Size=UDim2.new(1,0,0,20),
 BackgroundTransparency=1,
 },{
 WindUI_New("UIListLayout",{
 FillDirection="Horizontal",
 VerticalAlignment="Center",
 HorizontalAlignment="Center",
-Padding=UDim.new(0,10),
+Padding=UDim.new(0,8),
 }),
-WindUI_New("Frame",{Size=UDim2.new(0.4,0,0,1),BackgroundTransparency=1},{WindUI_Line()}),
+leftBox,
 WindUI_ai,
-WindUI_New("Frame",{Size=UDim2.new(0.4,0,0,1),BackgroundTransparency=1},{WindUI_Line()}),
+rightBox,
 })
+
+local function UpdateDivLines()
+pcall(function()
+local tW=WindUI_ai.TextBounds.X
+local hW=math.max(10,(divHolder.AbsoluteSize.X-tW-16)/2)
+leftBox.Size=UDim2.new(0,hW,0,1)
+rightBox.Size=UDim2.new(0,hW,0,1)
+end)
+end
+WindUI_AddSignal(divHolder:GetPropertyChangedSignal("AbsoluteSize"),UpdateDivLines)
+WindUI_AddSignal(WindUI_ai:GetPropertyChangedSignal("TextBounds"),UpdateDivLines)
+task.defer(UpdateDivLines)
 function WindUI_ah.SetTitle(WindUI_aj,WindUI_ak)
 WindUI_ah.Title=WindUI_ak
 WindUI_ai.Text=WindUI_ak
@@ -7542,7 +7786,8 @@ function WindUI_ToggleSlider.New(WindUI_af,WindUI_ag)
             return math.floor(v/ai.Step+0.5)*ai.Step
         end
 
-        local trackWidth=90
+        local isBoxTogSl=(WindUI_ag.Window and WindUI_ag.Window.TabLayoutType=="Boxes")
+        local trackWidth=isBoxTogSl and 60 or 90
         local rightWidth=trackWidth+38+46+10
 
         ai.Frame=a.load'y'{
@@ -7717,6 +7962,27 @@ function WindUI_ToggleSlider.New(WindUI_af,WindUI_ag)
             currentToggle=st
             ai.Value.Toggle=st
             switchObj:Set(st,triggerCb~=false)
+        end
+
+        function ai.SetBoxMode(self,isBoxes)
+            local inW=isBoxes and 75 or 105
+            local inH=isBoxes and 26 or 28
+            local rW=inW+46+8
+            rightHolder.Size=UDim2.new(0,rW,1,0)
+            inputContainer.Size=UDim2.new(0,inW,0,inH)
+            if ai.SetRowBoxMode then
+                ai:SetRowBoxMode(isBoxes)
+            end
+        end
+
+        function ai.SetBoxMode(self,isBoxes)
+            local trW=isBoxes and 60 or 90
+            local rW=trW+38+46+10
+            rightHolder.Size=UDim2.new(0,rW,1,0)
+            sliderFr.Size=UDim2.new(0,trW,0,4)
+            if ai.SetRowBoxMode then
+                ai:SetRowBoxMode(isBoxes)
+            end
         end
 
         function ai.Set(self,valTable,triggerCb)
@@ -8956,8 +9222,10 @@ function WindUI_ToggleInput.New(WindUI_af,WindUI_ag)
         local currentInput=initInput
         ai.Value={Toggle=currentToggle,Input=currentInput}
 
-        local inputWidth=105
+        local isBoxTogIn=(WindUI_ag.Window and WindUI_ag.Window.TabLayoutType=="Boxes")
+        local inputWidth=isBoxTogIn and 75 or 105
         local rightWidth=inputWidth+46+8
+        local inputH=isBoxTogIn and 26 or 28
 
         ai.Frame=a.load'y'{
             Title=ai.Title,
@@ -8987,7 +9255,7 @@ function WindUI_ToggleInput.New(WindUI_af,WindUI_ag)
         })
 
         local inputContainer=aa.NewRoundFrame(8,"Squircle",{
-            Size=UDim2.new(0,inputWidth,0,28),
+            Size=UDim2.new(0,inputWidth,0,inputH),
             ThemeTag={ImageColor3="Background"},
             ImageTransparency=0.3,
             Parent=rightHolder,
@@ -9133,7 +9401,8 @@ function WindUI_ToggleKeybind.New(WindUI_af,WindUI_ag)
         local isPicking=false
         ai.Value={Toggle=currentToggle,Key=currentKey}
 
-        local rightWidth=120
+        local isBoxTogKey=(WindUI_ag.Window and WindUI_ag.Window.TabLayoutType=="Boxes")
+        local rightWidth=isBoxTogKey and 90 or 120
 
         ai.Frame=a.load'y'{
             Title=ai.Title,
@@ -9165,14 +9434,44 @@ function WindUI_ToggleKeybind.New(WindUI_af,WindUI_ag)
         local keyBadge=createKeyBadge(currentKey,nil,rightHolder)
         ai.UIElements.Keybind=keyBadge
 
+        local togKeyText=keyBadge.Frame.Frame.TextLabel
+        togKeyText.TextXAlignment="Center"
+        togKeyText.TextYAlignment="Center"
+        pcall(function()
+            keyBadge.Frame.Frame.UIListLayout.HorizontalAlignment=Enum.HorizontalAlignment.Center
+        end)
+
+        local togKeyScale=ac("UIScale",{Parent=keyBadge,Scale=isBoxTogKey and 1 or 0.85})
+
         local function UpdateKeySize()
-            local textWidth=keyBadge.Frame.Frame.TextLabel.TextBounds.X
-            keyBadge.Size=UDim2.new(0,24+textWidth,0,32)
+            pcall(function()
+                local textWidth=togKeyText.TextBounds.X
+                if isBoxTogKey then
+                    keyBadge.Frame.Frame.UIPadding.PaddingLeft=UDim.new(0,0)
+                    keyBadge.Frame.Frame.UIPadding.PaddingRight=UDim.new(0,0)
+                    keyBadge.Size=UDim2.new(0,math.max(26,textWidth+14),0,26)
+                    togKeyScale.Scale=1
+                else
+                    keyBadge.Frame.Frame.UIPadding.PaddingLeft=UDim.new(0,8)
+                    keyBadge.Frame.Frame.UIPadding.PaddingRight=UDim.new(0,8)
+                    keyBadge.Size=UDim2.new(0,24+textWidth,0,32)
+                    togKeyScale.Scale=0.85
+                end
+            end)
         end
         UpdateKeySize()
-        ac("UIScale",{Parent=keyBadge,Scale=0.85})
 
-        aa.AddSignal(keyBadge.Frame.Frame.TextLabel:GetPropertyChangedSignal("TextBounds"),UpdateKeySize)
+        aa.AddSignal(togKeyText:GetPropertyChangedSignal("TextBounds"),UpdateKeySize)
+
+        function ai.SetBoxMode(self,isBoxes)
+            isBoxTogKey=isBoxes
+            rightWidth=isBoxes and 90 or 120
+            rightHolder.Size=UDim2.new(0,rightWidth,1,0)
+            UpdateKeySize()
+            if ai.SetRowBoxMode then
+                ai:SetRowBoxMode(isBoxes)
+            end
+        end
 
         local switchBtn=ac("TextButton",{
             Size=UDim2.new(0,42,0,26),
@@ -9335,6 +9634,17 @@ Load=function(aa,ac,ae,af,ag,ah,ai,aj)
 for ak,al in next,ae do
 aa[ak]=function(am,an)
 an=an or{}
+local isElement=(ak~="Section" and ak~="Box")
+if aa.__type=="Tab" and isElement then
+if not aa.LooseBox then
+aa.LooseBox=aa:Section({
+Title=aa.Title or "General",
+Opened=true,
+IsLooseBox=true,
+})
+end
+return aa.LooseBox[ak](aa.LooseBox,an)
+end
 an.Tab=aa
 an.Index=#aa.Elements+1
 an.GlobalIndex=#af.AllElements+1
@@ -9840,11 +10150,123 @@ FontFace=Font.new(ac.Font,Enum.FontWeight.Medium),
 
 
 
-local aw
-aw=ac.AddSignal(al.UIElements.ContainerFrame.ChildAdded,function()
+local function CheckTabNotEmpty()
+for _,child in ipairs(al.UIElements.ContainerFrame:GetChildren()) do
+if child~=av and not child:IsA("UIListLayout") and not child:IsA("UIPadding") then
+return true
+end
+end
+return false
+end
+
+if CheckTabNotEmpty() then
 av.Visible=false
-aw:Disconnect()
+end
+
+local aw
+aw=ac.AddSignal(al.UIElements.ContainerFrame.ChildAdded,function(ch)
+if ch~=av then
+av.Visible=false
+if aw then aw:Disconnect() end
+end
 end)
+end)
+
+al.Boxes={}
+
+function al.UpdateBoxLayout(self,animate)
+if not Window or Window.TabLayoutType~="Boxes" then return end
+if not al.Boxes then return end
+if animate then al.NeedAnimate=true end
+if al.LayoutUpdating then return end
+al.LayoutUpdating=true
+task.defer(function()
+al.LayoutUpdating=false
+local doAnimate=al.NeedAnimate
+al.NeedAnimate=false
+local gap=16
+local colHeights={[1]=0,[2]=0}
+local colX={
+[1]=UDim2.new(0,0,0,0),
+[2]=UDim2.new(0.5,12,0,0)
+}
+for _,box in ipairs(al.Boxes) do
+if box.Frame and box.Frame.Visible and box.Frame.Parent then
+local col=(colHeights[1]<=colHeights[2]) and 1 or 2
+local currentY=colHeights[col]
+local targetPos=UDim2.new(colX[col].X.Scale,colX[col].X.Offset,0,currentY)
+
+local boxH
+if box.Opened then
+local cH=box.Frame.Content.UIListLayout.AbsoluteContentSize.Y+16
+boxH=box.HeaderSize+(cH/(Window.UIScale or 1))
+else
+boxH=box.HeaderSize
+end
+
+if doAnimate then
+ac.Tween(box.Frame,0.33,{Position=targetPos,Size=UDim2.new(0.5,-12,0,boxH)},Enum.EasingStyle.Quint,Enum.EasingDirection.Out):Play()
+else
+box.Frame.Position=targetPos
+box.Frame.Size=UDim2.new(0.5,-12,0,boxH)
+end
+colHeights[col]=currentY+boxH+gap
+end
+end
+local totalH=math.max(colHeights[1],colHeights[2])
+al.UIElements.ContainerFrame.CanvasSize=UDim2.new(0,0,0,totalH+20)
+end)
+end
+
+function al.SetLayoutType(self,layoutType)
+local target=(type(self)=="string" and self) or (type(layoutType)=="string" and layoutType) or "Default"
+local isBoxes=(target=="Boxes")
+if not al.UIListLayout then
+al.UIListLayout=al.UIElements.ContainerFrame:FindFirstChildWhichIsA("UIListLayout")
+end
+if isBoxes then
+if al.UIListLayout then
+al.UIListLayout.Parent=nil
+end
+else
+if al.UIListLayout and al.UIListLayout.Parent~=al.UIElements.ContainerFrame then
+al.UIListLayout.Parent=al.UIElements.ContainerFrame
+end
+end
+
+if al.Boxes then
+for _,box in ipairs(al.Boxes) do
+if box.SetBoxMode then
+box:SetBoxMode(isBoxes)
+end
+end
+end
+
+if isBoxes then
+task.defer(function()
+al:UpdateBoxLayout(false)
+end)
+else
+for _,box in ipairs(al.Boxes or{}) do
+if box.Frame then
+box.Frame.Position=UDim2.new(0,0,0,0)
+box.Frame.AutomaticSize="None"
+local cH=(box.Frame.Content.UIListLayout and box.Frame.Content.UIListLayout.AbsoluteContentSize.Y or box.Frame.Content.AbsoluteSize.Y)
+box.Frame.Size=box.Opened and UDim2.new(1,0,0,box.HeaderSize+(cH/(Window.UIScale or 1))) or UDim2.new(1,0,0,box.HeaderSize)
+end
+end
+al.UIElements.ContainerFrame.CanvasSize=UDim2.new(0,0,0,0)
+end
+end
+
+al.Box=function(self,arg)
+return al:Section(arg)
+end
+
+al.UIElements.ContainerFrame:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
+if Window and Window.TabLayoutType=="Boxes" then
+al:UpdateBoxLayout(false)
+end
 end)
 
 return al
@@ -10631,6 +11053,8 @@ MinSize=an.MinSize or Vector2.new(560,350),
 MaxSize=an.MaxSize or Vector2.new(850,560),
 
 ToggleKey=an.ToggleKey,
+TabLayoutType=an.TabLayoutType or "Default",
+Tabs={},
 Transparent=an.Transparent or false,
 HideSearchBar=an.HideSearchBar,
 ScrollBarEnabled=an.ScrollBarEnabled or false,
@@ -12642,6 +13066,22 @@ an.WindUI.UIScale=p
 ah(an.WindUI.ScreenGui.UIScale,.2,{Scale=p},Enum.EasingStyle.Quint,Enum.EasingDirection.Out):Play()
 end
 
+function ao.SetTabLayoutType(x,z)
+local targetType=(type(x)=="string" and x) or (type(z)=="string" and z) or "Default"
+ao.TabLayoutType=targetType
+local tabList=ao.Tabs
+if (not tabList or #tabList==0) and ao.TabManager and ao.TabManager.Tabs then
+tabList=ao.TabManager.Tabs
+end
+if tabList then
+for _,tab in pairs(tabList) do
+if type(tab)=="table" and tab.SetLayoutType then
+tab:SetLayoutType(targetType)
+end
+end
+end
+end
+
 do
 
 if(ac.ViewportSize.X-40<ao.UIElements.Main.AbsoluteSize.X)
@@ -12696,7 +13136,13 @@ ao.TabManager=r
 
 function ao.Tab(x,z)
 z.Parent=ao.UIElements.SideBar.Frame
-return r.New(z,an.WindUI.UIScale)
+local newTab=r.New(z,an.WindUI.UIScale)
+if not ao.Tabs then ao.Tabs={} end
+table.insert(ao.Tabs,newTab)
+if ao.TabLayoutType and newTab.SetLayoutType then
+newTab:SetLayoutType(ao.TabLayoutType)
+end
+return newTab
 end
 
 function ao.SelectTab(x,z)
