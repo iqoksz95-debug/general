@@ -4227,7 +4227,7 @@ and GetTextColorForHSB(Color3.fromHex(aa.Colors[af.Color]))
 or typeof(af.Color)=="Color3"
 and GetTextColorForHSB(af.Color)
 
-local textSz=an=="Desc"and(isBoxesMode and 12 or 15)or(isBoxesMode and 14 or 17)
+local textSz=an=="Desc"and(isBoxesMode and 11 or 15)or(isBoxesMode and 13 or 17)
 return ab("TextLabel",{
 BackgroundTransparency=1,
 Text=am or"",
@@ -4344,6 +4344,18 @@ Padding=UDim.new(0,8)
 ao,ap
 },nil,true)
 
+af.TextOffset=ae.TextOffset or 0
+af.BaseTextOffset=ae.TextOffset or 0
+
+local textHolder=af.UIElements.Container:FindFirstChild("TextHolder") or (af.UIElements.Container:GetChildren()[2])
+
+function af.SetTextOffset(self,offset)
+af.TextOffset=offset
+if textHolder then
+textHolder.Size=UDim2.new(1,-offset,0,0)
+end
+end
+
 local mainUIPadding=ab("UIPadding",{
 PaddingTop=UDim.new(0,af.UIPadding),
 PaddingLeft=UDim.new(0,af.UIPadding),
@@ -4375,14 +4387,18 @@ mainUIPadding,
 
 local function SetRowBoxMode(self,boxMode)
 pcall(function()
-local pad=boxMode and 8 or ((ae.Window and ae.Window.NewElements) and 10 or 13)
+local pad=boxMode and 6 or ((ae.Window and ae.Window.NewElements) and 10 or 13)
 af.UIPadding=pad
 mainUIPadding.PaddingTop=UDim.new(0,pad)
 mainUIPadding.PaddingBottom=UDim.new(0,pad)
 mainUIPadding.PaddingLeft=UDim.new(0,pad)
 mainUIPadding.PaddingRight=UDim.new(0,pad)
-if am then am.TextSize=boxMode and 14 or 17 end
-if an then an.TextSize=boxMode and 12 or 15 end
+if am then am.TextSize=boxMode and 13 or 17 end
+if an then an.TextSize=boxMode and 11 or 15 end
+if textHolder then
+local off=boxMode and math.min(af.TextOffset or af.BaseTextOffset or 0, 85) or (af.BaseTextOffset or 0)
+textHolder.Size=UDim2.new(1,-off,0,0)
+end
 end)
 end
 
@@ -7796,8 +7812,10 @@ function WindUI_ToggleSlider.New(WindUI_af,WindUI_ag)
         end
 
         local isBoxTogSl=(WindUI_ag.Window and WindUI_ag.Window.TabLayoutType=="Boxes")
-        local trackWidth=isBoxTogSl and 60 or 90
-        local rightWidth=trackWidth+38+46+10
+        local trackWidth=isBoxTogSl and 38 or 90
+        local valWidth=isBoxTogSl and 24 or 34
+        local switchWidth=isBoxTogSl and 36 or 42
+        local rightWidth=isBoxTogSl and (trackWidth+valWidth+switchWidth+12) or (90+38+46+10)
 
         ai.Frame=a.load'y'{
             Title=ai.Title,
@@ -7974,21 +7992,45 @@ function WindUI_ToggleSlider.New(WindUI_af,WindUI_ag)
         end
 
         function ai.SetBoxMode(self,isBoxes)
-            local inW=isBoxes and 75 or 105
-            local inH=isBoxes and 26 or 28
-            local rW=inW+46+8
+            local inW=isBoxes and 52 or 105
+            local inH=isBoxes and 22 or 28
+            local sw=isBoxes and 36 or 42
+            local sh=isBoxes and 22 or 26
+            local rW=inW+sw+(isBoxes and 6 or 8)
             rightHolder.Size=UDim2.new(0,rW,1,0)
             inputContainer.Size=UDim2.new(0,inW,0,inH)
+            if switchBtn then
+                switchBtn.Size=UDim2.new(0,sw,0,sh)
+            end
+            if ai.Frame and ai.Frame.SetTextOffset then
+                ai.Frame:SetTextOffset(rW+(isBoxes and 6 or 15))
+            end
             if ai.SetRowBoxMode then
                 ai:SetRowBoxMode(isBoxes)
             end
         end
 
         function ai.SetBoxMode(self,isBoxes)
-            local trW=isBoxes and 60 or 90
-            local rW=trW+38+46+10
+            local trW=isBoxes and 38 or 90
+            local vW=isBoxes and 24 or 34
+            local sw=isBoxes and 36 or 42
+            local sh=isBoxes and 22 or 26
+            local rW=isBoxes and (trW+vW+sw+12) or (90+38+46+10)
             rightHolder.Size=UDim2.new(0,rW,1,0)
             sliderFr.Size=UDim2.new(0,trW,0,4)
+            if valueLabel then
+                valueLabel.Size=UDim2.new(0,vW,0,18)
+                valueLabel.TextSize=isBoxes and 10 or 12
+            end
+            if sliderRow then
+                sliderRow.Size=UDim2.new(0,trW+vW+4,0,isBoxes and 22 or 26)
+            end
+            if switchBtn then
+                switchBtn.Size=UDim2.new(0,sw,0,sh)
+            end
+            if ai.Frame and ai.Frame.SetTextOffset then
+                ai.Frame:SetTextOffset(rW+(isBoxes and 6 or 15))
+            end
             if ai.SetRowBoxMode then
                 ai:SetRowBoxMode(isBoxes)
             end
@@ -8791,14 +8833,15 @@ function WindUI_SocialCard.New(WindUI_af,WindUI_ag)
             UIElements={},
         }
 
-        local btnWidth=90
+        local isBoxSoc=(WindUI_ag.Window and WindUI_ag.Window.TabLayoutType=="Boxes")
+        local btnWidth=isBoxSoc and 55 or 90
         ai.Frame=a.load'y'{
             Title=ai.Title,
             Desc=ai.Desc,
             Icon=ai.Icon,
             Window=WindUI_ag.Window,
             Parent=WindUI_ag.Parent,
-            TextOffset=btnWidth+15,
+            TextOffset=btnWidth+(isBoxSoc and 8 or 15),
             Hover=false,
             Tab=WindUI_ag.Tab,
             Index=WindUI_ag.Index,
@@ -8893,6 +8936,17 @@ function WindUI_SocialCard.New(WindUI_af,WindUI_ag)
             ai.Desc=d
             ai.Frame:SetDesc(d)
         end
+        function ai.SetBoxMode(self,isBoxes)
+            local bw=isBoxes and 55 or 90
+            actionBtn.Size=UDim2.new(0,bw,0,isBoxes and 24 or 30)
+            if btnLbl then btnLbl.TextSize=isBoxes and 11 or 12 end
+            if ai.Frame and ai.Frame.SetTextOffset then
+                ai.Frame:SetTextOffset(bw+(isBoxes and 8 or 15))
+            end
+            if ai.SetRowBoxMode then
+                ai:SetRowBoxMode(isBoxes)
+            end
+        end
         function ai.Lock(self)
             ai.Locked=true
             isLocked=false
@@ -8954,15 +9008,17 @@ function WindUI_DualSlider.New(WindUI_af,WindUI_ag)
             return math.floor(v/ai.Step+0.5)*ai.Step
         end
 
-        local trackWidth=105
-        local rightWidth=trackWidth+65
+        local isBoxDual=(WindUI_ag.Window and WindUI_ag.Window.TabLayoutType=="Boxes")
+        local trackWidth=isBoxDual and 45 or 105
+        local valWidth=isBoxDual and 44 or 68
+        local rightWidth=trackWidth+valWidth+(isBoxDual and 6 or 8)
 
         ai.Frame=a.load'y'{
             Title=ai.Title,
             Desc=ai.Desc,
             Window=WindUI_ag.Window,
             Parent=WindUI_ag.Parent,
-            TextOffset=rightWidth+15,
+            TextOffset=rightWidth+(isBoxDual and 6 or 15),
             Hover=false,
             Tab=WindUI_ag.Tab,
             Index=WindUI_ag.Index,
@@ -9176,6 +9232,22 @@ function WindUI_DualSlider.New(WindUI_af,WindUI_ag)
             end
         end)
 
+        function ai.SetBoxMode(self,isBoxes)
+            local tw=isBoxes and 45 or 105
+            local vw=isBoxes and 44 or 68
+            local rw=tw+vw+(isBoxes and 6 or 8)
+            sliderFr.Size=UDim2.new(0,tw,0,4)
+            valueLabel.Size=UDim2.new(0,vw,0,18)
+            valueLabel.TextSize=isBoxes and 10 or 11
+            rightHolder.Size=UDim2.new(0,rw,1,0)
+            if ai.Frame and ai.Frame.SetTextOffset then
+                ai.Frame:SetTextOffset(rw+(isBoxes and 6 or 15))
+            end
+            if ai.SetRowBoxMode then
+                ai:SetRowBoxMode(isBoxes)
+            end
+        end
+
         function ai.Lock(self)
             ai.Locked=true
             isLocked=false
@@ -9232,9 +9304,10 @@ function WindUI_ToggleInput.New(WindUI_af,WindUI_ag)
         ai.Value={Toggle=currentToggle,Input=currentInput}
 
         local isBoxTogIn=(WindUI_ag.Window and WindUI_ag.Window.TabLayoutType=="Boxes")
-        local inputWidth=isBoxTogIn and 75 or 105
-        local rightWidth=inputWidth+46+8
-        local inputH=isBoxTogIn and 26 or 28
+        local inputWidth=isBoxTogIn and 52 or 105
+        local switchWidth=isBoxTogIn and 36 or 42
+        local rightWidth=inputWidth+switchWidth+(isBoxTogIn and 6 or 8)
+        local inputH=isBoxTogIn and 22 or 28
 
         ai.Frame=a.load'y'{
             Title=ai.Title,
@@ -9474,9 +9547,15 @@ function WindUI_ToggleKeybind.New(WindUI_af,WindUI_ag)
 
         function ai.SetBoxMode(self,isBoxes)
             isBoxTogKey=isBoxes
-            rightWidth=isBoxes and 90 or 120
+            rightWidth=isBoxes and 68 or 120
             rightHolder.Size=UDim2.new(0,rightWidth,1,0)
+            if switchBtn then
+                switchBtn.Size=UDim2.new(0,isBoxes and 36 or 42,0,isBoxes and 22 or 26)
+            end
             UpdateKeySize()
+            if ai.Frame and ai.Frame.SetTextOffset then
+                ai.Frame:SetTextOffset(rightWidth+(isBoxes and 6 or 15))
+            end
             if ai.SetRowBoxMode then
                 ai:SetRowBoxMode(isBoxes)
             end
