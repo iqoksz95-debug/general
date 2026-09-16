@@ -437,65 +437,19 @@ if not r or type(r)~="table"then
 r={p}
 end
 
-local targetPos=nil
-local dragConn=nil
-
-local function StopDragLoop()
-if dragConn then
-dragConn:Disconnect()
-dragConn=nil
-end
-end
-
-local function StartDragLoop()
-if dragConn then return end
-dragConn=b.RenderStepped:Connect(function(dt)
-if not targetPos then
-StopDragLoop()
-return
-end
-local WindUI_smooth=p:GetAttribute("WindUI_SmoothDragging")
-if WindUI_smooth then
-local dx=targetPos.X.Offset-p.Position.X.Offset
-local dy=targetPos.Y.Offset-p.Position.Y.Offset
-local distSq=dx*dx+dy*dy
-if distSq<0.25 then
-if p.Position.X.Offset~=targetPos.X.Offset or p.Position.Y.Offset~=targetPos.Y.Offset then
-p.Position=targetPos
-end
-if not A then
-targetPos=nil
-p:SetAttribute("WindUI_Dragging",false)
-StopDragLoop()
-end
-else
-local dist=math.sqrt(distSq)
-local speed=math.clamp(38+dist*0.12,38,70)
-local factor=1-math.exp(-speed*dt)
-p.Position=p.Position:Lerp(targetPos,factor)
-end
-else
-p.Position=targetPos
-if not A then
-targetPos=nil
-p:SetAttribute("WindUI_Dragging",false)
-StopDragLoop()
-end
-end
-end)
-end
-
 local function update(H)
 local J=H.Position-C
-targetPos=UDim2.new(
+local WindUI_smooth=p:GetAttribute("WindUI_SmoothDragging")
+if WindUI_smooth then
+j.Tween(p,0.18,{Position=UDim2.new(
+F.X.Scale,F.X.Offset+J.X,
+F.Y.Scale,F.Y.Offset+J.Y
+)},Enum.EasingStyle.Quad,Enum.EasingDirection.Out):Play()
+else
+p.Position=UDim2.new(
 F.X.Scale,F.X.Offset+J.X,
 F.Y.Scale,F.Y.Offset+J.Y
 )
-local WindUI_smooth=p:GetAttribute("WindUI_SmoothDragging")
-if not WindUI_smooth then
-p.Position=targetPos
-else
-StartDragLoop()
 end
 end
 
@@ -507,14 +461,7 @@ z=J
 A=true
 C=L.Position
 F=p.Position
-targetPos=p.Position
 p:SetAttribute("WindUI_Dragging",true)
-
-if p:GetAttribute("WindUI_SmoothDragging") then
-StartDragLoop()
-else
-StopDragLoop()
-end
 
 if x and type(x)=="function"then
 x(true,z)
@@ -525,19 +472,14 @@ if L.UserInputState==Enum.UserInputState.End then
 A=false
 local oldZ=z
 z=nil
-if not p:GetAttribute("WindUI_SmoothDragging") or not targetPos then
+if p:GetAttribute("WindUI_SmoothDragging") then
+task.delay(0.18,function()
+if not A then
 p:SetAttribute("WindUI_Dragging",false)
-StopDragLoop()
-targetPos=nil
-else
-local dx=targetPos.X.Offset-p.Position.X.Offset
-local dy=targetPos.Y.Offset-p.Position.Y.Offset
-if(dx*dx+dy*dy)<0.25 then
-p.Position=targetPos
-p:SetAttribute("WindUI_Dragging",false)
-StopDragLoop()
-targetPos=nil
 end
+end)
+else
+p:SetAttribute("WindUI_Dragging",false)
 end
 if x and type(x)=="function"then
 x(false,oldZ)
@@ -570,19 +512,14 @@ if(L.UserInputType==Enum.UserInputType.MouseButton1 or L.UserInputType==Enum.Use
 A=false
 local oldZ=z
 z=nil
-if not p:GetAttribute("WindUI_SmoothDragging") or not targetPos then
+if p:GetAttribute("WindUI_SmoothDragging") then
+task.delay(0.18,function()
+if not A then
 p:SetAttribute("WindUI_Dragging",false)
-StopDragLoop()
-targetPos=nil
-else
-local dx=targetPos.X.Offset-p.Position.X.Offset
-local dy=targetPos.Y.Offset-p.Position.Y.Offset
-if(dx*dx+dy*dy)<0.25 then
-p.Position=targetPos
-p:SetAttribute("WindUI_Dragging",false)
-StopDragLoop()
-targetPos=nil
 end
+end)
+else
+p:SetAttribute("WindUI_Dragging",false)
 end
 if x and type(x)=="function"then
 x(false,oldZ)
