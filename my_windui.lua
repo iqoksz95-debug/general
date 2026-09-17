@@ -125,7 +125,7 @@ if not m then local
 r, u=p:find":%d+: "
 
 
-warn("[ WindUI: DEBUG Mode ] "..p)
+warn("[ AetheriaUI: DEBUG Mode ] "..p)
 
 return i:Notify{
 Title="DEBUG Mode: Error",
@@ -170,7 +170,7 @@ return p
 end
 
 -- Which property actually carries transparency for a given ThemeTag PROPERTY (not role).
-local WindUI_TransparencySiblingProp={
+local AetheriaUI_TransparencySiblingProp={
 BackgroundColor3="BackgroundTransparency",
 ImageColor3="ImageTransparency",
 TextColor3="TextTransparency",
@@ -182,7 +182,7 @@ Color="Transparency",
 -- transfer the same way — a transparency chosen for the Text COLOR must never leak onto
 -- some unrelated background that merely happens to reuse the "Text" role. This whitelists
 -- exactly which property type each role is allowed to drive transparency on.
-local WindUI_TransparencyRoleProp={
+local AetheriaUI_TransparencyRoleProp={
 Text="TextColor3",
 Placeholder="TextColor3",
 Icon="ImageColor3",
@@ -204,15 +204,15 @@ j.Tween(p.Object,0.08,{[r]=Color3.fromHex(v)}):Play()
 end
 end
 
-local WindUI_transProp=WindUI_TransparencySiblingProp[r]
-if WindUI_transProp and type(u)=="string" and WindUI_TransparencyRoleProp[u]==r then
+local AetheriaUI_transProp=AetheriaUI_TransparencySiblingProp[r]
+if AetheriaUI_transProp and type(u)=="string" and AetheriaUI_TransparencyRoleProp[u]==r then
 pcall(function()
-local WindUI_transVal=j.Theme and j.Theme[u.."Transparency"]
-if typeof(WindUI_transVal)=="number" then
+local AetheriaUI_transVal=j.Theme and j.Theme[u.."Transparency"]
+if typeof(AetheriaUI_transVal)=="number" then
 if not m then
-p.Object[WindUI_transProp]=WindUI_transVal
+p.Object[AetheriaUI_transProp]=AetheriaUI_transVal
 else
-j.Tween(p.Object,0.08,{[WindUI_transProp]=WindUI_transVal}):Play()
+j.Tween(p.Object,0.08,{[AetheriaUI_transProp]=AetheriaUI_transVal}):Play()
 end
 end
 end)
@@ -439,8 +439,8 @@ end
 
 local function update(H)
 local J=H.Position-C
-local WindUI_smooth=p:GetAttribute("WindUI_SmoothDragging")
-if WindUI_smooth then
+local AetheriaUI_smooth=p:GetAttribute("AetheriaUI_SmoothDragging")
+if AetheriaUI_smooth then
 j.Tween(p,0.18,{Position=UDim2.new(
 F.X.Scale,F.X.Offset+J.X,
 F.Y.Scale,F.Y.Offset+J.Y
@@ -461,6 +461,7 @@ z=J
 A=true
 C=L.Position
 F=p.Position
+p:SetAttribute("AetheriaUI_Dragging",true)
 p:SetAttribute("WindUI_Dragging",true)
 
 if x and type(x)=="function"then
@@ -472,13 +473,15 @@ if L.UserInputState==Enum.UserInputState.End then
 A=false
 local oldZ=z
 z=nil
-if p:GetAttribute("WindUI_SmoothDragging") then
+if p:GetAttribute("AetheriaUI_SmoothDragging") then
 task.delay(0.18,function()
 if not A then
+p:SetAttribute("AetheriaUI_Dragging",false)
 p:SetAttribute("WindUI_Dragging",false)
 end
 end)
 else
+p:SetAttribute("AetheriaUI_Dragging",false)
 p:SetAttribute("WindUI_Dragging",false)
 end
 if x and type(x)=="function"then
@@ -512,13 +515,15 @@ if(L.UserInputType==Enum.UserInputType.MouseButton1 or L.UserInputType==Enum.Use
 A=false
 local oldZ=z
 z=nil
-if p:GetAttribute("WindUI_SmoothDragging") then
+if p:GetAttribute("AetheriaUI_SmoothDragging") then
 task.delay(0.18,function()
 if not A then
+p:SetAttribute("AetheriaUI_Dragging",false)
 p:SetAttribute("WindUI_Dragging",false)
 end
 end)
 else
+p:SetAttribute("AetheriaUI_Dragging",false)
 p:SetAttribute("WindUI_Dragging",false)
 end
 if x and type(x)=="function"then
@@ -581,7 +586,7 @@ Colors={
 }.IconFrame
 G.Parent=F
 elseif string.find(p,"http")then
-local G="WindUI/"..z.."/Assets/."..A.."-"..r..".png"
+local G="AetheriaUI/"..z.."/Assets/."..A.."-"..r..".png"
 local H,J=pcall(function()
 task.spawn(function()
 if not isfile(G)then
@@ -1506,7 +1511,7 @@ return[[
     "name": "windui",
     "version": "1.6.51",
     "main": "./dist/main.lua",
-    "repository": "https://github.com/Footagesus/WindUI",
+    "repository": "https://github.com/Footagesus/AetheriaUI",
     "discord": "https://discord.gg/Q6HkNG4vwP",
     "author": "Footagesus",
     "description": "Roblox UI Library for scripts",
@@ -1973,7 +1978,7 @@ local ae=a.load'j'.New
 local af=a.load'k'.New
 
 function aa.new(ag,ah,ai)
-local aj=a.load'l'.Init(nil,ag.WindUI.ScreenGui.KeySystem)
+local aj=a.load'l'.Init(nil,ag.AetheriaUI.ScreenGui.KeySystem)
 local ak=aj.Create(true)
 
 local al={}
@@ -2282,7 +2287,7 @@ PaddingBottom=UDim.new(0,10),
 })
 
 for e,g in next,ag.KeySystem.API do
-local h=ag.WindUI.Services[g.Type]
+local h=ag.AetheriaUI.Services[g.Type]
 if h then
 local i={}
 for j,l in next,h.Args do
@@ -2368,7 +2373,7 @@ ad(r,0.08,{ImageTransparency=1}):Play()
 end)
 ab.AddSignal(r.MouseButton1Click,function()
 m.Copy()
-ag.WindUI:Notify{
+ag.AetheriaUI:Notify{
 Title="Key System",
 Content="Key link copied to clipboard.",
 Image="key",
@@ -2429,7 +2434,7 @@ end
 if aB then
 handleSuccess(az)
 else
-ag.WindUI:Notify{
+ag.AetheriaUI:Notify{
 Title="Key System. Error",
 Content=aC,
 Icon="triangle-alert",
@@ -2814,7 +2819,7 @@ Buttons=ae.Buttons,
 IconSize=22,
 }
 
-local ag=a.load'l'.Init(nil,ae.WindUI.ScreenGui.Popups)
+local ag=a.load'l'.Init(nil,ae.AetheriaUI.ScreenGui.Popups)
 local ah=ag.Create(true)
 
 local ai=200
@@ -2836,7 +2841,7 @@ ak=ab.Image(
 af.Icon,
 af.Title..":"..af.Icon,
 0,
-ae.WindUI.Window,
+ae.AetheriaUI.Window,
 "Popup",
 true,
 ae.IconThemed
@@ -3622,8 +3627,8 @@ end
 ab=ae
 ac.Folder=ab.Folder
 if not isfolder("AetheriaUI")then makefolder("AetheriaUI")end
-if isfolder("WindUI/"..ac.Folder) and not isfolder("AetheriaUI/"..ac.Folder) then
-ac.Path="WindUI/"..tostring(ac.Folder).."/config/"
+if isfolder("AetheriaUI/"..ac.Folder) and not isfolder("AetheriaUI/"..ac.Folder) then
+ac.Path="AetheriaUI/"..tostring(ac.Folder).."/config/"
 else
 ac.Path="AetheriaUI/"..tostring(ac.Folder).."/config/"
 if not isfolder("AetheriaUI/"..ac.Folder)then
@@ -4943,15 +4948,15 @@ end
 
 function ai.Set(am,an,ao)
 ai.Value=an
-local WindUI_knobDur=(_G.AetheriaUI_AnimatedToggles or _G.WindUI_AnimatedToggles) and 0.35 or 0.1
-local WindUI_knobStyle=(_G.AetheriaUI_AnimatedToggles or _G.WindUI_AnimatedToggles) and Enum.EasingStyle.Back or Enum.EasingStyle.Quint
+local AetheriaUI_knobDur=(_G.AetheriaUI_AnimatedToggles or _G.AetheriaUI_AnimatedToggles) and 0.35 or 0.1
+local AetheriaUI_knobStyle=(_G.AetheriaUI_AnimatedToggles or _G.AetheriaUI_AnimatedToggles) and Enum.EasingStyle.Back or Enum.EasingStyle.Quint
 local onPos=isBoxMode and UDim2.new(1,-17,0.5,0) or UDim2.new(1,-22,0.5,0)
 local offPos=isBoxMode and UDim2.new(0,3,0.5,0) or UDim2.new(0,4,0.5,0)
 if an then
-ad(al.Frame,WindUI_knobDur,{
+ad(al.Frame,AetheriaUI_knobDur,{
 Position=onPos,
 
-},WindUI_knobStyle,Enum.EasingDirection.Out):Play()
+},AetheriaUI_knobStyle,Enum.EasingDirection.Out):Play()
 ad(al.Layer,0.1,{
 ImageTransparency=0,
 }):Play()
@@ -4965,10 +4970,10 @@ ImageTransparency=0,
 }):Play()
 end
 else
-ad(al.Frame,WindUI_knobDur,{
+ad(al.Frame,AetheriaUI_knobDur,{
 Position=offPos,
 Size=isBoxMode and UDim2.new(0,14,0,14) or UDim2.new(0,18,0,18),
-},WindUI_knobStyle,Enum.EasingDirection.Out):Play()
+},AetheriaUI_knobStyle,Enum.EasingDirection.Out):Play()
 ad(al.Layer,0.1,{
 ImageTransparency=1,
 }):Play()
@@ -5886,7 +5891,7 @@ Position=UDim2.new(-10,0,-10,0),
 Visible=false,
 Active=false,
 
-Parent=am.WindUI.DropdownGui,
+Parent=am.AetheriaUI.DropdownGui,
 AnchorPoint=Vector2.new(1,0),
 },{
 an.UIElements.Menu,
@@ -6807,7 +6812,7 @@ toclipboard(ai.Code)
 if ai.OnCopy then ai.OnCopy()end
 end)
 if not al then
-ah.WindUI:Notify{
+ah.AetheriaUI:Notify{
 Title="Error",
 Content="The "..ak.." is not copied. Error: "..am,
 Icon="x",
@@ -6815,7 +6820,7 @@ Duration=5,
 }
 end
 end
-end,ah.WindUI.UIScale,ai)
+end,ah.AetheriaUI.UIScale,ai)
 
 function ai.SetCode(al,am)
 ak.Set(am)
@@ -7815,7 +7820,7 @@ ai.Frame=am
 
 local an=ah.ElementsModule
 
-an.Load(ai,am.Content,an.Elements,ah.Window,ah.WindUI,function()
+an.Load(ai,am.Content,an.Elements,ah.Window,ah.AetheriaUI,function()
 if not ai.Expandable then
 ai.Expandable=true
 ak.Visible=true
@@ -8058,9 +8063,9 @@ return"Space",{__type="Space"}
 end
 
 return ae end function a.P()
-local WindUI_New=a.load'a'.New
-local WindUI_NewRoundFrame=a.load'a'.NewRoundFrame
-local WindUI_AddSignal=a.load'a'.AddSignal
+local AetheriaUI_New=a.load'a'.New
+local AetheriaUI_NewRoundFrame=a.load'a'.NewRoundFrame
+local AetheriaUI_AddSignal=a.load'a'.AddSignal
 
 -- Every one of the 5 modules below is wrapped in pcall with a safe fallback. A single
 -- uncaught error anywhere in one of these — as actually happened before — doesn't just
@@ -8073,28 +8078,28 @@ local WindUI_AddSignal=a.load'a'.AddSignal
 -- Multidropdown: literally the same Dropdown module (a.H already has full multi-select
 -- support built in — Multi=true just wasn't exposed under its own name before), just
 -- forced into Multi mode so it doesn't need to be remembered as a flag.
-local WindUI_Multidropdown={}
-function WindUI_Multidropdown.New(WindUI_af,WindUI_ag)
-local WindUI_ok,WindUI_a,WindUI_b=pcall(function()
-WindUI_ag.Multi=true
-return a.load'H'.New(WindUI_af,WindUI_ag)
+local AetheriaUI_Multidropdown={}
+function AetheriaUI_Multidropdown.New(AetheriaUI_af,AetheriaUI_ag)
+local AetheriaUI_ok,AetheriaUI_a,AetheriaUI_b=pcall(function()
+AetheriaUI_ag.Multi=true
+return a.load'H'.New(AetheriaUI_af,AetheriaUI_ag)
 end)
-if WindUI_ok then return WindUI_a,WindUI_b end
-warn("[AetheriaUI] Multidropdown failed: "..tostring(WindUI_a))
-return"Multidropdown",{__type="Multidropdown",Title=WindUI_ag.Title or"Multidropdown"}
+if AetheriaUI_ok then return AetheriaUI_a,AetheriaUI_b end
+warn("[AetheriaUI] Multidropdown failed: "..tostring(AetheriaUI_a))
+return"Multidropdown",{__type="Multidropdown",Title=AetheriaUI_ag.Title or"Multidropdown"}
 end
 
 -- Checkboxtoggle: same story — Toggle (a.D) already renders a real square checkbox
 -- (module a.C) whenever Type=="Checkbox", it just wasn't exposed as its own element type.
-local WindUI_Checkboxtoggle={}
-function WindUI_Checkboxtoggle.New(WindUI_af,WindUI_ag)
-local WindUI_ok,WindUI_a,WindUI_b=pcall(function()
-WindUI_ag.Type="Checkbox"
-return a.load'D'.New(WindUI_af,WindUI_ag)
+local AetheriaUI_Checkboxtoggle={}
+function AetheriaUI_Checkboxtoggle.New(AetheriaUI_af,AetheriaUI_ag)
+local AetheriaUI_ok,AetheriaUI_a,AetheriaUI_b=pcall(function()
+AetheriaUI_ag.Type="Checkbox"
+return a.load'D'.New(AetheriaUI_af,AetheriaUI_ag)
 end)
-if WindUI_ok then return WindUI_a,WindUI_b end
-warn("[AetheriaUI] Checkboxtoggle failed: "..tostring(WindUI_a))
-return"Checkboxtoggle",{__type="Checkboxtoggle",Title=WindUI_ag.Title or"Checkboxtoggle"}
+if AetheriaUI_ok then return AetheriaUI_a,AetheriaUI_b end
+warn("[AetheriaUI] Checkboxtoggle failed: "..tostring(AetheriaUI_a))
+return"Checkboxtoggle",{__type="Checkboxtoggle",Title=AetheriaUI_ag.Title or"Checkboxtoggle"}
 end
 
 -- Textinfo: a fixed background panel (same family as Textbox/Input) holding a wrapped,
@@ -8104,18 +8109,18 @@ end
 -- was the prime suspect for why this specific element (and everything the script tried
 -- to build after it) was silently going missing. This uses the exact same plain,
 -- already-proven construction Textbox below uses.
-local WindUI_Textinfo={}
-function WindUI_Textinfo.New(WindUI_af,WindUI_ag)
-local WindUI_ok,WindUI_a,WindUI_b=pcall(function()
-local WindUI_ah={
+local AetheriaUI_Textinfo={}
+function AetheriaUI_Textinfo.New(AetheriaUI_af,AetheriaUI_ag)
+local AetheriaUI_ok,AetheriaUI_a,AetheriaUI_b=pcall(function()
+local AetheriaUI_ah={
 __type="Textinfo",
-Title=WindUI_ag.Title or"Textinfo",
-Text=WindUI_ag.Desc or WindUI_ag.Text or"",
+Title=AetheriaUI_ag.Title or"Textinfo",
+Text=AetheriaUI_ag.Desc or AetheriaUI_ag.Text or"",
 UIElements={},
 }
-local WindUI_ai=WindUI_New("TextLabel",{
+local AetheriaUI_ai=AetheriaUI_New("TextLabel",{
 BackgroundTransparency=1,
-Text=WindUI_ah.Text,
+Text=AetheriaUI_ah.Text,
 TextSize=14,
 TextXAlignment="Left",
 TextYAlignment="Top",
@@ -8125,30 +8130,30 @@ Size=UDim2.new(1,0,0,0),
 AutomaticSize="Y",
 FontFace=Font.new(a.load'a'.Font,Enum.FontWeight.Medium),
 })
-local WindUI_aj=WindUI_NewRoundFrame(10,"Squircle",{
+local AetheriaUI_aj=AetheriaUI_NewRoundFrame(10,"Squircle",{
 Size=UDim2.new(1,0,0,0),
 AutomaticSize="Y",
 ImageTransparency=.93,
 ThemeTag={ImageColor3="Text"},
-Parent=WindUI_ag.Parent,
+Parent=AetheriaUI_ag.Parent,
 },{
-WindUI_New("UIPadding",{
+AetheriaUI_New("UIPadding",{
 PaddingLeft=UDim.new(0,14),
 PaddingRight=UDim.new(0,14),
 PaddingTop=UDim.new(0,12),
 PaddingBottom=UDim.new(0,12),
 }),
-WindUI_ai,
+AetheriaUI_ai,
 })
-WindUI_ah.UIElements.Main=WindUI_aj
-WindUI_ah.UIElements.TextLabel=WindUI_ai
-function WindUI_ah.SetText(WindUI_ak,WindUI_al)
-WindUI_ah.Text=WindUI_al
-WindUI_ai.Text=WindUI_al
+AetheriaUI_ah.UIElements.Main=AetheriaUI_aj
+AetheriaUI_ah.UIElements.TextLabel=AetheriaUI_ai
+function AetheriaUI_ah.SetText(AetheriaUI_ak,AetheriaUI_al)
+AetheriaUI_ah.Text=AetheriaUI_al
+AetheriaUI_ai.Text=AetheriaUI_al
 end
-function WindUI_ah.SetBoxMode(WindUI_self,isBoxes)
-WindUI_ai.TextSize=isBoxes and 12 or 14
-local pad=WindUI_aj:FindFirstChildWhichIsA("UIPadding")
+function AetheriaUI_ah.SetBoxMode(AetheriaUI_self,isBoxes)
+AetheriaUI_ai.TextSize=isBoxes and 12 or 14
+local pad=AetheriaUI_aj:FindFirstChildWhichIsA("UIPadding")
 if pad then
 pad.PaddingLeft=UDim.new(0,isBoxes and 8 or 14)
 pad.PaddingRight=UDim.new(0,isBoxes and 8 or 14)
@@ -8156,28 +8161,28 @@ pad.PaddingTop=UDim.new(0,isBoxes and 6 or 12)
 pad.PaddingBottom=UDim.new(0,isBoxes and 6 or 12)
 end
 end
-return WindUI_ah.__type,WindUI_ah
+return AetheriaUI_ah.__type,AetheriaUI_ah
 end)
-if WindUI_ok then return WindUI_a,WindUI_b end
-warn("[AetheriaUI] Textinfo failed: "..tostring(WindUI_a))
-return"Textinfo",{__type="Textinfo",Title=WindUI_ag.Title or"Textinfo"}
+if AetheriaUI_ok then return AetheriaUI_a,AetheriaUI_b end
+warn("[AetheriaUI] Textinfo failed: "..tostring(AetheriaUI_a))
+return"Textinfo",{__type="Textinfo",Title=AetheriaUI_ag.Title or"Textinfo"}
 end
 
 -- Textbox: a fixed, read-only line of text inside a rounded box — visually the same
 -- family as Input's own box, but with a plain TextLabel instead of an editable TextBox,
 -- so there's nothing for the player to type into.
-local WindUI_Textbox={}
-function WindUI_Textbox.New(WindUI_af,WindUI_ag)
-local WindUI_ok,WindUI_a,WindUI_b=pcall(function()
-local WindUI_ah={
+local AetheriaUI_Textbox={}
+function AetheriaUI_Textbox.New(AetheriaUI_af,AetheriaUI_ag)
+local AetheriaUI_ok,AetheriaUI_a,AetheriaUI_b=pcall(function()
+local AetheriaUI_ah={
 __type="Textbox",
-Title=WindUI_ag.Title or"Textbox",
-Text=WindUI_ag.Text or WindUI_ag.Title or"",
+Title=AetheriaUI_ag.Title or"Textbox",
+Text=AetheriaUI_ag.Text or AetheriaUI_ag.Title or"",
 UIElements={},
 }
-local WindUI_ai=WindUI_New("TextLabel",{
+local AetheriaUI_ai=AetheriaUI_New("TextLabel",{
 BackgroundTransparency=1,
-Text=WindUI_ah.Text,
+Text=AetheriaUI_ah.Text,
 TextSize=14,
 TextXAlignment="Left",
 TextWrapped=true,
@@ -8186,30 +8191,30 @@ Size=UDim2.new(1,0,0,0),
 AutomaticSize="Y",
 FontFace=Font.new(a.load'a'.Font,Enum.FontWeight.Medium),
 })
-local WindUI_aj=WindUI_NewRoundFrame(8,"Squircle",{
+local AetheriaUI_aj=AetheriaUI_NewRoundFrame(8,"Squircle",{
 Size=UDim2.new(1,0,0,0),
 AutomaticSize="Y",
 ImageTransparency=.93,
 ThemeTag={ImageColor3="Text"},
-Parent=WindUI_ag.Parent,
+Parent=AetheriaUI_ag.Parent,
 },{
-WindUI_New("UIPadding",{
+AetheriaUI_New("UIPadding",{
 PaddingLeft=UDim.new(0,12),
 PaddingRight=UDim.new(0,12),
 PaddingTop=UDim.new(0,9),
 PaddingBottom=UDim.new(0,9),
 }),
-WindUI_ai,
+AetheriaUI_ai,
 })
-WindUI_ah.UIElements.Main=WindUI_aj
-WindUI_ah.UIElements.TextLabel=WindUI_ai
-function WindUI_ah.SetText(WindUI_ak,WindUI_al)
-WindUI_ah.Text=WindUI_al
-WindUI_ai.Text=WindUI_al
+AetheriaUI_ah.UIElements.Main=AetheriaUI_aj
+AetheriaUI_ah.UIElements.TextLabel=AetheriaUI_ai
+function AetheriaUI_ah.SetText(AetheriaUI_ak,AetheriaUI_al)
+AetheriaUI_ah.Text=AetheriaUI_al
+AetheriaUI_ai.Text=AetheriaUI_al
 end
-function WindUI_ah.SetBoxMode(WindUI_self,isBoxes)
-WindUI_ai.TextSize=isBoxes and 12 or 14
-local pad=WindUI_aj:FindFirstChildWhichIsA("UIPadding")
+function AetheriaUI_ah.SetBoxMode(AetheriaUI_self,isBoxes)
+AetheriaUI_ai.TextSize=isBoxes and 12 or 14
+local pad=AetheriaUI_aj:FindFirstChildWhichIsA("UIPadding")
 if pad then
 pad.PaddingLeft=UDim.new(0,isBoxes and 8 or 12)
 pad.PaddingRight=UDim.new(0,isBoxes and 8 or 12)
@@ -8217,25 +8222,25 @@ pad.PaddingTop=UDim.new(0,isBoxes and 4 or 9)
 pad.PaddingBottom=UDim.new(0,isBoxes and 4 or 9)
 end
 end
-return WindUI_ah.__type,WindUI_ah
+return AetheriaUI_ah.__type,AetheriaUI_ah
 end)
-if WindUI_ok then return WindUI_a,WindUI_b end
-warn("[AetheriaUI] Textbox failed: "..tostring(WindUI_a))
-return"Textbox",{__type="Textbox",Title=WindUI_ag.Title or"Textbox"}
+if AetheriaUI_ok then return AetheriaUI_a,AetheriaUI_b end
+warn("[AetheriaUI] Textbox failed: "..tostring(AetheriaUI_a))
+return"Textbox",{__type="Textbox",Title=AetheriaUI_ag.Title or"Textbox"}
 end
 
 -- TextDivider: same thin theme-colored line as the plain Divider, just with a named
 -- label centered in the middle and a line running to it from each side.
-local WindUI_TextDivider={}
-function WindUI_TextDivider.New(WindUI_af,WindUI_ag)
-local WindUI_ok,WindUI_a,WindUI_b=pcall(function()
-local WindUI_ah={
+local AetheriaUI_TextDivider={}
+function AetheriaUI_TextDivider.New(AetheriaUI_af,AetheriaUI_ag)
+local AetheriaUI_ok,AetheriaUI_a,AetheriaUI_b=pcall(function()
+local AetheriaUI_ah={
 __type="TextDivider",
-Title=WindUI_ag.Title or"Divider",
+Title=AetheriaUI_ag.Title or"Divider",
 }
-local WindUI_ai=WindUI_New("TextLabel",{
+local AetheriaUI_ai=AetheriaUI_New("TextLabel",{
 BackgroundTransparency=1,
-Text=WindUI_ah.Title,
+Text=AetheriaUI_ah.Title,
 TextSize=13,
 TextTransparency=.35,
 AutomaticSize="X",
@@ -8243,8 +8248,8 @@ Size=UDim2.new(0,0,1,0),
 ThemeTag={TextColor3="Text"},
 FontFace=Font.new(a.load'a'.Font,Enum.FontWeight.Medium),
 })
-local function WindUI_Line()
-return WindUI_New("Frame",{
+local function AetheriaUI_Line()
+return AetheriaUI_New("Frame",{
 Size=UDim2.new(1,0,0,1),
 AnchorPoint=Vector2.new(0.5,0.5),
 Position=UDim2.new(0.5,0,0.5,0),
@@ -8252,51 +8257,51 @@ BackgroundTransparency=.9,
 ThemeTag={BackgroundColor3="Text"},
 })
 end
-local leftBox=WindUI_New("Frame",{Size=UDim2.new(0.5,-10,0,1),BackgroundTransparency=1},{WindUI_Line()})
-local rightBox=WindUI_New("Frame",{Size=UDim2.new(0.5,-10,0,1),BackgroundTransparency=1},{WindUI_Line()})
+local leftBox=AetheriaUI_New("Frame",{Size=UDim2.new(0.5,-10,0,1),BackgroundTransparency=1},{AetheriaUI_Line()})
+local rightBox=AetheriaUI_New("Frame",{Size=UDim2.new(0.5,-10,0,1),BackgroundTransparency=1},{AetheriaUI_Line()})
 
-local divHolder=WindUI_New("Frame",{
-Parent=WindUI_ag.Parent,
+local divHolder=AetheriaUI_New("Frame",{
+Parent=AetheriaUI_ag.Parent,
 Size=UDim2.new(1,0,0,20),
 BackgroundTransparency=1,
 },{
-WindUI_New("UIListLayout",{
+AetheriaUI_New("UIListLayout",{
 FillDirection="Horizontal",
 VerticalAlignment="Center",
 HorizontalAlignment="Center",
 Padding=UDim.new(0,8),
 }),
 leftBox,
-WindUI_ai,
+AetheriaUI_ai,
 rightBox,
 })
 
 local function UpdateDivLines()
 pcall(function()
-local tW=WindUI_ai.TextBounds.X
+local tW=AetheriaUI_ai.TextBounds.X
 local hW=math.max(10,(divHolder.AbsoluteSize.X-tW-16)/2)
 leftBox.Size=UDim2.new(0,hW,0,1)
 rightBox.Size=UDim2.new(0,hW,0,1)
 end)
 end
-WindUI_AddSignal(divHolder:GetPropertyChangedSignal("AbsoluteSize"),UpdateDivLines)
-WindUI_AddSignal(WindUI_ai:GetPropertyChangedSignal("TextBounds"),UpdateDivLines)
+AetheriaUI_AddSignal(divHolder:GetPropertyChangedSignal("AbsoluteSize"),UpdateDivLines)
+AetheriaUI_AddSignal(AetheriaUI_ai:GetPropertyChangedSignal("TextBounds"),UpdateDivLines)
 task.defer(UpdateDivLines)
-function WindUI_ah.SetTitle(WindUI_aj,WindUI_ak)
-WindUI_ah.Title=WindUI_ak
-WindUI_ai.Text=WindUI_ak
+function AetheriaUI_ah.SetTitle(AetheriaUI_aj,AetheriaUI_ak)
+AetheriaUI_ah.Title=AetheriaUI_ak
+AetheriaUI_ai.Text=AetheriaUI_ak
 end
-return"TextDivider",WindUI_ah
+return"TextDivider",AetheriaUI_ah
 end)
-if WindUI_ok then return WindUI_a,WindUI_b end
-warn("[AetheriaUI] TextDivider failed: "..tostring(WindUI_a))
-return"TextDivider",{__type="TextDivider",Title=WindUI_ag.Title or"Divider"}
+if AetheriaUI_ok then return AetheriaUI_a,AetheriaUI_b end
+warn("[AetheriaUI] TextDivider failed: "..tostring(AetheriaUI_a))
+return"TextDivider",{__type="TextDivider",Title=AetheriaUI_ag.Title or"Divider"}
 end
 
 -- ToggleSlider: Combines a boolean switch and a numeric slider in a single row
-local WindUI_ToggleSlider={}
-function WindUI_ToggleSlider.New(WindUI_af,WindUI_ag)
-    local WindUI_ok,WindUI_resA,WindUI_resB=pcall(function()
+local AetheriaUI_ToggleSlider={}
+function AetheriaUI_ToggleSlider.New(AetheriaUI_af,AetheriaUI_ag)
+    local AetheriaUI_ok,AetheriaUI_resA,AetheriaUI_resB=pcall(function()
         local aa=a.load'a'
         local ac=aa.New
         local ad=aa.Tween
@@ -8304,24 +8309,24 @@ function WindUI_ToggleSlider.New(WindUI_af,WindUI_ag)
 
         local ai={
             __type="ToggleSlider",
-            Title=WindUI_ag.Title or"ToggleSlider",
-            Desc=WindUI_ag.Desc or nil,
-            Locked=WindUI_ag.Locked or false,
-            Step=WindUI_ag.Step or 1,
-            Min=WindUI_ag.Min or(WindUI_ag.Value and WindUI_ag.Value.Min)or 0,
-            Max=WindUI_ag.Max or(WindUI_ag.Value and WindUI_ag.Value.Max)or 100,
-            Callback=WindUI_ag.Callback or function()end,
+            Title=AetheriaUI_ag.Title or"ToggleSlider",
+            Desc=AetheriaUI_ag.Desc or nil,
+            Locked=AetheriaUI_ag.Locked or false,
+            Step=AetheriaUI_ag.Step or 1,
+            Min=AetheriaUI_ag.Min or(AetheriaUI_ag.Value and AetheriaUI_ag.Value.Min)or 0,
+            Max=AetheriaUI_ag.Max or(AetheriaUI_ag.Value and AetheriaUI_ag.Value.Max)or 100,
+            Callback=AetheriaUI_ag.Callback or function()end,
             UIElements={},
         }
 
         local initToggle=false
         local initSlider=ai.Min
-        if type(WindUI_ag.Value)=="table" then
-            initToggle=WindUI_ag.Value.Toggle or WindUI_ag.Value.toggle or WindUI_ag.Value[1] or false
-            initSlider=WindUI_ag.Value.Slider or WindUI_ag.Value.slider or WindUI_ag.Value[2] or ai.Min
-        elseif type(WindUI_ag.Value)=="boolean" then
-            initToggle=WindUI_ag.Value
-            initSlider=WindUI_ag.Slider or WindUI_ag.slider or ai.Min
+        if type(AetheriaUI_ag.Value)=="table" then
+            initToggle=AetheriaUI_ag.Value.Toggle or AetheriaUI_ag.Value.toggle or AetheriaUI_ag.Value[1] or false
+            initSlider=AetheriaUI_ag.Value.Slider or AetheriaUI_ag.Value.slider or AetheriaUI_ag.Value[2] or ai.Min
+        elseif type(AetheriaUI_ag.Value)=="boolean" then
+            initToggle=AetheriaUI_ag.Value
+            initSlider=AetheriaUI_ag.Slider or AetheriaUI_ag.slider or ai.Min
         end
         ai.Value={Toggle=initToggle,Slider=initSlider}
 
@@ -8338,7 +8343,7 @@ function WindUI_ToggleSlider.New(WindUI_af,WindUI_ag)
             return math.floor(v/ai.Step+0.5)*ai.Step
         end
 
-        local isBoxTogSl=(WindUI_ag.Window and WindUI_ag.Window.TabLayoutType=="Boxes")
+        local isBoxTogSl=(AetheriaUI_ag.Window and AetheriaUI_ag.Window.TabLayoutType=="Boxes")
         local trackWidth=isBoxTogSl and 38 or 90
         local valWidth=isBoxTogSl and 22 or 34
         local switchWidth=isBoxTogSl and 36 or 42
@@ -8348,12 +8353,12 @@ function WindUI_ToggleSlider.New(WindUI_af,WindUI_ag)
         ai.Frame=a.load'y'{
             Title=ai.Title,
             Desc=ai.Desc,
-            Window=WindUI_ag.Window,
-            Parent=WindUI_ag.Parent,
+            Window=AetheriaUI_ag.Window,
+            Parent=AetheriaUI_ag.Parent,
             TextOffset=rightWidth+15,
             Hover=false,
-            Tab=WindUI_ag.Tab,
-            Index=WindUI_ag.Index,
+            Tab=AetheriaUI_ag.Tab,
+            Index=AetheriaUI_ag.Index,
             ElementTable=ai,
         }
 
@@ -8447,7 +8452,7 @@ function WindUI_ToggleSlider.New(WindUI_af,WindUI_ag)
             Parent=rightHolder,
         })
 
-        local switchFr,switchObj=createSwitch(currentToggle,WindUI_ag.Icon,switchBtn,function(st)
+        local switchFr,switchObj=createSwitch(currentToggle,AetheriaUI_ag.Icon,switchBtn,function(st)
             if isLocked then
                 currentToggle=st
                 ai.Value.Toggle=st
@@ -8582,15 +8587,15 @@ function WindUI_ToggleSlider.New(WindUI_af,WindUI_ag)
 
         return ai.__type,ai
     end)
-    if WindUI_ok then return WindUI_resA,WindUI_resB end
-    warn("[AetheriaUI] ToggleSlider failed: "..tostring(WindUI_resA))
-    return"ToggleSlider",{__type="ToggleSlider",Title=WindUI_ag.Title or"ToggleSlider"}
+    if AetheriaUI_ok then return AetheriaUI_resA,AetheriaUI_resB end
+    warn("[AetheriaUI] ToggleSlider failed: "..tostring(AetheriaUI_resA))
+    return"ToggleSlider",{__type="ToggleSlider",Title=AetheriaUI_ag.Title or"ToggleSlider"}
 end
 
 -- ToggleColorpicker: Combines a boolean switch and a colorpicker swatch
-local WindUI_ToggleColorpicker={}
-function WindUI_ToggleColorpicker.New(WindUI_af,WindUI_ag)
-    local WindUI_ok,WindUI_resA,WindUI_resB=pcall(function()
+local AetheriaUI_ToggleColorpicker={}
+function AetheriaUI_ToggleColorpicker.New(AetheriaUI_af,AetheriaUI_ag)
+    local AetheriaUI_ok,AetheriaUI_resA,AetheriaUI_resB=pcall(function()
         local aa=a.load'a'
         local ac=aa.New
         local createSwitch=a.load'B'.New
@@ -8600,30 +8605,30 @@ function WindUI_ToggleColorpicker.New(WindUI_af,WindUI_ag)
         local initColor=Color3.fromRGB(255,255,255)
         local initTransparency=0
 
-        if type(WindUI_ag.Value)=="table" then
-            initToggle=WindUI_ag.Value.Toggle or WindUI_ag.Value.toggle or WindUI_ag.Value[1] or false
-            if WindUI_ag.Value.Color or WindUI_ag.Value.color then
-                local c=WindUI_ag.Value.Color or WindUI_ag.Value.color
+        if type(AetheriaUI_ag.Value)=="table" then
+            initToggle=AetheriaUI_ag.Value.Toggle or AetheriaUI_ag.Value.toggle or AetheriaUI_ag.Value[1] or false
+            if AetheriaUI_ag.Value.Color or AetheriaUI_ag.Value.color then
+                local c=AetheriaUI_ag.Value.Color or AetheriaUI_ag.Value.color
                 if typeof(c)=="string" then c=Color3.fromHex(c) end
                 initColor=c
             end
-            if WindUI_ag.Value.Transparency or WindUI_ag.Value.transparency then
-                initTransparency=WindUI_ag.Value.Transparency or WindUI_ag.Value.transparency
+            if AetheriaUI_ag.Value.Transparency or AetheriaUI_ag.Value.transparency then
+                initTransparency=AetheriaUI_ag.Value.Transparency or AetheriaUI_ag.Value.transparency
             end
-        elseif type(WindUI_ag.Value)=="boolean" then
-            initToggle=WindUI_ag.Value
+        elseif type(AetheriaUI_ag.Value)=="boolean" then
+            initToggle=AetheriaUI_ag.Value
         end
-        if WindUI_ag.Default then initColor=WindUI_ag.Default end
-        if WindUI_ag.Transparency then initTransparency=WindUI_ag.Transparency end
+        if AetheriaUI_ag.Default then initColor=AetheriaUI_ag.Default end
+        if AetheriaUI_ag.Transparency then initTransparency=AetheriaUI_ag.Transparency end
 
         local ai={
             __type="ToggleColorpicker",
-            Title=WindUI_ag.Title or"ToggleColorpicker",
-            Desc=WindUI_ag.Desc or nil,
-            Locked=WindUI_ag.Locked or false,
+            Title=AetheriaUI_ag.Title or"ToggleColorpicker",
+            Desc=AetheriaUI_ag.Desc or nil,
+            Locked=AetheriaUI_ag.Locked or false,
             Default=initColor,
             Transparency=initTransparency,
-            Callback=WindUI_ag.Callback or function()end,
+            Callback=AetheriaUI_ag.Callback or function()end,
             UIElements={},
         }
         ai.Value={Toggle=initToggle,Color=initColor,Transparency=initTransparency}
@@ -8633,7 +8638,7 @@ function WindUI_ToggleColorpicker.New(WindUI_af,WindUI_ag)
         local currentColor=initColor
         local currentTransparency=initTransparency
 
-        local isBoxTogCol=(WindUI_ag.Window and WindUI_ag.Window.TabLayoutType=="Boxes")
+        local isBoxTogCol=(AetheriaUI_ag.Window and AetheriaUI_ag.Window.TabLayoutType=="Boxes")
         local colW=isBoxTogCol and 22 or 34
         local swW=isBoxTogCol and 36 or 42
         local sH=isBoxTogCol and 22 or 34
@@ -8642,12 +8647,12 @@ function WindUI_ToggleColorpicker.New(WindUI_af,WindUI_ag)
         ai.Frame=a.load'y'{
             Title=ai.Title,
             Desc=ai.Desc,
-            Window=WindUI_ag.Window,
-            Parent=WindUI_ag.Parent,
+            Window=AetheriaUI_ag.Window,
+            Parent=AetheriaUI_ag.Parent,
             TextOffset=rightWidth+(isBoxTogCol and 6 or 15),
             Hover=false,
-            Tab=WindUI_ag.Tab,
-            Index=WindUI_ag.Index,
+            Tab=AetheriaUI_ag.Tab,
+            Index=AetheriaUI_ag.Index,
             ElementTable=ai,
         }
 
@@ -8683,7 +8688,7 @@ function WindUI_ToggleColorpicker.New(WindUI_af,WindUI_ag)
             Parent=rightHolder,
         })
 
-        local switchFr,switchObj=createSwitch(currentToggle,WindUI_ag.Icon,switchBtn,function(st)
+        local switchFr,switchObj=createSwitch(currentToggle,AetheriaUI_ag.Icon,switchBtn,function(st)
             if isLocked then
                 currentToggle=st
                 ai.Value.Toggle=st
@@ -8767,7 +8772,7 @@ function WindUI_ToggleColorpicker.New(WindUI_af,WindUI_ag)
                 return
             end
 
-            local cp=colorpickerModule:Colorpicker(ai,WindUI_ag.Window,function(newCol,newTrans)
+            local cp=colorpickerModule:Colorpicker(ai,AetheriaUI_ag.Window,function(newCol,newTrans)
                 ai:UpdateColor(newCol,newTrans)
             end)
             ai.ActiveColorpicker=cp
@@ -8811,26 +8816,26 @@ function WindUI_ToggleColorpicker.New(WindUI_af,WindUI_ag)
 
         return ai.__type,ai
     end)
-    if WindUI_ok then return WindUI_resA,WindUI_resB end
-    warn("[AetheriaUI] ToggleColorpicker failed: "..tostring(WindUI_resA))
-    return"ToggleColorpicker",{__type="ToggleColorpicker",Title=WindUI_ag.Title or"ToggleColorpicker"}
+    if AetheriaUI_ok then return AetheriaUI_resA,AetheriaUI_resB end
+    warn("[AetheriaUI] ToggleColorpicker failed: "..tostring(AetheriaUI_resA))
+    return"ToggleColorpicker",{__type="ToggleColorpicker",Title=AetheriaUI_ag.Title or"ToggleColorpicker"}
 end
 
 -- ProgressBar: Smooth animated progress track with status label
-local WindUI_ProgressBar={}
-function WindUI_ProgressBar.New(WindUI_af,WindUI_ag)
-    local WindUI_ok,WindUI_resA,WindUI_resB=pcall(function()
+local AetheriaUI_ProgressBar={}
+function AetheriaUI_ProgressBar.New(AetheriaUI_af,AetheriaUI_ag)
+    local AetheriaUI_ok,AetheriaUI_resA,AetheriaUI_resB=pcall(function()
         local aa=a.load'a'
         local ac=aa.New
         local ad=aa.Tween
 
-        local curProg=math.clamp(tonumber(WindUI_ag.Progress or WindUI_ag.Value or 0) or 0,0,1)
-        local curStatus=WindUI_ag.Status or (tostring(math.floor(curProg*100)).."%")
+        local curProg=math.clamp(tonumber(AetheriaUI_ag.Progress or AetheriaUI_ag.Value or 0) or 0,0,1)
+        local curStatus=AetheriaUI_ag.Status or (tostring(math.floor(curProg*100)).."%")
 
         local ai={
             __type="ProgressBar",
-            Title=WindUI_ag.Title or"ProgressBar",
-            Desc=WindUI_ag.Desc or nil,
+            Title=AetheriaUI_ag.Title or"ProgressBar",
+            Desc=AetheriaUI_ag.Desc or nil,
             Progress=curProg,
             Status=curStatus,
             UIElements={},
@@ -8839,12 +8844,12 @@ function WindUI_ProgressBar.New(WindUI_af,WindUI_ag)
         ai.Frame=a.load'y'{
             Title=ai.Title,
             Desc=ai.Desc,
-            Window=WindUI_ag.Window,
-            Parent=WindUI_ag.Parent,
+            Window=AetheriaUI_ag.Window,
+            Parent=AetheriaUI_ag.Parent,
             TextOffset=80,
             Hover=false,
-            Tab=WindUI_ag.Tab,
-            Index=WindUI_ag.Index,
+            Tab=AetheriaUI_ag.Tab,
+            Index=AetheriaUI_ag.Index,
             ElementTable=ai,
         }
 
@@ -8919,36 +8924,36 @@ function WindUI_ProgressBar.New(WindUI_af,WindUI_ag)
 
         return ai.__type,ai
     end)
-    if WindUI_ok then return WindUI_resA,WindUI_resB end
-    warn("[AetheriaUI] ProgressBar failed: "..tostring(WindUI_resA))
-    return"ProgressBar",{__type="ProgressBar",Title=WindUI_ag.Title or"ProgressBar"}
+    if AetheriaUI_ok then return AetheriaUI_resA,AetheriaUI_resB end
+    warn("[AetheriaUI] ProgressBar failed: "..tostring(AetheriaUI_resA))
+    return"ProgressBar",{__type="ProgressBar",Title=AetheriaUI_ag.Title or"ProgressBar"}
 end
 
 -- StatCard: Metric cards with unlimited rows & dynamic wrapping
-local WindUI_StatCard={}
-function WindUI_StatCard.New(WindUI_af,WindUI_ag)
-    local WindUI_ok,WindUI_resA,WindUI_resB=pcall(function()
+local AetheriaUI_StatCard={}
+function AetheriaUI_StatCard.New(AetheriaUI_af,AetheriaUI_ag)
+    local AetheriaUI_ok,AetheriaUI_resA,AetheriaUI_resB=pcall(function()
         local aa=a.load'a'
         local ac=aa.New
 
-        local cols=math.max(1,tonumber(WindUI_ag.Columns) or 2)
+        local cols=math.max(1,tonumber(AetheriaUI_ag.Columns) or 2)
         local ai={
             __type="StatCard",
-            Title=WindUI_ag.Title or"StatCard",
-            Desc=WindUI_ag.Desc or nil,
-            Items=WindUI_ag.Items or{},
+            Title=AetheriaUI_ag.Title or"StatCard",
+            Desc=AetheriaUI_ag.Desc or nil,
+            Items=AetheriaUI_ag.Items or{},
             UIElements={Tiles={}},
         }
 
         ai.Frame=a.load'y'{
             Title=ai.Title,
             Desc=ai.Desc,
-            Window=WindUI_ag.Window,
-            Parent=WindUI_ag.Parent,
+            Window=AetheriaUI_ag.Window,
+            Parent=AetheriaUI_ag.Parent,
             TextOffset=0,
             Hover=false,
-            Tab=WindUI_ag.Tab,
-            Index=WindUI_ag.Index,
+            Tab=AetheriaUI_ag.Tab,
+            Index=AetheriaUI_ag.Index,
             ElementTable=ai,
         }
 
@@ -8991,7 +8996,7 @@ function WindUI_StatCard.New(WindUI_af,WindUI_ag)
             local iconImg=nil
             if itemIcon and itemIcon~="" then
                 pcall(function()
-                    iconImg=aa.Image(itemIcon,itemIcon,0,WindUI_ag.Window.Folder,"StatIcon",true)
+                    iconImg=aa.Image(itemIcon,itemIcon,0,AetheriaUI_ag.Window.Folder,"StatIcon",true)
                     if iconImg then
                         iconImg.Size=UDim2.new(0,20,0,20)
                         iconImg.AnchorPoint=Vector2.new(0,0.5)
@@ -9095,24 +9100,24 @@ function WindUI_StatCard.New(WindUI_af,WindUI_ag)
 
         return ai.__type,ai
     end)
-    if WindUI_ok then return WindUI_resA,WindUI_resB end
-    warn("[AetheriaUI] StatCard failed: "..tostring(WindUI_resA))
-    return"StatCard",{__type="StatCard",Title=WindUI_ag.Title or"StatCard"}
+    if AetheriaUI_ok then return AetheriaUI_resA,AetheriaUI_resB end
+    warn("[AetheriaUI] StatCard failed: "..tostring(AetheriaUI_resA))
+    return"StatCard",{__type="StatCard",Title=AetheriaUI_ag.Title or"StatCard"}
 end
 
 -- ButtonGroup: Row of compact action buttons in a single module
-local WindUI_ButtonGroup={}
-function WindUI_ButtonGroup.New(WindUI_af,WindUI_ag)
-    local WindUI_ok,WindUI_resA,WindUI_resB=pcall(function()
+local AetheriaUI_ButtonGroup={}
+function AetheriaUI_ButtonGroup.New(AetheriaUI_af,AetheriaUI_ag)
+    local AetheriaUI_ok,AetheriaUI_resA,AetheriaUI_resB=pcall(function()
         local aa=a.load'a'
         local ac=aa.New
         local ad=aa.Tween
 
-        local buttons=WindUI_ag.Buttons or{}
+        local buttons=AetheriaUI_ag.Buttons or{}
         local ai={
             __type="ButtonGroup",
-            Title=WindUI_ag.Title or"ButtonGroup",
-            Desc=WindUI_ag.Desc or nil,
+            Title=AetheriaUI_ag.Title or"ButtonGroup",
+            Desc=AetheriaUI_ag.Desc or nil,
             Buttons=buttons,
             UIElements={Buttons={}},
         }
@@ -9120,12 +9125,12 @@ function WindUI_ButtonGroup.New(WindUI_af,WindUI_ag)
         ai.Frame=a.load'y'{
             Title=ai.Title,
             Desc=ai.Desc,
-            Window=WindUI_ag.Window,
-            Parent=WindUI_ag.Parent,
+            Window=AetheriaUI_ag.Window,
+            Parent=AetheriaUI_ag.Parent,
             TextOffset=0,
             Hover=false,
-            Tab=WindUI_ag.Tab,
-            Index=WindUI_ag.Index,
+            Tab=AetheriaUI_ag.Tab,
+            Index=AetheriaUI_ag.Index,
             ElementTable=ai,
         }
 
@@ -9162,7 +9167,7 @@ function WindUI_ButtonGroup.New(WindUI_af,WindUI_ag)
 
             if btnData.Icon and btnData.Icon~="" then
                 pcall(function()
-                    local icon=aa.Image(btnData.Icon,btnData.Icon,0,WindUI_ag.Window.Folder,"BtnIcon",true)
+                    local icon=aa.Image(btnData.Icon,btnData.Icon,0,AetheriaUI_ag.Window.Folder,"BtnIcon",true)
                     if icon then
                         icon.Size=UDim2.new(0,16,0,16)
                         icon.Active=false
@@ -9219,32 +9224,32 @@ function WindUI_ButtonGroup.New(WindUI_af,WindUI_ag)
 
         return ai.__type,ai
     end)
-    if WindUI_ok then return WindUI_resA,WindUI_resB end
-    warn("[AetheriaUI] ButtonGroup failed: "..tostring(WindUI_resA))
-    return"ButtonGroup",{__type="ButtonGroup",Title=WindUI_ag.Title or"ButtonGroup"}
+    if AetheriaUI_ok then return AetheriaUI_resA,AetheriaUI_resB end
+    warn("[AetheriaUI] ButtonGroup failed: "..tostring(AetheriaUI_resA))
+    return"ButtonGroup",{__type="ButtonGroup",Title=AetheriaUI_ag.Title or"ButtonGroup"}
 end
 
 -- ToggleGroup: Segmented pill selector (single radio mode or multi-select)
-local WindUI_ToggleGroup={}
-function WindUI_ToggleGroup.New(WindUI_af,WindUI_ag)
-    local WindUI_ok,WindUI_resA,WindUI_resB=pcall(function()
+local AetheriaUI_ToggleGroup={}
+function AetheriaUI_ToggleGroup.New(AetheriaUI_af,AetheriaUI_ag)
+    local AetheriaUI_ok,AetheriaUI_resA,AetheriaUI_resB=pcall(function()
         local aa=a.load'a'
         local ac=aa.New
         local ad=aa.Tween
 
-        local options=WindUI_ag.Options or{}
-        local isMulti=WindUI_ag.Multi or false
-        local curValue=WindUI_ag.Value or (isMulti and {} or options[1])
+        local options=AetheriaUI_ag.Options or{}
+        local isMulti=AetheriaUI_ag.Multi or false
+        local curValue=AetheriaUI_ag.Value or (isMulti and {} or options[1])
 
         local ai={
             __type="ToggleGroup",
-            Title=WindUI_ag.Title or"ToggleGroup",
-            Desc=WindUI_ag.Desc or nil,
-            Locked=WindUI_ag.Locked or false,
+            Title=AetheriaUI_ag.Title or"ToggleGroup",
+            Desc=AetheriaUI_ag.Desc or nil,
+            Locked=AetheriaUI_ag.Locked or false,
             Multi=isMulti,
             Options=options,
             Value=curValue,
-            Callback=WindUI_ag.Callback or function()end,
+            Callback=AetheriaUI_ag.Callback or function()end,
             UIElements={Buttons={}},
         }
 
@@ -9253,12 +9258,12 @@ function WindUI_ToggleGroup.New(WindUI_af,WindUI_ag)
         ai.Frame=a.load'y'{
             Title=ai.Title,
             Desc=ai.Desc,
-            Window=WindUI_ag.Window,
-            Parent=WindUI_ag.Parent,
+            Window=AetheriaUI_ag.Window,
+            Parent=AetheriaUI_ag.Parent,
             TextOffset=0,
             Hover=false,
-            Tab=WindUI_ag.Tab,
-            Index=WindUI_ag.Index,
+            Tab=AetheriaUI_ag.Tab,
+            Index=AetheriaUI_ag.Index,
             ElementTable=ai,
         }
 
@@ -9422,45 +9427,45 @@ function WindUI_ToggleGroup.New(WindUI_af,WindUI_ag)
 
         return ai.__type,ai
     end)
-    if WindUI_ok then return WindUI_resA,WindUI_resB end
-    warn("[AetheriaUI] ToggleGroup failed: "..tostring(WindUI_resA))
-    return"ToggleGroup",{__type="ToggleGroup",Title=WindUI_ag.Title or"ToggleGroup"}
+    if AetheriaUI_ok then return AetheriaUI_resA,AetheriaUI_resB end
+    warn("[AetheriaUI] ToggleGroup failed: "..tostring(AetheriaUI_resA))
+    return"ToggleGroup",{__type="ToggleGroup",Title=AetheriaUI_ag.Title or"ToggleGroup"}
 end
 
 
 -- SocialCard: Community / social media card with action button
-local WindUI_SocialCard={}
-function WindUI_SocialCard.New(WindUI_af,WindUI_ag)
-    local WindUI_ok,WindUI_resA,WindUI_resB=pcall(function()
+local AetheriaUI_SocialCard={}
+function AetheriaUI_SocialCard.New(AetheriaUI_af,AetheriaUI_ag)
+    local AetheriaUI_ok,AetheriaUI_resA,AetheriaUI_resB=pcall(function()
         local aa=a.load'a'
         local ac=aa.New
         local ad=aa.Tween
-        local isLocked=not WindUI_ag.Locked
+        local isLocked=not AetheriaUI_ag.Locked
 
         local ai={
             __type="SocialCard",
-            Title=WindUI_ag.Title or"Social Card",
-            Desc=WindUI_ag.Desc or"",
-            Icon=WindUI_ag.Icon or"users",
-            ButtonText=WindUI_ag.ButtonText or"Join",
-            ButtonIcon=WindUI_ag.ButtonIcon or"external-link",
-            Link=WindUI_ag.Link or"",
-            Callback=WindUI_ag.Callback or function()end,
+            Title=AetheriaUI_ag.Title or"Social Card",
+            Desc=AetheriaUI_ag.Desc or"",
+            Icon=AetheriaUI_ag.Icon or"users",
+            ButtonText=AetheriaUI_ag.ButtonText or"Join",
+            ButtonIcon=AetheriaUI_ag.ButtonIcon or"external-link",
+            Link=AetheriaUI_ag.Link or"",
+            Callback=AetheriaUI_ag.Callback or function()end,
             UIElements={},
         }
 
-        local isBoxSoc=(WindUI_ag.Window and WindUI_ag.Window.TabLayoutType=="Boxes")
+        local isBoxSoc=(AetheriaUI_ag.Window and AetheriaUI_ag.Window.TabLayoutType=="Boxes")
         local btnWidth=isBoxSoc and 54 or 90
         ai.Frame=a.load'y'{
             Title=ai.Title,
             Desc=ai.Desc,
             Icon=ai.Icon,
-            Window=WindUI_ag.Window,
-            Parent=WindUI_ag.Parent,
+            Window=AetheriaUI_ag.Window,
+            Parent=AetheriaUI_ag.Parent,
             TextOffset=btnWidth+(isBoxSoc and 8 or 15),
             Hover=false,
-            Tab=WindUI_ag.Tab,
-            Index=WindUI_ag.Index,
+            Tab=AetheriaUI_ag.Tab,
+            Index=AetheriaUI_ag.Index,
             ElementTable=ai,
         }
 
@@ -9577,37 +9582,37 @@ function WindUI_SocialCard.New(WindUI_af,WindUI_ag)
 
         return ai.__type,ai
     end)
-    if WindUI_ok then return WindUI_resA,WindUI_resB end
-    warn("[AetheriaUI] SocialCard failed: "..tostring(WindUI_resA))
-    return"SocialCard",{__type="SocialCard",Title=WindUI_ag.Title or"SocialCard"}
+    if AetheriaUI_ok then return AetheriaUI_resA,AetheriaUI_resB end
+    warn("[AetheriaUI] SocialCard failed: "..tostring(AetheriaUI_resA))
+    return"SocialCard",{__type="SocialCard",Title=AetheriaUI_ag.Title or"SocialCard"}
 end
 
 -- DualSlider: Range slider with two draggable knobs for Min and Max range
-local WindUI_DualSlider={}
-function WindUI_DualSlider.New(WindUI_af,WindUI_ag)
-    local WindUI_ok,WindUI_resA,WindUI_resB=pcall(function()
+local AetheriaUI_DualSlider={}
+function AetheriaUI_DualSlider.New(AetheriaUI_af,AetheriaUI_ag)
+    local AetheriaUI_ok,AetheriaUI_resA,AetheriaUI_resB=pcall(function()
         local aa=a.load'a'
         local ac=aa.New
         local ad=aa.Tween
-        local isLocked=not WindUI_ag.Locked
+        local isLocked=not AetheriaUI_ag.Locked
 
         local ai={
             __type="DualSlider",
-            Title=WindUI_ag.Title or"DualSlider",
-            Desc=WindUI_ag.Desc or nil,
-            Locked=WindUI_ag.Locked or false,
-            Step=WindUI_ag.Step or 1,
-            Min=WindUI_ag.Min or 0,
-            Max=WindUI_ag.Max or 100,
-            Callback=WindUI_ag.Callback or function()end,
+            Title=AetheriaUI_ag.Title or"DualSlider",
+            Desc=AetheriaUI_ag.Desc or nil,
+            Locked=AetheriaUI_ag.Locked or false,
+            Step=AetheriaUI_ag.Step or 1,
+            Min=AetheriaUI_ag.Min or 0,
+            Max=AetheriaUI_ag.Max or 100,
+            Callback=AetheriaUI_ag.Callback or function()end,
             UIElements={},
         }
 
         local initLower=ai.Min
         local initUpper=ai.Max
-        if type(WindUI_ag.Value)=="table" then
-            initLower=WindUI_ag.Value.Min or WindUI_ag.Value.min or WindUI_ag.Value[1] or ai.Min
-            initUpper=WindUI_ag.Value.Max or WindUI_ag.Value.max or WindUI_ag.Value[2] or ai.Max
+        if type(AetheriaUI_ag.Value)=="table" then
+            initLower=AetheriaUI_ag.Value.Min or AetheriaUI_ag.Value.min or AetheriaUI_ag.Value[1] or ai.Min
+            initUpper=AetheriaUI_ag.Value.Max or AetheriaUI_ag.Value.max or AetheriaUI_ag.Value[2] or ai.Max
         end
         initLower=math.clamp(initLower,ai.Min,ai.Max)
         initUpper=math.clamp(initUpper,initLower,ai.Max)
@@ -9624,7 +9629,7 @@ function WindUI_DualSlider.New(WindUI_af,WindUI_ag)
             return math.floor(v/ai.Step+0.5)*ai.Step
         end
 
-        local isBoxDual=(WindUI_ag.Window and WindUI_ag.Window.TabLayoutType=="Boxes")
+        local isBoxDual=(AetheriaUI_ag.Window and AetheriaUI_ag.Window.TabLayoutType=="Boxes")
         local trackWidth=isBoxDual and 45 or 105
         local valWidth=isBoxDual and 40 or 68
         local rightWidth=trackWidth+valWidth+(isBoxDual and 6 or 8)
@@ -9632,12 +9637,12 @@ function WindUI_DualSlider.New(WindUI_af,WindUI_ag)
         ai.Frame=a.load'y'{
             Title=ai.Title,
             Desc=ai.Desc,
-            Window=WindUI_ag.Window,
-            Parent=WindUI_ag.Parent,
+            Window=AetheriaUI_ag.Window,
+            Parent=AetheriaUI_ag.Parent,
             TextOffset=rightWidth+(isBoxDual and 12 or 15),
             Hover=false,
-            Tab=WindUI_ag.Tab,
-            Index=WindUI_ag.Index,
+            Tab=AetheriaUI_ag.Tab,
+            Index=AetheriaUI_ag.Index,
             ElementTable=ai,
         }
 
@@ -9878,40 +9883,40 @@ function WindUI_DualSlider.New(WindUI_af,WindUI_ag)
 
         return ai.__type,ai
     end)
-    if WindUI_ok then return WindUI_resA,WindUI_resB end
-    warn("[AetheriaUI] DualSlider failed: "..tostring(WindUI_resA))
-    return"DualSlider",{__type="DualSlider",Title=WindUI_ag.Title or"DualSlider"}
+    if AetheriaUI_ok then return AetheriaUI_resA,AetheriaUI_resB end
+    warn("[AetheriaUI] DualSlider failed: "..tostring(AetheriaUI_resA))
+    return"DualSlider",{__type="DualSlider",Title=AetheriaUI_ag.Title or"DualSlider"}
 end
 
 -- ToggleInput: Combines a boolean switch and an editable text box in a single row
-local WindUI_ToggleInput={}
-function WindUI_ToggleInput.New(WindUI_af,WindUI_ag)
-    local WindUI_ok,WindUI_resA,WindUI_resB=pcall(function()
+local AetheriaUI_ToggleInput={}
+function AetheriaUI_ToggleInput.New(AetheriaUI_af,AetheriaUI_ag)
+    local AetheriaUI_ok,AetheriaUI_resA,AetheriaUI_resB=pcall(function()
         local aa=a.load'a'
         local ac=aa.New
         local ad=aa.Tween
         local createSwitch=a.load'B'.New
-        local isLocked=not WindUI_ag.Locked
+        local isLocked=not AetheriaUI_ag.Locked
 
         local initToggle=false
         local initInput=""
-        if type(WindUI_ag.Value)=="table" then
-            initToggle=WindUI_ag.Value.Toggle or WindUI_ag.Value.toggle or WindUI_ag.Value[1] or false
-            initInput=tostring(WindUI_ag.Value.Input or WindUI_ag.Value.input or WindUI_ag.Value.Text or WindUI_ag.Value.text or WindUI_ag.Value[2] or"")
-        elseif type(WindUI_ag.Value)=="boolean" then
-            initToggle=WindUI_ag.Value
-            initInput=tostring(WindUI_ag.Input or WindUI_ag.Text or"")
-        elseif type(WindUI_ag.Value)=="string" then
-            initInput=WindUI_ag.Value
+        if type(AetheriaUI_ag.Value)=="table" then
+            initToggle=AetheriaUI_ag.Value.Toggle or AetheriaUI_ag.Value.toggle or AetheriaUI_ag.Value[1] or false
+            initInput=tostring(AetheriaUI_ag.Value.Input or AetheriaUI_ag.Value.input or AetheriaUI_ag.Value.Text or AetheriaUI_ag.Value.text or AetheriaUI_ag.Value[2] or"")
+        elseif type(AetheriaUI_ag.Value)=="boolean" then
+            initToggle=AetheriaUI_ag.Value
+            initInput=tostring(AetheriaUI_ag.Input or AetheriaUI_ag.Text or"")
+        elseif type(AetheriaUI_ag.Value)=="string" then
+            initInput=AetheriaUI_ag.Value
         end
 
         local ai={
             __type="ToggleInput",
-            Title=WindUI_ag.Title or"ToggleInput",
-            Desc=WindUI_ag.Desc or nil,
-            Locked=WindUI_ag.Locked or false,
-            Placeholder=WindUI_ag.Placeholder or"Enter text...",
-            Callback=WindUI_ag.Callback or function()end,
+            Title=AetheriaUI_ag.Title or"ToggleInput",
+            Desc=AetheriaUI_ag.Desc or nil,
+            Locked=AetheriaUI_ag.Locked or false,
+            Placeholder=AetheriaUI_ag.Placeholder or"Enter text...",
+            Callback=AetheriaUI_ag.Callback or function()end,
             UIElements={},
         }
 
@@ -9919,7 +9924,7 @@ function WindUI_ToggleInput.New(WindUI_af,WindUI_ag)
         local currentInput=initInput
         ai.Value={Toggle=currentToggle,Input=currentInput}
 
-        local isBoxTogIn=(WindUI_ag.Window and WindUI_ag.Window.TabLayoutType=="Boxes")
+        local isBoxTogIn=(AetheriaUI_ag.Window and AetheriaUI_ag.Window.TabLayoutType=="Boxes")
         local inputWidth=isBoxTogIn and 55 or 120
         local switchWidth=isBoxTogIn and 36 or 42
         local inputH=isBoxTogIn and 22 or 34
@@ -9928,12 +9933,12 @@ function WindUI_ToggleInput.New(WindUI_af,WindUI_ag)
         ai.Frame=a.load'y'{
             Title=ai.Title,
             Desc=ai.Desc,
-            Window=WindUI_ag.Window,
-            Parent=WindUI_ag.Parent,
+            Window=AetheriaUI_ag.Window,
+            Parent=AetheriaUI_ag.Parent,
             TextOffset=rightWidth+15,
             Hover=false,
-            Tab=WindUI_ag.Tab,
-            Index=WindUI_ag.Index,
+            Tab=AetheriaUI_ag.Tab,
+            Index=AetheriaUI_ag.Index,
             ElementTable=ai,
         }
 
@@ -9987,7 +9992,7 @@ function WindUI_ToggleInput.New(WindUI_af,WindUI_ag)
             Parent=rightHolder,
         })
 
-        local switchFr,switchObj=createSwitch(currentToggle,WindUI_ag.Icon,switchBtn,function(st)
+        local switchFr,switchObj=createSwitch(currentToggle,AetheriaUI_ag.Icon,switchBtn,function(st)
             if isLocked then
                 currentToggle=st
                 ai.Value.Toggle=st
@@ -10083,40 +10088,40 @@ function WindUI_ToggleInput.New(WindUI_af,WindUI_ag)
 
         return ai.__type,ai
     end)
-    if WindUI_ok then return WindUI_resA,WindUI_resB end
-    warn("[AetheriaUI] ToggleInput failed: "..tostring(WindUI_resA))
-    return"ToggleInput",{__type="ToggleInput",Title=WindUI_ag.Title or"ToggleInput"}
+    if AetheriaUI_ok then return AetheriaUI_resA,AetheriaUI_resB end
+    warn("[AetheriaUI] ToggleInput failed: "..tostring(AetheriaUI_resA))
+    return"ToggleInput",{__type="ToggleInput",Title=AetheriaUI_ag.Title or"ToggleInput"}
 end
 
 -- ToggleKeybind: Combines a boolean switch and a keybind selector in a single row
-local WindUI_ToggleKeybind={}
-function WindUI_ToggleKeybind.New(WindUI_af,WindUI_ag)
-    local WindUI_ok,WindUI_resA,WindUI_resB=pcall(function()
+local AetheriaUI_ToggleKeybind={}
+function AetheriaUI_ToggleKeybind.New(AetheriaUI_af,AetheriaUI_ag)
+    local AetheriaUI_ok,AetheriaUI_resA,AetheriaUI_resB=pcall(function()
         local aa=a.load'a'
         local ac=aa.New
         local ad=aa.Tween
         local createSwitch=a.load'B'.New
         local createKeyBadge=a.load's'.New
-        local isLocked=not WindUI_ag.Locked
+        local isLocked=not AetheriaUI_ag.Locked
 
         local initToggle=false
         local initKey="F"
-        if type(WindUI_ag.Value)=="table" then
-            initToggle=WindUI_ag.Value.Toggle or WindUI_ag.Value.toggle or WindUI_ag.Value[1] or false
-            initKey=tostring(WindUI_ag.Value.Key or WindUI_ag.Value.key or WindUI_ag.Value.Bind or WindUI_ag.Value.bind or WindUI_ag.Value[2] or"F")
-        elseif type(WindUI_ag.Value)=="boolean" then
-            initToggle=WindUI_ag.Value
-            initKey=tostring(WindUI_ag.Key or WindUI_ag.Bind or"F")
-        elseif type(WindUI_ag.Value)=="string" then
-            initKey=WindUI_ag.Value
+        if type(AetheriaUI_ag.Value)=="table" then
+            initToggle=AetheriaUI_ag.Value.Toggle or AetheriaUI_ag.Value.toggle or AetheriaUI_ag.Value[1] or false
+            initKey=tostring(AetheriaUI_ag.Value.Key or AetheriaUI_ag.Value.key or AetheriaUI_ag.Value.Bind or AetheriaUI_ag.Value.bind or AetheriaUI_ag.Value[2] or"F")
+        elseif type(AetheriaUI_ag.Value)=="boolean" then
+            initToggle=AetheriaUI_ag.Value
+            initKey=tostring(AetheriaUI_ag.Key or AetheriaUI_ag.Bind or"F")
+        elseif type(AetheriaUI_ag.Value)=="string" then
+            initKey=AetheriaUI_ag.Value
         end
 
         local ai={
             __type="ToggleKeybind",
-            Title=WindUI_ag.Title or"ToggleKeybind",
-            Desc=WindUI_ag.Desc or nil,
-            Locked=WindUI_ag.Locked or false,
-            Callback=WindUI_ag.Callback or function()end,
+            Title=AetheriaUI_ag.Title or"ToggleKeybind",
+            Desc=AetheriaUI_ag.Desc or nil,
+            Locked=AetheriaUI_ag.Locked or false,
+            Callback=AetheriaUI_ag.Callback or function()end,
             UIElements={},
         }
 
@@ -10125,7 +10130,7 @@ function WindUI_ToggleKeybind.New(WindUI_af,WindUI_ag)
         local isPicking=false
         ai.Value={Toggle=currentToggle,Key=currentKey}
 
-        local isBoxTogKey=(WindUI_ag.Window and WindUI_ag.Window.TabLayoutType=="Boxes")
+        local isBoxTogKey=(AetheriaUI_ag.Window and AetheriaUI_ag.Window.TabLayoutType=="Boxes")
         local swW=isBoxTogKey and 36 or 42
         local boxH=isBoxTogKey and 22 or 34
         local rightWidth=isBoxTogKey and 68 or 95
@@ -10133,12 +10138,12 @@ function WindUI_ToggleKeybind.New(WindUI_af,WindUI_ag)
         ai.Frame=a.load'y'{
             Title=ai.Title,
             Desc=ai.Desc,
-            Window=WindUI_ag.Window,
-            Parent=WindUI_ag.Parent,
+            Window=AetheriaUI_ag.Window,
+            Parent=AetheriaUI_ag.Parent,
             TextOffset=rightWidth+(isBoxTogKey and 6 or 15),
             Hover=false,
-            Tab=WindUI_ag.Tab,
-            Index=WindUI_ag.Index,
+            Tab=AetheriaUI_ag.Tab,
+            Index=AetheriaUI_ag.Index,
             ElementTable=ai,
         }
 
@@ -10219,7 +10224,7 @@ function WindUI_ToggleKeybind.New(WindUI_af,WindUI_ag)
             Parent=rightHolder,
         })
 
-        local switchFr,switchObj=createSwitch(currentToggle,WindUI_ag.Icon,switchBtn,function(st)
+        local switchFr,switchObj=createSwitch(currentToggle,AetheriaUI_ag.Icon,switchBtn,function(st)
             if isLocked then
                 currentToggle=st
                 ai.Value.Toggle=st
@@ -10333,16 +10338,16 @@ function WindUI_ToggleKeybind.New(WindUI_af,WindUI_ag)
 
         return ai.__type,ai
     end)
-    if WindUI_ok then return WindUI_resA,WindUI_resB end
-    warn("[AetheriaUI] ToggleKeybind failed: "..tostring(WindUI_resA))
-    return"ToggleKeybind",{__type="ToggleKeybind",Title=WindUI_ag.Title or"ToggleKeybind"}
+    if AetheriaUI_ok then return AetheriaUI_resA,AetheriaUI_resB end
+    warn("[AetheriaUI] ToggleKeybind failed: "..tostring(AetheriaUI_resA))
+    return"ToggleKeybind",{__type="ToggleKeybind",Title=AetheriaUI_ag.Title or"ToggleKeybind"}
 end
 
 
 -- =========================================================================
 -- Action Button Helper for Composite Modules
 -- =========================================================================
-local function WindUI_CreateActionButton(aa,ac,ad,parent,isBox,btnText,onClick)
+local function AetheriaUI_CreateActionButton(aa,ac,ad,parent,isBox,btnText,onClick)
     local w=isBox and 46 or 70
     local h=isBox and 22 or 34
     local corner=isBox and 6 or 8
@@ -10387,8 +10392,8 @@ end
 -- =========================================================================
 -- 1. ToggleDropdown & 2. ToggleMultiDropdown
 -- =========================================================================
-local function WindUI_CreateToggleDropdown(WindUI_af,WindUI_ag,isMulti)
-    local cfg = (type(WindUI_ag)=="table" and WindUI_ag) or (type(WindUI_af)=="table" and WindUI_af) or {}
+local function AetheriaUI_CreateToggleDropdown(AetheriaUI_af,AetheriaUI_ag,isMulti)
+    local cfg = (type(AetheriaUI_ag)=="table" and AetheriaUI_ag) or (type(AetheriaUI_af)=="table" and AetheriaUI_af) or {}
     local aa=a.load'a'
     local ac=aa.New
     local createSwitch=a.load'B'.New
@@ -10482,7 +10487,7 @@ local function WindUI_CreateToggleDropdown(WindUI_af,WindUI_ag,isMulti)
     local _,dropObj=dropModule.New(dummyFolder,{
         Title=ai.Title,
         Window=cfg.Window,
-        WindUI=cfg.WindUI,
+        AetheriaUI=cfg.AetheriaUI,
         Parent=dummyFolder,
         Values=cfg.Values or cfg.Items or{},
         Value=currentDrop,
@@ -10629,27 +10634,27 @@ local function WindUI_CreateToggleDropdown(WindUI_af,WindUI_ag,isMulti)
     return ai.__type,ai
 end
 
-local WindUI_ToggleDropdown={}
-function WindUI_ToggleDropdown.New(WindUI_af,WindUI_ag)
-    local ok,resA,resB=pcall(function() return WindUI_CreateToggleDropdown(WindUI_af,WindUI_ag,false) end)
+local AetheriaUI_ToggleDropdown={}
+function AetheriaUI_ToggleDropdown.New(AetheriaUI_af,AetheriaUI_ag)
+    local ok,resA,resB=pcall(function() return AetheriaUI_CreateToggleDropdown(AetheriaUI_af,AetheriaUI_ag,false) end)
     if ok then return resA,resB end
     warn("[AetheriaUI] ToggleDropdown failed: "..tostring(resA))
-    return"ToggleDropdown",{__type="ToggleDropdown",Title=(WindUI_ag and WindUI_ag.Title) or (WindUI_af and WindUI_af.Title) or"ToggleDropdown"}
+    return"ToggleDropdown",{__type="ToggleDropdown",Title=(AetheriaUI_ag and AetheriaUI_ag.Title) or (AetheriaUI_af and AetheriaUI_af.Title) or"ToggleDropdown"}
 end
 
-local WindUI_ToggleMultiDropdown={}
-function WindUI_ToggleMultiDropdown.New(WindUI_af,WindUI_ag)
-    local ok,resA,resB=pcall(function() return WindUI_CreateToggleDropdown(WindUI_af,WindUI_ag,true) end)
+local AetheriaUI_ToggleMultiDropdown={}
+function AetheriaUI_ToggleMultiDropdown.New(AetheriaUI_af,AetheriaUI_ag)
+    local ok,resA,resB=pcall(function() return AetheriaUI_CreateToggleDropdown(AetheriaUI_af,AetheriaUI_ag,true) end)
     if ok then return resA,resB end
     warn("[AetheriaUI] ToggleMultiDropdown failed: "..tostring(resA))
-    return"ToggleMultiDropdown",{__type="ToggleMultiDropdown",Title=(WindUI_ag and WindUI_ag.Title) or (WindUI_af and WindUI_af.Title) or"ToggleMultiDropdown"}
+    return"ToggleMultiDropdown",{__type="ToggleMultiDropdown",Title=(AetheriaUI_ag and AetheriaUI_ag.Title) or (AetheriaUI_af and AetheriaUI_af.Title) or"ToggleMultiDropdown"}
 end
 
 -- =========================================================================
 -- 3. ButtonDropdown & 4. ButtonMultiDropdown
 -- =========================================================================
-local function WindUI_CreateButtonDropdown(WindUI_af,WindUI_ag,isMulti)
-    local cfg = (type(WindUI_ag)=="table" and WindUI_ag) or (type(WindUI_af)=="table" and WindUI_af) or {}
+local function AetheriaUI_CreateButtonDropdown(AetheriaUI_af,AetheriaUI_ag,isMulti)
+    local cfg = (type(AetheriaUI_ag)=="table" and AetheriaUI_ag) or (type(AetheriaUI_af)=="table" and AetheriaUI_af) or {}
     local aa=a.load'a'
     local ac=aa.New
     local ad=aa.Tween
@@ -10739,7 +10744,7 @@ local function WindUI_CreateButtonDropdown(WindUI_af,WindUI_ag,isMulti)
     local _,dropObj=dropModule.New(dummyFolder,{
         Title=ai.Title,
         Window=cfg.Window,
-        WindUI=cfg.WindUI,
+        AetheriaUI=cfg.AetheriaUI,
         Parent=dummyFolder,
         Values=cfg.Values or cfg.Items or{},
         Value=currentDrop,
@@ -10768,7 +10773,7 @@ local function WindUI_CreateButtonDropdown(WindUI_af,WindUI_ag,isMulti)
     end
     ai.UIElements.Dropdown=dropObj
 
-    local actionBtn,actionBtnLabel=WindUI_CreateActionButton(aa,ac,ad,rightHolder,isBoxBtnDrop,cfg.ButtonText,function()
+    local actionBtn,actionBtnLabel=AetheriaUI_CreateActionButton(aa,ac,ad,rightHolder,isBoxBtnDrop,cfg.ButtonText,function()
         if isLocked then
             local cb=cfg.ButtonCallback or cfg.ButtonClick or cfg.Callback
             aa.SafeCallback(cb,ai.Value)
@@ -10837,29 +10842,29 @@ local function WindUI_CreateButtonDropdown(WindUI_af,WindUI_ag,isMulti)
     return ai.__type,ai
 end
 
-local WindUI_ButtonDropdown={}
-function WindUI_ButtonDropdown.New(WindUI_af,WindUI_ag)
-    local ok,resA,resB=pcall(function() return WindUI_CreateButtonDropdown(WindUI_af,WindUI_ag,false) end)
+local AetheriaUI_ButtonDropdown={}
+function AetheriaUI_ButtonDropdown.New(AetheriaUI_af,AetheriaUI_ag)
+    local ok,resA,resB=pcall(function() return AetheriaUI_CreateButtonDropdown(AetheriaUI_af,AetheriaUI_ag,false) end)
     if ok then return resA,resB end
     warn("[AetheriaUI] ButtonDropdown failed: "..tostring(resA))
-    return"ButtonDropdown",{__type="ButtonDropdown",Title=(WindUI_ag and WindUI_ag.Title) or (WindUI_af and WindUI_af.Title) or"ButtonDropdown"}
+    return"ButtonDropdown",{__type="ButtonDropdown",Title=(AetheriaUI_ag and AetheriaUI_ag.Title) or (AetheriaUI_af and AetheriaUI_af.Title) or"ButtonDropdown"}
 end
 
-local WindUI_ButtonMultiDropdown={}
-function WindUI_ButtonMultiDropdown.New(WindUI_af,WindUI_ag)
-    local ok,resA,resB=pcall(function() return WindUI_CreateButtonDropdown(WindUI_af,WindUI_ag,true) end)
+local AetheriaUI_ButtonMultiDropdown={}
+function AetheriaUI_ButtonMultiDropdown.New(AetheriaUI_af,AetheriaUI_ag)
+    local ok,resA,resB=pcall(function() return AetheriaUI_CreateButtonDropdown(AetheriaUI_af,AetheriaUI_ag,true) end)
     if ok then return resA,resB end
     warn("[AetheriaUI] ButtonMultiDropdown failed: "..tostring(resA))
-    return"ButtonMultiDropdown",{__type="ButtonMultiDropdown",Title=(WindUI_ag and WindUI_ag.Title) or (WindUI_af and WindUI_af.Title) or"ButtonMultiDropdown"}
+    return"ButtonMultiDropdown",{__type="ButtonMultiDropdown",Title=(AetheriaUI_ag and AetheriaUI_ag.Title) or (AetheriaUI_af and AetheriaUI_af.Title) or"ButtonMultiDropdown"}
 end
 
 -- =========================================================================
 -- 5. ButtonColorPicker
 -- =========================================================================
-local WindUI_ButtonColorPicker={}
-function WindUI_ButtonColorPicker.New(WindUI_af,WindUI_ag)
+local AetheriaUI_ButtonColorPicker={}
+function AetheriaUI_ButtonColorPicker.New(AetheriaUI_af,AetheriaUI_ag)
     local ok,resA,resB=pcall(function()
-        local cfg = (type(WindUI_ag)=="table" and WindUI_ag) or (type(WindUI_af)=="table" and WindUI_af) or {}
+        local cfg = (type(AetheriaUI_ag)=="table" and AetheriaUI_ag) or (type(AetheriaUI_af)=="table" and AetheriaUI_af) or {}
         local aa=a.load'a'
         local ac=aa.New
         local ad=aa.Tween
@@ -10941,7 +10946,7 @@ function WindUI_ButtonColorPicker.New(WindUI_af,WindUI_ag)
             ZIndex=2,
         },nil,true)
 
-        local actionBtn,actionBtnLabel=WindUI_CreateActionButton(aa,ac,ad,rightHolder,isBoxBtnCol,cfg.ButtonText,function()
+        local actionBtn,actionBtnLabel=AetheriaUI_CreateActionButton(aa,ac,ad,rightHolder,isBoxBtnCol,cfg.ButtonText,function()
             if isLocked then
                 local cb=cfg.ButtonCallback or cfg.ButtonClick or cfg.Callback
                 aa.SafeCallback(cb,ai.Value)
@@ -11061,16 +11066,16 @@ function WindUI_ButtonColorPicker.New(WindUI_af,WindUI_ag)
     end)
     if ok then return resA,resB end
     warn("[AetheriaUI] ButtonColorPicker failed: "..tostring(resA))
-    return"ButtonColorPicker",{__type="ButtonColorPicker",Title=(WindUI_ag and WindUI_ag.Title) or (WindUI_af and WindUI_af.Title) or"ButtonColorPicker"}
+    return"ButtonColorPicker",{__type="ButtonColorPicker",Title=(AetheriaUI_ag and AetheriaUI_ag.Title) or (AetheriaUI_af and AetheriaUI_af.Title) or"ButtonColorPicker"}
 end
 
 -- =========================================================================
 -- 6. ButtonSlider
 -- =========================================================================
-local WindUI_ButtonSlider={}
-function WindUI_ButtonSlider.New(WindUI_af,WindUI_ag)
+local AetheriaUI_ButtonSlider={}
+function AetheriaUI_ButtonSlider.New(AetheriaUI_af,AetheriaUI_ag)
     local ok,resA,resB=pcall(function()
-        local cfg = (type(WindUI_ag)=="table" and WindUI_ag) or (type(WindUI_af)=="table" and WindUI_af) or {}
+        local cfg = (type(AetheriaUI_ag)=="table" and AetheriaUI_ag) or (type(AetheriaUI_af)=="table" and AetheriaUI_af) or {}
         local aa=a.load'a'
         local ac=aa.New
         local ad=aa.Tween
@@ -11238,7 +11243,7 @@ function WindUI_ButtonSlider.New(WindUI_af,WindUI_ag)
             end
         end)
 
-        local actionBtn,actionBtnLabel=WindUI_CreateActionButton(aa,ac,ad,rightHolder,isBoxBtnSl,cfg.ButtonText,function()
+        local actionBtn,actionBtnLabel=AetheriaUI_CreateActionButton(aa,ac,ad,rightHolder,isBoxBtnSl,cfg.ButtonText,function()
             if isLocked then
                 local cb=cfg.ButtonCallback or cfg.ButtonClick or cfg.Callback
                 aa.SafeCallback(cb,ai.Value)
@@ -11305,16 +11310,16 @@ function WindUI_ButtonSlider.New(WindUI_af,WindUI_ag)
     end)
     if ok then return resA,resB end
     warn("[AetheriaUI] ButtonSlider failed: "..tostring(resA))
-    return"ButtonSlider",{__type="ButtonSlider",Title=(WindUI_ag and WindUI_ag.Title) or (WindUI_af and WindUI_af.Title) or"ButtonSlider"}
+    return"ButtonSlider",{__type="ButtonSlider",Title=(AetheriaUI_ag and AetheriaUI_ag.Title) or (AetheriaUI_af and AetheriaUI_af.Title) or"ButtonSlider"}
 end
 
 -- =========================================================================
 -- 7. ButtonKeybind
 -- =========================================================================
-local WindUI_ButtonKeybind={}
-function WindUI_ButtonKeybind.New(WindUI_af,WindUI_ag)
+local AetheriaUI_ButtonKeybind={}
+function AetheriaUI_ButtonKeybind.New(AetheriaUI_af,AetheriaUI_ag)
     local ok,resA,resB=pcall(function()
-        local cfg = (type(WindUI_ag)=="table" and WindUI_ag) or (type(WindUI_af)=="table" and WindUI_af) or {}
+        local cfg = (type(AetheriaUI_ag)=="table" and AetheriaUI_ag) or (type(AetheriaUI_af)=="table" and AetheriaUI_af) or {}
         local aa=a.load'a'
         local ac=aa.New
         local ad=aa.Tween
@@ -11472,7 +11477,7 @@ function WindUI_ButtonKeybind.New(WindUI_af,WindUI_ag)
             end
         end)
 
-        local actionBtn,actionBtnLabel=WindUI_CreateActionButton(aa,ac,ad,rightHolder,isBoxBtnKey,cfg.ButtonText,function()
+        local actionBtn,actionBtnLabel=AetheriaUI_CreateActionButton(aa,ac,ad,rightHolder,isBoxBtnKey,cfg.ButtonText,function()
             if isLocked then
                 local cb=cfg.ButtonCallback or cfg.ButtonClick or cfg.Callback
                 aa.SafeCallback(cb,ai.Value)
@@ -11537,16 +11542,16 @@ function WindUI_ButtonKeybind.New(WindUI_af,WindUI_ag)
     end)
     if ok then return resA,resB end
     warn("[AetheriaUI] ButtonKeybind failed: "..tostring(resA))
-    return"ButtonKeybind",{__type="ButtonKeybind",Title=(WindUI_ag and WindUI_ag.Title) or (WindUI_af and WindUI_af.Title) or"ButtonKeybind"}
+    return"ButtonKeybind",{__type="ButtonKeybind",Title=(AetheriaUI_ag and AetheriaUI_ag.Title) or (AetheriaUI_af and AetheriaUI_af.Title) or"ButtonKeybind"}
 end
 
 -- =========================================================================
 -- 8. ButtonInput
 -- =========================================================================
-local WindUI_ButtonInput={}
-function WindUI_ButtonInput.New(WindUI_af,WindUI_ag)
+local AetheriaUI_ButtonInput={}
+function AetheriaUI_ButtonInput.New(AetheriaUI_af,AetheriaUI_ag)
     local ok,resA,resB=pcall(function()
-        local cfg = (type(WindUI_ag)=="table" and WindUI_ag) or (type(WindUI_af)=="table" and WindUI_af) or {}
+        local cfg = (type(AetheriaUI_ag)=="table" and AetheriaUI_ag) or (type(AetheriaUI_af)=="table" and AetheriaUI_af) or {}
         local aa=a.load'a'
         local ac=aa.New
         local ad=aa.Tween
@@ -11635,7 +11640,7 @@ function WindUI_ButtonInput.New(WindUI_af,WindUI_ag)
             end
         end)
 
-        local actionBtn,actionBtnLabel=WindUI_CreateActionButton(aa,ac,ad,rightHolder,isBoxBtnIn,cfg.ButtonText or"Submit",function()
+        local actionBtn,actionBtnLabel=AetheriaUI_CreateActionButton(aa,ac,ad,rightHolder,isBoxBtnIn,cfg.ButtonText or"Submit",function()
             if isLocked then
                 currentInput=textBox.Text
                 ai.Value.Input=currentInput
@@ -11703,7 +11708,7 @@ function WindUI_ButtonInput.New(WindUI_af,WindUI_ag)
     end)
     if ok then return resA,resB end
     warn("[AetheriaUI] ButtonInput failed: "..tostring(resA))
-    return"ButtonInput",{__type="ButtonInput",Title=(WindUI_ag and WindUI_ag.Title) or (WindUI_af and WindUI_af.Title) or"ButtonInput"}
+    return"ButtonInput",{__type="ButtonInput",Title=(AetheriaUI_ag and AetheriaUI_ag.Title) or (AetheriaUI_af and AetheriaUI_af.Title) or"ButtonInput"}
 end
 
 
@@ -11721,32 +11726,32 @@ Colorpicker=a.load'L',
 Section=a.load'M',
 Divider=a.load'N',
 Space=a.load'O',
-Multidropdown=WindUI_Multidropdown,
-Checkboxtoggle=WindUI_Checkboxtoggle,
-Textinfo=WindUI_Textinfo,
-Textbox=WindUI_Textbox,
-TextDivider=WindUI_TextDivider,
-ToggleSlider=WindUI_ToggleSlider,
-ToggleColorpicker=WindUI_ToggleColorpicker,
-ProgressBar=WindUI_ProgressBar,
-StatCard=WindUI_StatCard,
-ButtonGroup=WindUI_ButtonGroup,
-ToggleGroup=WindUI_ToggleGroup,
-SocialCard=WindUI_SocialCard,
-DualSlider=WindUI_DualSlider,
-ToggleInput=WindUI_ToggleInput,
-ToggleKeybind=WindUI_ToggleKeybind,
-ToggleDropdown=WindUI_ToggleDropdown,
-ToggleMultiDropdown=WindUI_ToggleMultiDropdown,
-ToggleMultidropdown=WindUI_ToggleMultiDropdown,
-ButtonDropdown=WindUI_ButtonDropdown,
-ButtonMultiDropdown=WindUI_ButtonMultiDropdown,
-ButtonMultidropdown=WindUI_ButtonMultiDropdown,
-ButtonColorPicker=WindUI_ButtonColorPicker,
-ButtonColorpicker=WindUI_ButtonColorPicker,
-ButtonSlider=WindUI_ButtonSlider,
-ButtonKeybind=WindUI_ButtonKeybind,
-ButtonInput=WindUI_ButtonInput,
+Multidropdown=AetheriaUI_Multidropdown,
+Checkboxtoggle=AetheriaUI_Checkboxtoggle,
+Textinfo=AetheriaUI_Textinfo,
+Textbox=AetheriaUI_Textbox,
+TextDivider=AetheriaUI_TextDivider,
+ToggleSlider=AetheriaUI_ToggleSlider,
+ToggleColorpicker=AetheriaUI_ToggleColorpicker,
+ProgressBar=AetheriaUI_ProgressBar,
+StatCard=AetheriaUI_StatCard,
+ButtonGroup=AetheriaUI_ButtonGroup,
+ToggleGroup=AetheriaUI_ToggleGroup,
+SocialCard=AetheriaUI_SocialCard,
+DualSlider=AetheriaUI_DualSlider,
+ToggleInput=AetheriaUI_ToggleInput,
+ToggleKeybind=AetheriaUI_ToggleKeybind,
+ToggleDropdown=AetheriaUI_ToggleDropdown,
+ToggleMultiDropdown=AetheriaUI_ToggleMultiDropdown,
+ToggleMultidropdown=AetheriaUI_ToggleMultiDropdown,
+ButtonDropdown=AetheriaUI_ButtonDropdown,
+ButtonMultiDropdown=AetheriaUI_ButtonMultiDropdown,
+ButtonMultidropdown=AetheriaUI_ButtonMultiDropdown,
+ButtonColorPicker=AetheriaUI_ButtonColorPicker,
+ButtonColorpicker=AetheriaUI_ButtonColorPicker,
+ButtonSlider=AetheriaUI_ButtonSlider,
+ButtonKeybind=AetheriaUI_ButtonKeybind,
+ButtonInput=AetheriaUI_ButtonInput,
 },
 Load=function(aa,ac,ae,af,ag,ah,ai,aj)
 for ak,al in next,ae do
@@ -11768,7 +11773,7 @@ an.Index=#aa.Elements+1
 an.GlobalIndex=#af.AllElements+1
 an.Parent=ac
 an.Window=af
-an.WindUI=ag
+an.AetheriaUI=ag
 an.UIScale=aj
 an.ElementsModule=ai local
 
@@ -11896,7 +11901,7 @@ OnChangeFunc=function(ai)end
 
 function ai.Init(aj,ak,al,am)
 Window=aj
-WindUI=ak
+AetheriaUI=ak
 ai.ToolTipParent=al
 ai.TabHighlight=am
 return ai
@@ -12201,7 +12206,7 @@ end)
 
 al.ElementsModule=a.load'P'
 
-al.ElementsModule.Load(al,al.UIElements.ContainerFrame,al.ElementsModule.Elements,Window,WindUI,nil,al.ElementsModule,ak)
+al.ElementsModule.Load(al,al.UIElements.ContainerFrame,al.ElementsModule.Elements,Window,AetheriaUI,nil,al.ElementsModule,ak)
 
 
 
@@ -13285,7 +13290,7 @@ ao.Resizable=true
 end
 
 if ao.Folder then
-makefolder("WindUI/"..ao.Folder)
+makefolder("AetheriaUI/"..ao.Folder)
 end
 
 local aq=ag("UICorner",{
@@ -13987,7 +13992,7 @@ end
 -- contains the query. Clicking a result switches to its tab, scrolls its section into
 -- view, and briefly outlines it in the current theme's accent color.
 function ao.CreateSearchBar(j,p)
-local WindUI_Search_Box=ag("TextBox",{
+local AetheriaUI_Search_Box=ag("TextBox",{
 Name="SearchInput",
 BackgroundTransparency=1,
 Size=UDim2.new(1,-16,1,0),
@@ -14001,7 +14006,7 @@ ThemeTag={TextColor3="Text",PlaceholderColor3="Placeholder"},
 FontFace=Font.new(af.Font,Enum.FontWeight.Regular),
 })
 
-local WindUI_Search_Container=af.NewRoundFrame(9,"Squircle",{
+local AetheriaUI_Search_Container=af.NewRoundFrame(9,"Squircle",{
 Size=UDim2.new(0,200,0,30),
 LayoutOrder=p or 500,
 Parent=ao.UIElements.Main.Main.Topbar.Center,
@@ -14009,10 +14014,10 @@ ThemeTag={ImageColor3="Dialog"},
 ImageTransparency=.15,
 ZIndex=20,
 },{
-WindUI_Search_Box,
+AetheriaUI_Search_Box,
 })
 
-local WindUI_Search_Results=ag("ScrollingFrame",{
+local AetheriaUI_Search_Results=ag("ScrollingFrame",{
 Name="SearchResults",
 Size=UDim2.new(0,300,0,0),
 Position=UDim2.new(0,0,0,0),
@@ -14041,125 +14046,125 @@ ag("UIListLayout",{SortOrder=Enum.SortOrder.LayoutOrder,Padding=UDim.new(0,4)}),
 ag("UIPadding",{PaddingTop=UDim.new(0,6),PaddingBottom=UDim.new(0,6),PaddingLeft=UDim.new(0,6),PaddingRight=UDim.new(0,6)}),
 })
 
-local function WindUI_Search_UpdatePosition()
-if not WindUI_Search_Container or not ao.UIElements.Main or not WindUI_Search_Results or not WindUI_Search_Results.Visible then return end
-local cPos=WindUI_Search_Container.AbsolutePosition
+local function AetheriaUI_Search_UpdatePosition()
+if not AetheriaUI_Search_Container or not ao.UIElements.Main or not AetheriaUI_Search_Results or not AetheriaUI_Search_Results.Visible then return end
+local cPos=AetheriaUI_Search_Container.AbsolutePosition
 local mPos=ao.UIElements.Main.AbsolutePosition
-local cSize=WindUI_Search_Container.AbsoluteSize
+local cSize=AetheriaUI_Search_Container.AbsoluteSize
 local relX=(cPos.X-mPos.X)+(cSize.X/2)
 local relY=(cPos.Y-mPos.Y)+cSize.Y+6
-WindUI_Search_Results.Position=UDim2.new(0,relX,0,relY)
+AetheriaUI_Search_Results.Position=UDim2.new(0,relX,0,relY)
 end
-af.AddSignal(WindUI_Search_Container:GetPropertyChangedSignal("AbsolutePosition"),WindUI_Search_UpdatePosition)
+af.AddSignal(AetheriaUI_Search_Container:GetPropertyChangedSignal("AbsolutePosition"),AetheriaUI_Search_UpdatePosition)
 
-local function WindUI_Search_GetMainFrame(WindUI_Search_el)
-if not WindUI_Search_el then return nil end
-if WindUI_Search_el.UIElements and WindUI_Search_el.UIElements.Main then
-return WindUI_Search_el.UIElements.Main
+local function AetheriaUI_Search_GetMainFrame(AetheriaUI_Search_el)
+if not AetheriaUI_Search_el then return nil end
+if AetheriaUI_Search_el.UIElements and AetheriaUI_Search_el.UIElements.Main then
+return AetheriaUI_Search_el.UIElements.Main
 end
-if WindUI_Search_el.Frame and typeof(WindUI_Search_el.Frame)=="Instance" then
-return WindUI_Search_el.Frame
+if AetheriaUI_Search_el.Frame and typeof(AetheriaUI_Search_el.Frame)=="Instance" then
+return AetheriaUI_Search_el.Frame
 end
-for WindUI_Search_k,WindUI_Search_v in pairs(WindUI_Search_el)do
-if type(WindUI_Search_v)=="table" and type(WindUI_Search_k)=="string" and WindUI_Search_k:match("Frame$") then
-if WindUI_Search_v.UIElements and WindUI_Search_v.UIElements.Main then
-return WindUI_Search_v.UIElements.Main
+for AetheriaUI_Search_k,AetheriaUI_Search_v in pairs(AetheriaUI_Search_el)do
+if type(AetheriaUI_Search_v)=="table" and type(AetheriaUI_Search_k)=="string" and AetheriaUI_Search_k:match("Frame$") then
+if AetheriaUI_Search_v.UIElements and AetheriaUI_Search_v.UIElements.Main then
+return AetheriaUI_Search_v.UIElements.Main
 end
-if WindUI_Search_v.Frame and typeof(WindUI_Search_v.Frame)=="Instance" then
-return WindUI_Search_v.Frame
+if AetheriaUI_Search_v.Frame and typeof(AetheriaUI_Search_v.Frame)=="Instance" then
+return AetheriaUI_Search_v.Frame
 end
 end
 end
 return nil
 end
 
-local function WindUI_Search_ClearResults()
+local function AetheriaUI_Search_ClearResults()
 pcall(function()
-WindUI_Search_Results.CanvasPosition=Vector2.new(0,0)
+AetheriaUI_Search_Results.CanvasPosition=Vector2.new(0,0)
 end)
-local WindUI_ThemeMod
-pcall(function()WindUI_ThemeMod=a.load'b'end)
-for _,WindUI_Search_child in ipairs(WindUI_Search_Results:GetChildren())do
-if WindUI_Search_child:IsA("GuiObject") and not WindUI_Search_child:IsA("UIListLayout") and not WindUI_Search_child:IsA("UIPadding") and not WindUI_Search_child:IsA("UICorner") and not WindUI_Search_child:IsA("UIStroke") then
+local AetheriaUI_ThemeMod
+pcall(function()AetheriaUI_ThemeMod=a.load'b'end)
+for _,AetheriaUI_Search_child in ipairs(AetheriaUI_Search_Results:GetChildren())do
+if AetheriaUI_Search_child:IsA("GuiObject") and not AetheriaUI_Search_child:IsA("UIListLayout") and not AetheriaUI_Search_child:IsA("UIPadding") and not AetheriaUI_Search_child:IsA("UICorner") and not AetheriaUI_Search_child:IsA("UIStroke") then
 pcall(function()
-if WindUI_ThemeMod and WindUI_ThemeMod.Objects then
-for _,desc in ipairs(WindUI_Search_child:GetDescendants()) do
-WindUI_ThemeMod.Objects[desc]=nil
+if AetheriaUI_ThemeMod and AetheriaUI_ThemeMod.Objects then
+for _,desc in ipairs(AetheriaUI_Search_child:GetDescendants()) do
+AetheriaUI_ThemeMod.Objects[desc]=nil
 end
-WindUI_ThemeMod.Objects[WindUI_Search_child]=nil
+AetheriaUI_ThemeMod.Objects[AetheriaUI_Search_child]=nil
 end
 end)
 pcall(function()
-WindUI_Search_child:Destroy()
+AetheriaUI_Search_child:Destroy()
 end)
 end
 end
 end
 
-local function WindUI_Search_Jump(WindUI_Search_el)
-local WindUI_Search_frame=WindUI_Search_GetMainFrame(WindUI_Search_el)
-if not WindUI_Search_frame then return end
+local function AetheriaUI_Search_Jump(AetheriaUI_Search_el)
+local AetheriaUI_Search_frame=AetheriaUI_Search_GetMainFrame(AetheriaUI_Search_el)
+if not AetheriaUI_Search_frame then return end
 
-local WindUI_Search_realTab=nil
-local WindUI_Search_cur=WindUI_Search_el
-local WindUI_Search_sections={}
-while WindUI_Search_cur do
-if WindUI_Search_cur.__type=="Section" then
-table.insert(WindUI_Search_sections,WindUI_Search_cur)
+local AetheriaUI_Search_realTab=nil
+local AetheriaUI_Search_cur=AetheriaUI_Search_el
+local AetheriaUI_Search_sections={}
+while AetheriaUI_Search_cur do
+if AetheriaUI_Search_cur.__type=="Section" then
+table.insert(AetheriaUI_Search_sections,AetheriaUI_Search_cur)
 end
-if WindUI_Search_cur.UIElements and WindUI_Search_cur.UIElements.ContainerFrame then
-WindUI_Search_realTab=WindUI_Search_cur
+if AetheriaUI_Search_cur.UIElements and AetheriaUI_Search_cur.UIElements.ContainerFrame then
+AetheriaUI_Search_realTab=AetheriaUI_Search_cur
 break
 end
-if WindUI_Search_cur.Tab and WindUI_Search_cur.Tab~=WindUI_Search_cur then
-WindUI_Search_cur=WindUI_Search_cur.Tab
+if AetheriaUI_Search_cur.Tab and AetheriaUI_Search_cur.Tab~=AetheriaUI_Search_cur then
+AetheriaUI_Search_cur=AetheriaUI_Search_cur.Tab
 else
 break
 end
 end
 
-if WindUI_Search_realTab and WindUI_Search_realTab.Index and ao.TabManager then
+if AetheriaUI_Search_realTab and AetheriaUI_Search_realTab.Index and ao.TabManager then
 pcall(function()
-ao.TabManager:SelectTab(WindUI_Search_realTab.Index)
+ao.TabManager:SelectTab(AetheriaUI_Search_realTab.Index)
 end)
 end
 
-for _,WindUI_Search_sec in ipairs(WindUI_Search_sections)do
-if WindUI_Search_sec.Open and not WindUI_Search_sec.Opened then
-pcall(function()WindUI_Search_sec:Open()end)
+for _,AetheriaUI_Search_sec in ipairs(AetheriaUI_Search_sections)do
+if AetheriaUI_Search_sec.Open and not AetheriaUI_Search_sec.Opened then
+pcall(function()AetheriaUI_Search_sec:Open()end)
 end
 end
 
 task.wait(0.1)
 pcall(function()
-local WindUI_Search_canvas=WindUI_Search_realTab and WindUI_Search_realTab.UIElements and WindUI_Search_realTab.UIElements.ContainerFrame
-if WindUI_Search_canvas and WindUI_Search_canvas:IsA("ScrollingFrame") then
-local WindUI_Search_targetY=(WindUI_Search_frame.AbsolutePosition.Y-WindUI_Search_canvas.AbsolutePosition.Y)+WindUI_Search_canvas.CanvasPosition.Y-20
-WindUI_Search_canvas.CanvasPosition=Vector2.new(0,math.max(0,WindUI_Search_targetY))
+local AetheriaUI_Search_canvas=AetheriaUI_Search_realTab and AetheriaUI_Search_realTab.UIElements and AetheriaUI_Search_realTab.UIElements.ContainerFrame
+if AetheriaUI_Search_canvas and AetheriaUI_Search_canvas:IsA("ScrollingFrame") then
+local AetheriaUI_Search_targetY=(AetheriaUI_Search_frame.AbsolutePosition.Y-AetheriaUI_Search_canvas.AbsolutePosition.Y)+AetheriaUI_Search_canvas.CanvasPosition.Y-20
+AetheriaUI_Search_canvas.CanvasPosition=Vector2.new(0,math.max(0,AetheriaUI_Search_targetY))
 end
 end)
 
 pcall(function()
-local WindUI_Search_highlight=WindUI_Search_frame:FindFirstChild("WindUI_SearchHighlight")
-if not WindUI_Search_highlight then
-WindUI_Search_highlight=Instance.new("UIStroke")
-WindUI_Search_highlight.Name="WindUI_SearchHighlight"
-WindUI_Search_highlight.Thickness=2
-WindUI_Search_highlight.ApplyStrokeMode=Enum.ApplyStrokeMode.Border
-WindUI_Search_highlight.Parent=WindUI_Search_frame
+local AetheriaUI_Search_highlight=AetheriaUI_Search_frame:FindFirstChild("AetheriaUI_SearchHighlight")
+if not AetheriaUI_Search_highlight then
+AetheriaUI_Search_highlight=Instance.new("UIStroke")
+AetheriaUI_Search_highlight.Name="AetheriaUI_SearchHighlight"
+AetheriaUI_Search_highlight.Thickness=2
+AetheriaUI_Search_highlight.ApplyStrokeMode=Enum.ApplyStrokeMode.Border
+AetheriaUI_Search_highlight.Parent=AetheriaUI_Search_frame
 end
-local WindUI_Search_accent=(af.Theme and af.Theme.Accent)or"#733dd1"
-WindUI_Search_highlight.Color=Color3.fromHex(WindUI_Search_accent)
-WindUI_Search_highlight.Transparency=0
+local AetheriaUI_Search_accent=(af.Theme and af.Theme.Accent)or"#733dd1"
+AetheriaUI_Search_highlight.Color=Color3.fromHex(AetheriaUI_Search_accent)
+AetheriaUI_Search_highlight.Transparency=0
 task.delay(2,function()
-if WindUI_Search_highlight then
-WindUI_Search_highlight.Transparency=1
+if AetheriaUI_Search_highlight then
+AetheriaUI_Search_highlight.Transparency=1
 end
 end)
 end)
 end
 
-local WindUI_Search_TypeIcons={
+local AetheriaUI_Search_TypeIcons={
 Toggle="toggle-right",
 Checkboxtoggle="check-square",
 Slider="sliders-horizontal",
@@ -14188,14 +14193,14 @@ ToggleInput="text-cursor-input",
 ToggleKeybind="command",
 }
 
-local function WindUI_Search_GetTabName(WindUI_Search_el)
-local WindUI_Search_cur=WindUI_Search_el
-while WindUI_Search_cur do
-if WindUI_Search_cur.Title and WindUI_Search_cur.UIElements and WindUI_Search_cur.UIElements.ContainerFrame then
-return tostring(WindUI_Search_cur.Title)
+local function AetheriaUI_Search_GetTabName(AetheriaUI_Search_el)
+local AetheriaUI_Search_cur=AetheriaUI_Search_el
+while AetheriaUI_Search_cur do
+if AetheriaUI_Search_cur.Title and AetheriaUI_Search_cur.UIElements and AetheriaUI_Search_cur.UIElements.ContainerFrame then
+return tostring(AetheriaUI_Search_cur.Title)
 end
-if WindUI_Search_cur.Tab and WindUI_Search_cur.Tab~=WindUI_Search_cur then
-WindUI_Search_cur=WindUI_Search_cur.Tab
+if AetheriaUI_Search_cur.Tab and AetheriaUI_Search_cur.Tab~=AetheriaUI_Search_cur then
+AetheriaUI_Search_cur=AetheriaUI_Search_cur.Tab
 else
 break
 end
@@ -14203,32 +14208,32 @@ end
 return nil
 end
 
-local function WindUI_Search_Update()
+local function AetheriaUI_Search_Update()
 pcall(function()
-local WindUI_Search_query=WindUI_Search_Box.Text:lower()
-WindUI_Search_ClearResults()
+local AetheriaUI_Search_query=AetheriaUI_Search_Box.Text:lower()
+AetheriaUI_Search_ClearResults()
 
-if WindUI_Search_query=="" then
-WindUI_Search_Results.Visible=false
+if AetheriaUI_Search_query=="" then
+AetheriaUI_Search_Results.Visible=false
 return
 end
 
-WindUI_Search_UpdatePosition()
+AetheriaUI_Search_UpdatePosition()
 
-local WindUI_Search_matches={}
-for _,WindUI_Search_el in pairs(ao.AllElements)do
-local WindUI_Search_title=tostring(WindUI_Search_el.Title or""):lower()
-if WindUI_Search_title~="" and WindUI_Search_title:find(WindUI_Search_query,1,true) then
-table.insert(WindUI_Search_matches,WindUI_Search_el)
-if #WindUI_Search_matches>=30 then break end
+local AetheriaUI_Search_matches={}
+for _,AetheriaUI_Search_el in pairs(ao.AllElements)do
+local AetheriaUI_Search_title=tostring(AetheriaUI_Search_el.Title or""):lower()
+if AetheriaUI_Search_title~="" and AetheriaUI_Search_title:find(AetheriaUI_Search_query,1,true) then
+table.insert(AetheriaUI_Search_matches,AetheriaUI_Search_el)
+if #AetheriaUI_Search_matches>=30 then break end
 end
 end
 
-if #WindUI_Search_matches==0 then
-local WindUI_NoResult=ag("Frame",{
+if #AetheriaUI_Search_matches==0 then
+local AetheriaUI_NoResult=ag("Frame",{
 Size=UDim2.new(1,0,0,34),
 BackgroundTransparency=1,
-Parent=WindUI_Search_Results,
+Parent=AetheriaUI_Search_Results,
 },{
 ag("TextLabel",{
 Size=UDim2.new(1,0,1,0),
@@ -14241,73 +14246,73 @@ FontFace=Font.new(af.Font,Enum.FontWeight.Medium),
 TextXAlignment=Enum.TextXAlignment.Center,
 })
 })
-WindUI_Search_Results.Size=UDim2.new(0,300,0,46)
-WindUI_Search_Results.CanvasSize=UDim2.new(0,0,0,46)
-WindUI_Search_Results.CanvasPosition=Vector2.new(0,0)
-WindUI_Search_Results.Visible=true
+AetheriaUI_Search_Results.Size=UDim2.new(0,300,0,46)
+AetheriaUI_Search_Results.CanvasSize=UDim2.new(0,0,0,46)
+AetheriaUI_Search_Results.CanvasPosition=Vector2.new(0,0)
+AetheriaUI_Search_Results.Visible=true
 return
 end
 
-local WindUI_itemH=34
-local WindUI_visibleCount=math.min(#WindUI_Search_matches,6)
-local WindUI_visibleH=WindUI_visibleCount*WindUI_itemH+(WindUI_visibleCount-1)*4+12
-local WindUI_totalH=#WindUI_Search_matches*WindUI_itemH+(#WindUI_Search_matches-1)*4+12
-WindUI_Search_Results.Size=UDim2.new(0,300,0,WindUI_visibleH)
-WindUI_Search_Results.CanvasSize=UDim2.new(0,0,0,WindUI_totalH)
-WindUI_Search_Results.CanvasPosition=Vector2.new(0,0)
+local AetheriaUI_itemH=34
+local AetheriaUI_visibleCount=math.min(#AetheriaUI_Search_matches,6)
+local AetheriaUI_visibleH=AetheriaUI_visibleCount*AetheriaUI_itemH+(AetheriaUI_visibleCount-1)*4+12
+local AetheriaUI_totalH=#AetheriaUI_Search_matches*AetheriaUI_itemH+(#AetheriaUI_Search_matches-1)*4+12
+AetheriaUI_Search_Results.Size=UDim2.new(0,300,0,AetheriaUI_visibleH)
+AetheriaUI_Search_Results.CanvasSize=UDim2.new(0,0,0,AetheriaUI_totalH)
+AetheriaUI_Search_Results.CanvasPosition=Vector2.new(0,0)
 
-for _,WindUI_Search_el in ipairs(WindUI_Search_matches)do
+for _,AetheriaUI_Search_el in ipairs(AetheriaUI_Search_matches)do
 pcall(function()
-local WindUI_elType=tostring(WindUI_Search_el.__type or"")
-local WindUI_iconName=WindUI_Search_TypeIcons[WindUI_elType] or"search"
-local WindUI_tabName=WindUI_Search_GetTabName(WindUI_Search_el)
+local AetheriaUI_elType=tostring(AetheriaUI_Search_el.__type or"")
+local AetheriaUI_iconName=AetheriaUI_Search_TypeIcons[AetheriaUI_elType] or"search"
+local AetheriaUI_tabName=AetheriaUI_Search_GetTabName(AetheriaUI_Search_el)
 
-local WindUI_Search_item=ag("TextButton",{
+local AetheriaUI_Search_item=ag("TextButton",{
 Size=UDim2.new(1,0,0,34),
 BackgroundTransparency=1,
 AutoButtonColor=false,
 Text="",
 ThemeTag={BackgroundColor3="Text"},
-Parent=WindUI_Search_Results,
+Parent=AetheriaUI_Search_Results,
 },{
 ag("UICorner",{CornerRadius=UDim.new(0,7)}),
 })
 
-local WindUI_iconImg=nil
+local AetheriaUI_iconImg=nil
 pcall(function()
-WindUI_iconImg=af.Image(WindUI_iconName,WindUI_iconName,0,ao.Folder,"SearchIcon",true)
-if WindUI_iconImg then
-WindUI_iconImg.Size=UDim2.new(0,16,0,16)
-WindUI_iconImg.Position=UDim2.new(0,8,0.5,0)
-WindUI_iconImg.AnchorPoint=Vector2.new(0,0.5)
-WindUI_iconImg.Parent=WindUI_Search_item
+AetheriaUI_iconImg=af.Image(AetheriaUI_iconName,AetheriaUI_iconName,0,ao.Folder,"SearchIcon",true)
+if AetheriaUI_iconImg then
+AetheriaUI_iconImg.Size=UDim2.new(0,16,0,16)
+AetheriaUI_iconImg.Position=UDim2.new(0,8,0.5,0)
+AetheriaUI_iconImg.AnchorPoint=Vector2.new(0,0.5)
+AetheriaUI_iconImg.Parent=AetheriaUI_Search_item
 end
 end)
 
-local WindUI_titleOffset=WindUI_iconImg and 32 or 10
-local WindUI_rightPadding=WindUI_tabName and 82 or 10
+local AetheriaUI_titleOffset=AetheriaUI_iconImg and 32 or 10
+local AetheriaUI_rightPadding=AetheriaUI_tabName and 82 or 10
 
 ag("TextLabel",{
-Size=UDim2.new(1,-WindUI_titleOffset-WindUI_rightPadding,1,0),
-Position=UDim2.new(0,WindUI_titleOffset,0,0),
+Size=UDim2.new(1,-AetheriaUI_titleOffset-AetheriaUI_rightPadding,1,0),
+Position=UDim2.new(0,AetheriaUI_titleOffset,0,0),
 BackgroundTransparency=1,
-Text=tostring(WindUI_Search_el.Title or"?"),
+Text=tostring(AetheriaUI_Search_el.Title or"?"),
 TextSize=13,
 TextTruncate=Enum.TextTruncate.AtEnd,
 TextXAlignment=Enum.TextXAlignment.Left,
 ThemeTag={TextColor3="Text"},
 FontFace=Font.new(af.Font,Enum.FontWeight.Medium),
-Parent=WindUI_Search_item,
+Parent=AetheriaUI_Search_item,
 })
 
-if WindUI_tabName then
-local WindUI_tabBadge=ag("Frame",{
+if AetheriaUI_tabName then
+local AetheriaUI_tabBadge=ag("Frame",{
 Size=UDim2.new(0,70,0,20),
 Position=UDim2.new(1,-6,0.5,0),
 AnchorPoint=Vector2.new(1,0.5),
 BackgroundTransparency=0.88,
 ThemeTag={BackgroundColor3="Text"},
-Parent=WindUI_Search_item,
+Parent=AetheriaUI_Search_item,
 },{
 ag("UICorner",{CornerRadius=UDim.new(0,5)}),
 ag("TextLabel",{
@@ -14315,7 +14320,7 @@ Size=UDim2.new(1,-8,1,0),
 Position=UDim2.new(0.5,0,0.5,0),
 AnchorPoint=Vector2.new(0.5,0.5),
 BackgroundTransparency=1,
-Text=WindUI_tabName,
+Text=AetheriaUI_tabName,
 TextSize=10,
 TextTruncate=Enum.TextTruncate.AtEnd,
 TextXAlignment=Enum.TextXAlignment.Center,
@@ -14325,52 +14330,52 @@ FontFace=Font.new(af.Font,Enum.FontWeight.Medium),
 })
 end
 
-af.AddSignal(WindUI_Search_item.MouseEnter,function()
-ah(WindUI_Search_item,0.1,{BackgroundTransparency=0.9}):Play()
+af.AddSignal(AetheriaUI_Search_item.MouseEnter,function()
+ah(AetheriaUI_Search_item,0.1,{BackgroundTransparency=0.9}):Play()
 end)
-af.AddSignal(WindUI_Search_item.MouseLeave,function()
-ah(WindUI_Search_item,0.1,{BackgroundTransparency=1}):Play()
+af.AddSignal(AetheriaUI_Search_item.MouseLeave,function()
+ah(AetheriaUI_Search_item,0.1,{BackgroundTransparency=1}):Play()
 end)
 
-af.AddSignal(WindUI_Search_item.MouseButton1Click,function()
-WindUI_Search_Results.Visible=false
-WindUI_Search_Box.Text=""
+af.AddSignal(AetheriaUI_Search_item.MouseButton1Click,function()
+AetheriaUI_Search_Results.Visible=false
+AetheriaUI_Search_Box.Text=""
 task.spawn(function()
-WindUI_Search_Jump(WindUI_Search_el)
+AetheriaUI_Search_Jump(AetheriaUI_Search_el)
 end)
 end)
 end)
 end
 
-WindUI_Search_Results.Visible=true
+AetheriaUI_Search_Results.Visible=true
 end)
 end
 
-af.AddSignal(WindUI_Search_Box:GetPropertyChangedSignal("Text"),WindUI_Search_Update)
-af.AddSignal(WindUI_Search_Box.Focused,function()
-if WindUI_Search_Box.Text~="" and not WindUI_Search_Results.Visible then
-WindUI_Search_Update()
+af.AddSignal(AetheriaUI_Search_Box:GetPropertyChangedSignal("Text"),AetheriaUI_Search_Update)
+af.AddSignal(AetheriaUI_Search_Box.Focused,function()
+if AetheriaUI_Search_Box.Text~="" and not AetheriaUI_Search_Results.Visible then
+AetheriaUI_Search_Update()
 end
 end)
 
 af.AddSignal(game:GetService("UserInputService").InputBegan,function(input)
 if input.UserInputType==Enum.UserInputType.MouseButton1 or input.UserInputType==Enum.UserInputType.Touch then
-if WindUI_Search_Results.Visible then
+if AetheriaUI_Search_Results.Visible then
 local mousePos=input.Position
-local rPos=WindUI_Search_Results.AbsolutePosition
-local rSize=WindUI_Search_Results.AbsoluteSize
-local cPos=WindUI_Search_Container.AbsolutePosition
-local cSize=WindUI_Search_Container.AbsoluteSize
+local rPos=AetheriaUI_Search_Results.AbsolutePosition
+local rSize=AetheriaUI_Search_Results.AbsoluteSize
+local cPos=AetheriaUI_Search_Container.AbsolutePosition
+local cSize=AetheriaUI_Search_Container.AbsoluteSize
 local inResults=(mousePos.X>=rPos.X and mousePos.X<=rPos.X+rSize.X and mousePos.Y>=rPos.Y and mousePos.Y<=rPos.Y+rSize.Y)
 local inContainer=(mousePos.X>=cPos.X and mousePos.X<=cPos.X+cSize.X and mousePos.Y>=cPos.Y and mousePos.Y<=cPos.Y+cSize.Y)
 if not inResults and not inContainer then
-WindUI_Search_Results.Visible=false
+AetheriaUI_Search_Results.Visible=false
 end
 end
 end
 end)
 
-return WindUI_Search_Container
+return AetheriaUI_Search_Container
 end
 
 
@@ -14397,7 +14402,7 @@ local state=l
 if state==nil and type(j)=="boolean"then
 state=j
 end
-ao.UIElements.Main:SetAttribute("WindUI_SmoothDragging",state==true)
+ao.UIElements.Main:SetAttribute("AetheriaUI_SmoothDragging",state==true)
 end
 
 if not aB and ao.Background and typeof(ao.Background)=="table"then
@@ -14410,7 +14415,7 @@ end
 ao.UIElements.BackgroundGradient=af.NewRoundFrame(ao.UICorner,"Squircle",{
 Size=UDim2.new(1,0,1,0),
 Parent=ao.UIElements.Main.Background,
-ImageTransparency=ao.Transparent and an.WindUI.TransparencyValue or 0
+ImageTransparency=ao.Transparent and an.AetheriaUI.TransparencyValue or 0
 },{
 i
 })
@@ -14483,52 +14488,52 @@ end
 b.Text=l
 end
 
-local function WindUI_BG_MakeFolders(WindUI_BG_path)
+local function AetheriaUI_BG_MakeFolders(AetheriaUI_BG_path)
 if not(isfolder and makefolder)then return end
-local WindUI_BG_segments=WindUI_BG_path:split("/")
-table.remove(WindUI_BG_segments,#WindUI_BG_segments)
-local WindUI_BG_traversed=""
-for _,WindUI_BG_segment in ipairs(WindUI_BG_segments) do
-if WindUI_BG_traversed=="" then
-WindUI_BG_traversed=WindUI_BG_segment
+local AetheriaUI_BG_segments=AetheriaUI_BG_path:split("/")
+table.remove(AetheriaUI_BG_segments,#AetheriaUI_BG_segments)
+local AetheriaUI_BG_traversed=""
+for _,AetheriaUI_BG_segment in ipairs(AetheriaUI_BG_segments) do
+if AetheriaUI_BG_traversed=="" then
+AetheriaUI_BG_traversed=AetheriaUI_BG_segment
 else
-WindUI_BG_traversed=WindUI_BG_traversed.."/"..WindUI_BG_segment
+AetheriaUI_BG_traversed=AetheriaUI_BG_traversed.."/"..AetheriaUI_BG_segment
 end
-if not isfolder(WindUI_BG_traversed) then makefolder(WindUI_BG_traversed) end
+if not isfolder(AetheriaUI_BG_traversed) then makefolder(AetheriaUI_BG_traversed) end
 end
 end
-local function WindUI_BG_ResolveAsset(WindUI_BG_url)
-if typeof(WindUI_BG_url)~="string" or WindUI_BG_url=="" then return "" end
-if WindUI_BG_url:match("^rbxassetid://")or WindUI_BG_url:match("^rbxasset://")or WindUI_BG_url:match("^rbxthumb://")then
-return WindUI_BG_url
+local function AetheriaUI_BG_ResolveAsset(AetheriaUI_BG_url)
+if typeof(AetheriaUI_BG_url)~="string" or AetheriaUI_BG_url=="" then return "" end
+if AetheriaUI_BG_url:match("^rbxassetid://")or AetheriaUI_BG_url:match("^rbxasset://")or AetheriaUI_BG_url:match("^rbxthumb://")then
+return AetheriaUI_BG_url
 end
 if not(writefile and isfile and getcustomasset and game.HttpGet)then
-return WindUI_BG_url
+return AetheriaUI_BG_url
 end
-local WindUI_BG_ok,WindUI_BG_result=pcall(function()
-local WindUI_BG_clean=WindUI_BG_url:gsub("[%?#].*$","")
-local WindUI_BG_rawName=WindUI_BG_clean:match("(.+)%..+$")
-local WindUI_BG_extension=WindUI_BG_rawName and string.sub(WindUI_BG_clean,#WindUI_BG_rawName+1,#WindUI_BG_clean)or".png"
-local WindUI_BG_slashPos=WindUI_BG_clean:gsub("\\","/"):find("/[^/]*$")
-local WindUI_BG_fileName=WindUI_BG_slashPos and WindUI_BG_clean:sub(WindUI_BG_slashPos+1)or WindUI_BG_clean
-if WindUI_BG_fileName==""or#WindUI_BG_fileName>150 then
-WindUI_BG_fileName=tostring(#WindUI_BG_url)..WindUI_BG_extension
+local AetheriaUI_BG_ok,AetheriaUI_BG_result=pcall(function()
+local AetheriaUI_BG_clean=AetheriaUI_BG_url:gsub("[%?#].*$","")
+local AetheriaUI_BG_rawName=AetheriaUI_BG_clean:match("(.+)%..+$")
+local AetheriaUI_BG_extension=AetheriaUI_BG_rawName and string.sub(AetheriaUI_BG_clean,#AetheriaUI_BG_rawName+1,#AetheriaUI_BG_clean)or".png"
+local AetheriaUI_BG_slashPos=AetheriaUI_BG_clean:gsub("\\","/"):find("/[^/]*$")
+local AetheriaUI_BG_fileName=AetheriaUI_BG_slashPos and AetheriaUI_BG_clean:sub(AetheriaUI_BG_slashPos+1)or AetheriaUI_BG_clean
+if AetheriaUI_BG_fileName==""or#AetheriaUI_BG_fileName>150 then
+AetheriaUI_BG_fileName=tostring(#AetheriaUI_BG_url)..AetheriaUI_BG_extension
 end
-local WindUI_BG_path="WindUI/BackgroundCache/"..WindUI_BG_fileName
-WindUI_BG_MakeFolders(WindUI_BG_path)
-if not isfile(WindUI_BG_path) then
-local WindUI_BG_data=game:HttpGet(WindUI_BG_url)
-if not WindUI_BG_data or WindUI_BG_data=="" then error("empty download")end
-writefile(WindUI_BG_path,WindUI_BG_data)
+local AetheriaUI_BG_path="AetheriaUI/BackgroundCache/"..AetheriaUI_BG_fileName
+AetheriaUI_BG_MakeFolders(AetheriaUI_BG_path)
+if not isfile(AetheriaUI_BG_path) then
+local AetheriaUI_BG_data=game:HttpGet(AetheriaUI_BG_url)
+if not AetheriaUI_BG_data or AetheriaUI_BG_data=="" then error("empty download")end
+writefile(AetheriaUI_BG_path,AetheriaUI_BG_data)
 end
-return getcustomasset(WindUI_BG_path)
+return getcustomasset(AetheriaUI_BG_path)
 end)
-if WindUI_BG_ok and WindUI_BG_result then return WindUI_BG_result end
+if AetheriaUI_BG_ok and AetheriaUI_BG_result then return AetheriaUI_BG_result end
 return ""
 end
-local function WindUI_BG_SyncCorner(WindUI_BG_holder,WindUI_BG_corner)
-local WindUI_BG_radius=(WindUI_BG_holder.SliceScale or 0.0625)*256
-WindUI_BG_corner.CornerRadius=UDim.new(0,WindUI_BG_radius)
+local function AetheriaUI_BG_SyncCorner(AetheriaUI_BG_holder,AetheriaUI_BG_corner)
+local AetheriaUI_BG_radius=(AetheriaUI_BG_holder.SliceScale or 0.0625)*256
+AetheriaUI_BG_corner.CornerRadius=UDim.new(0,AetheriaUI_BG_radius)
 end
 
 -- IMPORTANT: this reuses the SAME "aC" upvalue the library's own Open()/Close() already
@@ -14541,10 +14546,10 @@ end
 -- checks aC:IsA("ImageLabel") and tweens aC.ImageTransparency to fade the background in/out.
 -- The real, visible photo lives on a child instead, inside aC's fixed, correctly-clipped,
 -- correctly-rounded bounds, and mirrors aC's transparency so the open/close fade works.
-local function WindUI_BG_EnsurePhoto()
+local function AetheriaUI_BG_EnsurePhoto()
 if not aC then
 aC=Instance.new("ImageLabel")
-aC.Name="WindUI_BackgroundPhoto"
+aC.Name="AetheriaUI_BackgroundPhoto"
 aC.BackgroundTransparency=1
 aC.ImageTransparency=1
 aC.Image=""
@@ -14558,56 +14563,56 @@ aC.ZIndex=0
 -- invisible while still technically clickable/draggable underneath.
 aC.ClipsDescendants=true
 
-local WindUI_BG_corner=Instance.new("UICorner")
-WindUI_BG_corner.Parent=aC
-WindUI_BG_SyncCorner(ao.UIElements.Main.Background,WindUI_BG_corner)
+local AetheriaUI_BG_corner=Instance.new("UICorner")
+AetheriaUI_BG_corner.Parent=aC
+AetheriaUI_BG_SyncCorner(ao.UIElements.Main.Background,AetheriaUI_BG_corner)
 ao.UIElements.Main.Background:GetPropertyChangedSignal("SliceScale"):Connect(function()
-WindUI_BG_SyncCorner(ao.UIElements.Main.Background,WindUI_BG_corner)
+AetheriaUI_BG_SyncCorner(ao.UIElements.Main.Background,AetheriaUI_BG_corner)
 end)
 
 -- The actual visible photo. Never resizes or repositions itself — it always matches aC
 -- exactly, so its own rounding can never drift out of alignment.
-local WindUI_BG_photo=Instance.new("ImageLabel")
-WindUI_BG_photo.Name="WindUI_BackgroundPhotoContent"
-WindUI_BG_photo.BackgroundTransparency=1
-WindUI_BG_photo.ImageTransparency=aC.ImageTransparency
-WindUI_BG_photo.ScaleType=Enum.ScaleType.Crop
-WindUI_BG_photo.Size=UDim2.new(1,0,1,0)
-WindUI_BG_photo.Position=UDim2.new(0,0,0,0)
-WindUI_BG_photo.ZIndex=0
-WindUI_BG_photo.Parent=aC
-ao.UIElements.WindUI_BackgroundPhotoContent=WindUI_BG_photo
+local AetheriaUI_BG_photo=Instance.new("ImageLabel")
+AetheriaUI_BG_photo.Name="AetheriaUI_BackgroundPhotoContent"
+AetheriaUI_BG_photo.BackgroundTransparency=1
+AetheriaUI_BG_photo.ImageTransparency=aC.ImageTransparency
+AetheriaUI_BG_photo.ScaleType=Enum.ScaleType.Crop
+AetheriaUI_BG_photo.Size=UDim2.new(1,0,1,0)
+AetheriaUI_BG_photo.Position=UDim2.new(0,0,0,0)
+AetheriaUI_BG_photo.ZIndex=0
+AetheriaUI_BG_photo.Parent=aC
+ao.UIElements.AetheriaUI_BackgroundPhotoContent=AetheriaUI_BG_photo
 
-local WindUI_BG_photoCorner=Instance.new("UICorner")
-WindUI_BG_photoCorner.Parent=WindUI_BG_photo
-WindUI_BG_SyncCorner(ao.UIElements.Main.Background,WindUI_BG_photoCorner)
+local AetheriaUI_BG_photoCorner=Instance.new("UICorner")
+AetheriaUI_BG_photoCorner.Parent=AetheriaUI_BG_photo
+AetheriaUI_BG_SyncCorner(ao.UIElements.Main.Background,AetheriaUI_BG_photoCorner)
 ao.UIElements.Main.Background:GetPropertyChangedSignal("SliceScale"):Connect(function()
-WindUI_BG_SyncCorner(ao.UIElements.Main.Background,WindUI_BG_photoCorner)
+AetheriaUI_BG_SyncCorner(ao.UIElements.Main.Background,AetheriaUI_BG_photoCorner)
 end)
 
 aC:GetPropertyChangedSignal("ImageTransparency"):Connect(function()
-WindUI_BG_photo.ImageTransparency=aC.ImageTransparency
+AetheriaUI_BG_photo.ImageTransparency=aC.ImageTransparency
 end)
 
 -- Darkening overlay (Background Photo Opacity), Blur layers, and Vignette (added later
--- via SetVignette) are all parented to aC directly — NOT to WindUI_BG_photo above —
+-- via SetVignette) are all parented to aC directly — NOT to AetheriaUI_BG_photo above —
 -- and (darken/vignette) get their own UICorner synced the same way aC's is, so their
 -- rounding is always calculated against the same never-moving reference aC's own is.
-local WindUI_BG_dark=Instance.new("Frame")
-WindUI_BG_dark.Name="WindUI_BackgroundDarken"
-WindUI_BG_dark.BackgroundColor3=Color3.new(0,0,0)
-WindUI_BG_dark.BackgroundTransparency=1
-WindUI_BG_dark.BorderSizePixel=0
-WindUI_BG_dark.Size=UDim2.new(1,0,1,0)
-WindUI_BG_dark.ZIndex=1
-local WindUI_BG_darkCorner=Instance.new("UICorner")
-WindUI_BG_darkCorner.Parent=WindUI_BG_dark
-WindUI_BG_SyncCorner(ao.UIElements.Main.Background,WindUI_BG_darkCorner)
+local AetheriaUI_BG_dark=Instance.new("Frame")
+AetheriaUI_BG_dark.Name="AetheriaUI_BackgroundDarken"
+AetheriaUI_BG_dark.BackgroundColor3=Color3.new(0,0,0)
+AetheriaUI_BG_dark.BackgroundTransparency=1
+AetheriaUI_BG_dark.BorderSizePixel=0
+AetheriaUI_BG_dark.Size=UDim2.new(1,0,1,0)
+AetheriaUI_BG_dark.ZIndex=1
+local AetheriaUI_BG_darkCorner=Instance.new("UICorner")
+AetheriaUI_BG_darkCorner.Parent=AetheriaUI_BG_dark
+AetheriaUI_BG_SyncCorner(ao.UIElements.Main.Background,AetheriaUI_BG_darkCorner)
 ao.UIElements.Main.Background:GetPropertyChangedSignal("SliceScale"):Connect(function()
-WindUI_BG_SyncCorner(ao.UIElements.Main.Background,WindUI_BG_darkCorner)
+AetheriaUI_BG_SyncCorner(ao.UIElements.Main.Background,AetheriaUI_BG_darkCorner)
 end)
-WindUI_BG_dark.Parent=aC
-ao.UIElements.WindUI_BackgroundDarken=WindUI_BG_dark
+AetheriaUI_BG_dark.Parent=aC
+ao.UIElements.AetheriaUI_BackgroundDarken=AetheriaUI_BG_dark
 
 -- Blur approximation (Background Photo Blur) — Roblox has no real blur filter for a GUI
 -- image, so this stacks several faint, radially-offset copies of the same photo instead
@@ -14615,73 +14620,73 @@ ao.UIElements.WindUI_BackgroundDarken=WindUI_BG_dark
 -- nudge position by a few px — no room to need their own rounding: any sliver that peeks
 -- past aC's fixed edge at max offset is just a few percent of a semi-transparent
 -- duplicate, not worth the complexity of syncing 8 separate corners.
-local WindUI_BG_blurLayers={}
-for WindUI_BG_i=1,8 do
-local WindUI_BG_layer=Instance.new("ImageLabel")
-WindUI_BG_layer.Name="WindUI_BackgroundBlurLayer"..WindUI_BG_i
-WindUI_BG_layer.BackgroundTransparency=1
-WindUI_BG_layer.ImageTransparency=1
-WindUI_BG_layer.ScaleType=Enum.ScaleType.Crop
-WindUI_BG_layer.Size=UDim2.new(1,0,1,0)
-WindUI_BG_layer.ZIndex=0
-WindUI_BG_layer.Parent=aC
-table.insert(WindUI_BG_blurLayers,WindUI_BG_layer)
+local AetheriaUI_BG_blurLayers={}
+for AetheriaUI_BG_i=1,8 do
+local AetheriaUI_BG_layer=Instance.new("ImageLabel")
+AetheriaUI_BG_layer.Name="AetheriaUI_BackgroundBlurLayer"..AetheriaUI_BG_i
+AetheriaUI_BG_layer.BackgroundTransparency=1
+AetheriaUI_BG_layer.ImageTransparency=1
+AetheriaUI_BG_layer.ScaleType=Enum.ScaleType.Crop
+AetheriaUI_BG_layer.Size=UDim2.new(1,0,1,0)
+AetheriaUI_BG_layer.ZIndex=0
+AetheriaUI_BG_layer.Parent=aC
+table.insert(AetheriaUI_BG_blurLayers,AetheriaUI_BG_layer)
 end
-ao.UIElements.WindUI_BackgroundBlurLayers=WindUI_BG_blurLayers
+ao.UIElements.AetheriaUI_BackgroundBlurLayers=AetheriaUI_BG_blurLayers
 
 aC.Parent=ao.UIElements.Main.Background
 end
-return ao.UIElements.WindUI_BackgroundPhotoContent
+return ao.UIElements.AetheriaUI_BackgroundPhotoContent
 end
 
 function ao.SetBackgroundImage(j,l)
-local WindUI_BG_img=WindUI_BG_EnsurePhoto()
-local WindUI_BG_asset=(l==nil or l=="")and""or WindUI_BG_ResolveAsset(l)
-WindUI_BG_img.Image=WindUI_BG_asset
-if ao.UIElements.WindUI_BackgroundBlurLayers then
-for _,WindUI_BG_layer in ipairs(ao.UIElements.WindUI_BackgroundBlurLayers)do
-WindUI_BG_layer.Image=WindUI_BG_asset
+local AetheriaUI_BG_img=AetheriaUI_BG_EnsurePhoto()
+local AetheriaUI_BG_asset=(l==nil or l=="")and""or AetheriaUI_BG_ResolveAsset(l)
+AetheriaUI_BG_img.Image=AetheriaUI_BG_asset
+if ao.UIElements.AetheriaUI_BackgroundBlurLayers then
+for _,AetheriaUI_BG_layer in ipairs(ao.UIElements.AetheriaUI_BackgroundBlurLayers)do
+AetheriaUI_BG_layer.Image=AetheriaUI_BG_asset
 end
 end
 end
 function ao.SetBackgroundImageTransparency(j,l)
-WindUI_BG_EnsurePhoto()
+AetheriaUI_BG_EnsurePhoto()
 aC.ImageTransparency=l
 ao.BackgroundImageTransparency=l
 end
 -- Background Photo Opacity slider — 0 = no darkening, 1 = fully black.
 function ao.SetBackgroundDarkness(j,l)
-WindUI_BG_EnsurePhoto()
-if aC:FindFirstChild("WindUI_BackgroundDarken")then
-aC.WindUI_BackgroundDarken.BackgroundTransparency=1-l
+AetheriaUI_BG_EnsurePhoto()
+if aC:FindFirstChild("AetheriaUI_BackgroundDarken")then
+aC.AetheriaUI_BackgroundDarken.BackgroundTransparency=1-l
 end
 end
 -- Background Photo Blur slider — 0 = off (all layers hidden), higher = more spread/softer.
 -- Layers only ever SHIFT position, never resize, and aC clips everything regardless — so
 -- nothing can spill out past the window's edges at any slider value.
 function ao.SetBackgroundBlur(j,l)
-local WindUI_BG_img=WindUI_BG_EnsurePhoto()
-local WindUI_BG_layers=ao.UIElements.WindUI_BackgroundBlurLayers
-if not WindUI_BG_layers then return end
+local AetheriaUI_BG_img=AetheriaUI_BG_EnsurePhoto()
+local AetheriaUI_BG_layers=ao.UIElements.AetheriaUI_BackgroundBlurLayers
+if not AetheriaUI_BG_layers then return end
 
-local WindUI_BG_offset=(tonumber(l)or 0)*0.4
+local AetheriaUI_BG_offset=(tonumber(l)or 0)*0.4
 
-if WindUI_BG_offset<=0 then
-for _,WindUI_BG_layer in ipairs(WindUI_BG_layers)do
-WindUI_BG_layer.ImageTransparency=1
+if AetheriaUI_BG_offset<=0 then
+for _,AetheriaUI_BG_layer in ipairs(AetheriaUI_BG_layers)do
+AetheriaUI_BG_layer.ImageTransparency=1
 end
 return
 end
 
-local WindUI_BG_dirs={
+local AetheriaUI_BG_dirs={
 Vector2.new(1,0),Vector2.new(-1,0),Vector2.new(0,1),Vector2.new(0,-1),
 Vector2.new(0.7,0.7),Vector2.new(-0.7,0.7),Vector2.new(0.7,-0.7),Vector2.new(-0.7,-0.7),
 }
-for WindUI_BG_i,WindUI_BG_layer in ipairs(WindUI_BG_layers)do
-local WindUI_BG_dir=WindUI_BG_dirs[WindUI_BG_i]or Vector2.new(0,0)
-WindUI_BG_layer.Size=UDim2.new(1,0,1,0)
-WindUI_BG_layer.Position=UDim2.new(0,WindUI_BG_dir.X*WindUI_BG_offset,0,WindUI_BG_dir.Y*WindUI_BG_offset)
-WindUI_BG_layer.ImageTransparency=0.87
+for AetheriaUI_BG_i,AetheriaUI_BG_layer in ipairs(AetheriaUI_BG_layers)do
+local AetheriaUI_BG_dir=AetheriaUI_BG_dirs[AetheriaUI_BG_i]or Vector2.new(0,0)
+AetheriaUI_BG_layer.Size=UDim2.new(1,0,1,0)
+AetheriaUI_BG_layer.Position=UDim2.new(0,AetheriaUI_BG_dir.X*AetheriaUI_BG_offset,0,AetheriaUI_BG_dir.Y*AetheriaUI_BG_offset)
+AetheriaUI_BG_layer.ImageTransparency=0.87
 end
 end
 
@@ -14689,7 +14694,7 @@ end
 -- a.B) reads each time it animates — no per-toggle wiring needed anywhere.
 function ao.SetAnimatedToggles(j,l)
 _G.AetheriaUI_AnimatedToggles=l
-_G.WindUI_AnimatedToggles=l
+_G.AetheriaUI_AnimatedToggles=l
 end
 
 -- Vignette Effect: two overlapping linear gradients (horizontal + vertical) darkening
@@ -14698,55 +14703,55 @@ end
 -- Parented to aC (fixed) with its own corner sync, same reasoning as the darkening
 -- overlay above.
 function ao.SetVignette(j,l)
-WindUI_BG_EnsurePhoto()
-local WindUI_Vig_amount=tonumber(l)or 0
+AetheriaUI_BG_EnsurePhoto()
+local AetheriaUI_Vig_amount=tonumber(l)or 0
 
-if not aC:FindFirstChild("WindUI_Vignette_H")then
-local WindUI_Vig_h=Instance.new("Frame")
-WindUI_Vig_h.Name="WindUI_Vignette_H"
-WindUI_Vig_h.BackgroundColor3=Color3.new(0,0,0)
-WindUI_Vig_h.BorderSizePixel=0
-WindUI_Vig_h.Size=UDim2.new(1,0,1,0)
-WindUI_Vig_h.ZIndex=2
-local WindUI_Vig_hCorner=Instance.new("UICorner")
-WindUI_Vig_hCorner.Parent=WindUI_Vig_h
-WindUI_BG_SyncCorner(ao.UIElements.Main.Background,WindUI_Vig_hCorner)
+if not aC:FindFirstChild("AetheriaUI_Vignette_H")then
+local AetheriaUI_Vig_h=Instance.new("Frame")
+AetheriaUI_Vig_h.Name="AetheriaUI_Vignette_H"
+AetheriaUI_Vig_h.BackgroundColor3=Color3.new(0,0,0)
+AetheriaUI_Vig_h.BorderSizePixel=0
+AetheriaUI_Vig_h.Size=UDim2.new(1,0,1,0)
+AetheriaUI_Vig_h.ZIndex=2
+local AetheriaUI_Vig_hCorner=Instance.new("UICorner")
+AetheriaUI_Vig_hCorner.Parent=AetheriaUI_Vig_h
+AetheriaUI_BG_SyncCorner(ao.UIElements.Main.Background,AetheriaUI_Vig_hCorner)
 ao.UIElements.Main.Background:GetPropertyChangedSignal("SliceScale"):Connect(function()
-WindUI_BG_SyncCorner(ao.UIElements.Main.Background,WindUI_Vig_hCorner)
+AetheriaUI_BG_SyncCorner(ao.UIElements.Main.Background,AetheriaUI_Vig_hCorner)
 end)
-local WindUI_Vig_hGrad=Instance.new("UIGradient")
-WindUI_Vig_hGrad.Rotation=0
-WindUI_Vig_hGrad.Color=ColorSequence.new(Color3.new(0,0,0))
-WindUI_Vig_hGrad.Parent=WindUI_Vig_h
-WindUI_Vig_h.Parent=aC
+local AetheriaUI_Vig_hGrad=Instance.new("UIGradient")
+AetheriaUI_Vig_hGrad.Rotation=0
+AetheriaUI_Vig_hGrad.Color=ColorSequence.new(Color3.new(0,0,0))
+AetheriaUI_Vig_hGrad.Parent=AetheriaUI_Vig_h
+AetheriaUI_Vig_h.Parent=aC
 
-local WindUI_Vig_v=Instance.new("Frame")
-WindUI_Vig_v.Name="WindUI_Vignette_V"
-WindUI_Vig_v.BackgroundColor3=Color3.new(0,0,0)
-WindUI_Vig_v.BorderSizePixel=0
-WindUI_Vig_v.Size=UDim2.new(1,0,1,0)
-WindUI_Vig_v.ZIndex=2
-local WindUI_Vig_vCorner=Instance.new("UICorner")
-WindUI_Vig_vCorner.Parent=WindUI_Vig_v
-WindUI_BG_SyncCorner(ao.UIElements.Main.Background,WindUI_Vig_vCorner)
+local AetheriaUI_Vig_v=Instance.new("Frame")
+AetheriaUI_Vig_v.Name="AetheriaUI_Vignette_V"
+AetheriaUI_Vig_v.BackgroundColor3=Color3.new(0,0,0)
+AetheriaUI_Vig_v.BorderSizePixel=0
+AetheriaUI_Vig_v.Size=UDim2.new(1,0,1,0)
+AetheriaUI_Vig_v.ZIndex=2
+local AetheriaUI_Vig_vCorner=Instance.new("UICorner")
+AetheriaUI_Vig_vCorner.Parent=AetheriaUI_Vig_v
+AetheriaUI_BG_SyncCorner(ao.UIElements.Main.Background,AetheriaUI_Vig_vCorner)
 ao.UIElements.Main.Background:GetPropertyChangedSignal("SliceScale"):Connect(function()
-WindUI_BG_SyncCorner(ao.UIElements.Main.Background,WindUI_Vig_vCorner)
+AetheriaUI_BG_SyncCorner(ao.UIElements.Main.Background,AetheriaUI_Vig_vCorner)
 end)
-local WindUI_Vig_vGrad=Instance.new("UIGradient")
-WindUI_Vig_vGrad.Rotation=90
-WindUI_Vig_vGrad.Color=ColorSequence.new(Color3.new(0,0,0))
-WindUI_Vig_vGrad.Parent=WindUI_Vig_v
-WindUI_Vig_v.Parent=aC
+local AetheriaUI_Vig_vGrad=Instance.new("UIGradient")
+AetheriaUI_Vig_vGrad.Rotation=90
+AetheriaUI_Vig_vGrad.Color=ColorSequence.new(Color3.new(0,0,0))
+AetheriaUI_Vig_vGrad.Parent=AetheriaUI_Vig_v
+AetheriaUI_Vig_v.Parent=aC
 end
 
-local WindUI_Vig_edge=1-(WindUI_Vig_amount*0.75)
-local WindUI_Vig_seq=NumberSequence.new({
-NumberSequenceKeypoint.new(0,WindUI_Vig_edge),
+local AetheriaUI_Vig_edge=1-(AetheriaUI_Vig_amount*0.75)
+local AetheriaUI_Vig_seq=NumberSequence.new({
+NumberSequenceKeypoint.new(0,AetheriaUI_Vig_edge),
 NumberSequenceKeypoint.new(0.5,1),
-NumberSequenceKeypoint.new(1,WindUI_Vig_edge),
+NumberSequenceKeypoint.new(1,AetheriaUI_Vig_edge),
 })
-aC.WindUI_Vignette_H.UIGradient.Transparency=WindUI_Vig_seq
-aC.WindUI_Vignette_V.UIGradient.Transparency=WindUI_Vig_seq
+aC.AetheriaUI_Vignette_H.UIGradient.Transparency=AetheriaUI_Vig_seq
+aC.AetheriaUI_Vignette_V.UIGradient.Transparency=AetheriaUI_Vig_seq
 end
 
 -- Glow / Drop Shadow: reuses the library's own existing soft shadow image around the
@@ -14782,33 +14787,33 @@ function ao.SetHoverScaleEnabled(j,l)
 ao.HoverScaleEnabled=l
 if l and not ao.HoverScaleHooked then
 ao.HoverScaleHooked=true
-local function WindUI_HS_Hook(WindUI_HS_obj)
-if not(WindUI_HS_obj:IsA("ImageLabel")or WindUI_HS_obj:IsA("ImageButton"))then return end
-local WindUI_HS_ok,WindUI_HS_already=pcall(function()return WindUI_HS_obj:GetAttribute("WindUI_HS_Hooked")end)
-if WindUI_HS_ok and WindUI_HS_already then return end
-pcall(function()WindUI_HS_obj:SetAttribute("WindUI_HS_Hooked",true)end)
-local WindUI_HS_scale=WindUI_HS_obj:FindFirstChildOfClass("UIScale")
-if not WindUI_HS_scale then
-WindUI_HS_scale=Instance.new("UIScale")
-WindUI_HS_scale.Parent=WindUI_HS_obj
+local function AetheriaUI_HS_Hook(AetheriaUI_HS_obj)
+if not(AetheriaUI_HS_obj:IsA("ImageLabel")or AetheriaUI_HS_obj:IsA("ImageButton"))then return end
+local AetheriaUI_HS_ok,AetheriaUI_HS_already=pcall(function()return AetheriaUI_HS_obj:GetAttribute("AetheriaUI_HS_Hooked")end)
+if AetheriaUI_HS_ok and AetheriaUI_HS_already then return end
+pcall(function()AetheriaUI_HS_obj:SetAttribute("AetheriaUI_HS_Hooked",true)end)
+local AetheriaUI_HS_scale=AetheriaUI_HS_obj:FindFirstChildOfClass("UIScale")
+if not AetheriaUI_HS_scale then
+AetheriaUI_HS_scale=Instance.new("UIScale")
+AetheriaUI_HS_scale.Parent=AetheriaUI_HS_obj
 end
-WindUI_HS_obj.MouseEnter:Connect(function()
+AetheriaUI_HS_obj.MouseEnter:Connect(function()
 if not ao.HoverScaleEnabled then return end
 -- Checked here (not at hook time) so AbsoluteSize is guaranteed to already be laid
 -- out — large background/photo squircles (also ImageLabels under the hood) are
 -- excluded this way, only small fixed-size icons/indicators pass.
-local WindUI_HS_size=WindUI_HS_obj.AbsoluteSize
-if WindUI_HS_size.X>40 or WindUI_HS_size.Y>40 then return end
-ah(WindUI_HS_scale,0.12,{Scale=1+0.05/3},Enum.EasingStyle.Quad,Enum.EasingDirection.Out):Play()
+local AetheriaUI_HS_size=AetheriaUI_HS_obj.AbsoluteSize
+if AetheriaUI_HS_size.X>40 or AetheriaUI_HS_size.Y>40 then return end
+ah(AetheriaUI_HS_scale,0.12,{Scale=1+0.05/3},Enum.EasingStyle.Quad,Enum.EasingDirection.Out):Play()
 end)
-WindUI_HS_obj.MouseLeave:Connect(function()
-ah(WindUI_HS_scale,0.12,{Scale=1},Enum.EasingStyle.Quad,Enum.EasingDirection.Out):Play()
+AetheriaUI_HS_obj.MouseLeave:Connect(function()
+ah(AetheriaUI_HS_scale,0.12,{Scale=1},Enum.EasingStyle.Quad,Enum.EasingDirection.Out):Play()
 end)
 end
-for _,WindUI_HS_d in ipairs(ao.UIElements.Main:GetDescendants())do
-WindUI_HS_Hook(WindUI_HS_d)
+for _,AetheriaUI_HS_d in ipairs(ao.UIElements.Main:GetDescendants())do
+AetheriaUI_HS_Hook(AetheriaUI_HS_d)
 end
-ao.UIElements.Main.DescendantAdded:Connect(WindUI_HS_Hook)
+ao.UIElements.Main.DescendantAdded:Connect(AetheriaUI_HS_Hook)
 end
 end
 
@@ -14816,65 +14821,90 @@ end
 -- background ONLY — every other outline/stroke elsewhere in the UI is untouched by these.
 -- Only ever visible while Rainbow Outline is switched on; Size Outline just sets how
 -- thick it'll be once it is.
-local WindUI_Outline_Stroke
-local WindUI_Outline_Gradient
-local function WindUI_Outline_Ensure()
-if not WindUI_Outline_Stroke then
--- A brand-new, empty wrapper Frame — NOT a UICorner added directly onto
--- Main.Background itself. Main.Background is a 9-slice image with its own internal
--- rendering, and adding UICorner straight onto it was NOT reliably respected by
--- UIStroke in testing. A plain, dedicated Frame with nothing else going on, sized to
--- match Main.Background exactly (same 1,0,1,0 relative trick already proven to work
--- correctly for the background photo), is a much safer, guaranteed-clean target.
-local WindUI_Outline_holder=Instance.new("Frame")
-WindUI_Outline_holder.Name="WindUI_OutlineHolder"
-WindUI_Outline_holder.BackgroundTransparency=1
-WindUI_Outline_holder.Size=UDim2.new(1,0,1,0)
-WindUI_Outline_holder.ZIndex=5
-WindUI_Outline_holder.Parent=ao.UIElements.Main.Background
+local AetheriaUI_Outline_Stroke
+local AetheriaUI_Outline_Gradient
+local function AetheriaUI_Outline_Ensure()
+if not AetheriaUI_Outline_Stroke then
+local bg = ao.UIElements.Main.Background
+local AetheriaUI_Outline_holder = bg:FindFirstChild("AetheriaUI_OutlineHolder") or bg:FindFirstChild("WindUI_OutlineHolder")
+if AetheriaUI_Outline_holder and AetheriaUI_Outline_holder:IsA("ObjectValue") and AetheriaUI_Outline_holder.Value then
+AetheriaUI_Outline_holder = AetheriaUI_Outline_holder.Value
+end
+if not AetheriaUI_Outline_holder then
+AetheriaUI_Outline_holder=Instance.new("Frame")
+AetheriaUI_Outline_holder.Name="AetheriaUI_OutlineHolder"
+AetheriaUI_Outline_holder.BackgroundTransparency=1
+AetheriaUI_Outline_holder.Size=UDim2.new(1,0,1,0)
+AetheriaUI_Outline_holder.ZIndex=5
+AetheriaUI_Outline_holder.Parent=bg
 
-local WindUI_Outline_holderCorner=Instance.new("UICorner")
-WindUI_Outline_holderCorner.Parent=WindUI_Outline_holder
-WindUI_BG_SyncCorner(ao.UIElements.Main.Background,WindUI_Outline_holderCorner)
-ao.UIElements.Main.Background:GetPropertyChangedSignal("SliceScale"):Connect(function()
-WindUI_BG_SyncCorner(ao.UIElements.Main.Background,WindUI_Outline_holderCorner)
+local AetheriaUI_Outline_holderCorner=Instance.new("UICorner")
+AetheriaUI_Outline_holderCorner.Parent=AetheriaUI_Outline_holder
+AetheriaUI_BG_SyncCorner(bg,AetheriaUI_Outline_holderCorner)
+bg:GetPropertyChangedSignal("SliceScale"):Connect(function()
+AetheriaUI_BG_SyncCorner(bg,AetheriaUI_Outline_holderCorner)
 end)
 
-WindUI_Outline_Stroke=Instance.new("UIStroke")
-WindUI_Outline_Stroke.Name="WindUI_MainOutline"
-WindUI_Outline_Stroke.Thickness=1
-WindUI_Outline_Stroke.ApplyStrokeMode=Enum.ApplyStrokeMode.Border
-WindUI_Outline_Stroke.Color=Color3.fromRGB(255,255,255)
-WindUI_Outline_Stroke.Enabled=false
-WindUI_Outline_Stroke.Parent=WindUI_Outline_holder
+-- Backwards compatibility alias for scripts looking for WindUI_OutlineHolder
+local WindUI_Holder_Alias=Instance.new("ObjectValue")
+WindUI_Holder_Alias.Name="WindUI_OutlineHolder"
+WindUI_Holder_Alias.Value=AetheriaUI_Outline_holder
+WindUI_Holder_Alias.Parent=bg
+end
 
--- Rainbow WAVE: a scrolling multi-stop rainbow gradient around the stroke, instead of
--- the whole outline just uniformly shifting hue all at once.
-local WindUI_Outline_keypoints={}
-for WindUI_Outline_i=0,10 do
-local WindUI_Outline_t=WindUI_Outline_i/10
-table.insert(WindUI_Outline_keypoints,ColorSequenceKeypoint.new(WindUI_Outline_t,Color3.fromHSV(WindUI_Outline_t,1,1)))
+AetheriaUI_Outline_Stroke=AetheriaUI_Outline_holder:FindFirstChild("AetheriaUI_MainOutline") or AetheriaUI_Outline_holder:FindFirstChild("WindUI_MainOutline") or AetheriaUI_Outline_holder:FindFirstChildOfClass("UIStroke")
+if AetheriaUI_Outline_Stroke and AetheriaUI_Outline_Stroke:IsA("ObjectValue") and AetheriaUI_Outline_Stroke.Value then
+AetheriaUI_Outline_Stroke = AetheriaUI_Outline_Stroke.Value
 end
-WindUI_Outline_Gradient=Instance.new("UIGradient")
-WindUI_Outline_Gradient.Color=ColorSequence.new(WindUI_Outline_keypoints)
-WindUI_Outline_Gradient.Enabled=false
-WindUI_Outline_Gradient.Parent=WindUI_Outline_Stroke
+if not AetheriaUI_Outline_Stroke then
+AetheriaUI_Outline_Stroke=Instance.new("UIStroke")
+AetheriaUI_Outline_Stroke.Name="AetheriaUI_MainOutline"
+AetheriaUI_Outline_Stroke.Thickness=1
+AetheriaUI_Outline_Stroke.ApplyStrokeMode=Enum.ApplyStrokeMode.Border
+AetheriaUI_Outline_Stroke.Color=Color3.fromRGB(255,255,255)
+AetheriaUI_Outline_Stroke.Enabled=false
+AetheriaUI_Outline_Stroke.Parent=AetheriaUI_Outline_holder
+
+-- Backwards compatibility alias for scripts looking for WindUI_MainOutline
+local WindUI_Stroke_Alias=Instance.new("ObjectValue")
+WindUI_Stroke_Alias.Name="WindUI_MainOutline"
+WindUI_Stroke_Alias.Value=AetheriaUI_Outline_Stroke
+WindUI_Stroke_Alias.Parent=AetheriaUI_Outline_holder
 end
-return WindUI_Outline_Stroke
+
+AetheriaUI_Outline_Gradient=AetheriaUI_Outline_Stroke:FindFirstChildOfClass("UIGradient")
+if not AetheriaUI_Outline_Gradient then
+local AetheriaUI_Outline_keypoints={}
+for AetheriaUI_Outline_i=0,10 do
+local AetheriaUI_Outline_t=AetheriaUI_Outline_i/10
+table.insert(AetheriaUI_Outline_keypoints,ColorSequenceKeypoint.new(AetheriaUI_Outline_t,Color3.fromHSV(AetheriaUI_Outline_t,1,1)))
+end
+AetheriaUI_Outline_Gradient=Instance.new("UIGradient")
+AetheriaUI_Outline_Gradient.Name="AetheriaUI_Outline_Gradient"
+AetheriaUI_Outline_Gradient.Color=ColorSequence.new(AetheriaUI_Outline_keypoints)
+AetheriaUI_Outline_Gradient.Enabled=false
+AetheriaUI_Outline_Gradient.Parent=AetheriaUI_Outline_Stroke
+end
+
+ao.OutlineHolder=AetheriaUI_Outline_holder
+ao.OutlineStroke=AetheriaUI_Outline_Stroke
+ao.OutlineGradient=AetheriaUI_Outline_Gradient
+end
+return AetheriaUI_Outline_Stroke
 end
 function ao.SetOutlineSize(j,l)
-WindUI_Outline_Ensure().Thickness=l
+AetheriaUI_Outline_Ensure().Thickness=l
 end
 ao.RainbowOutlineSpeed=0.15
 function ao.SetRainbowSpeed(j,l)
 ao.RainbowOutlineSpeed=tonumber(l)or 0.15
 end
 function ao.SetRainbowOutline(j,l)
-local WindUI_Outline_stroke=WindUI_Outline_Ensure()
+local AetheriaUI_Outline_stroke=AetheriaUI_Outline_Ensure()
 ao.RainbowOutlineEnabled=l
 if l then
-WindUI_Outline_stroke.Enabled=true
-WindUI_Outline_Gradient.Enabled=true
+AetheriaUI_Outline_stroke.Enabled=true
+AetheriaUI_Outline_Gradient.Enabled=true
 if not ao.RainbowOutlineConn then
 -- Animating via Offset used to cause the "GIF loop" stutter: Roblox's UIGradient
 -- clamps at the 0/1 boundary instead of tiling, so the instant it wrapped back to 0
@@ -14883,16 +14913,16 @@ if not ao.RainbowOutlineConn then
 -- hue 1 are the same color, so wrapping it with %1 is mathematically seamless, no
 -- boundary to ever hit. Speed is read fresh every frame (ao.RainbowOutlineSpeed) so
 -- the Rainbow Speed slider can change it live without needing to restart the loop.
-local WindUI_Outline_hue=0
-ao.RainbowOutlineConn=game:GetService("RunService").RenderStepped:Connect(function(WindUI_Outline_dt)
-WindUI_Outline_hue=(WindUI_Outline_hue+WindUI_Outline_dt*(ao.RainbowOutlineSpeed or 0.15))%1
-local WindUI_Outline_keypoints={}
-for WindUI_Outline_i=0,10 do
-local WindUI_Outline_t=WindUI_Outline_i/10
-local WindUI_Outline_h=(WindUI_Outline_t+WindUI_Outline_hue)%1
-table.insert(WindUI_Outline_keypoints,ColorSequenceKeypoint.new(WindUI_Outline_t,Color3.fromHSV(WindUI_Outline_h,1,1)))
+local AetheriaUI_Outline_hue=0
+ao.RainbowOutlineConn=game:GetService("RunService").RenderStepped:Connect(function(AetheriaUI_Outline_dt)
+AetheriaUI_Outline_hue=(AetheriaUI_Outline_hue+AetheriaUI_Outline_dt*(ao.RainbowOutlineSpeed or 0.15))%1
+local AetheriaUI_Outline_keypoints={}
+for AetheriaUI_Outline_i=0,10 do
+local AetheriaUI_Outline_t=AetheriaUI_Outline_i/10
+local AetheriaUI_Outline_h=(AetheriaUI_Outline_t+AetheriaUI_Outline_hue)%1
+table.insert(AetheriaUI_Outline_keypoints,ColorSequenceKeypoint.new(AetheriaUI_Outline_t,Color3.fromHSV(AetheriaUI_Outline_h,1,1)))
 end
-WindUI_Outline_Gradient.Color=ColorSequence.new(WindUI_Outline_keypoints)
+AetheriaUI_Outline_Gradient.Color=ColorSequence.new(AetheriaUI_Outline_keypoints)
 end)
 end
 else
@@ -14900,62 +14930,62 @@ if ao.RainbowOutlineConn then
 ao.RainbowOutlineConn:Disconnect()
 ao.RainbowOutlineConn=nil
 end
-WindUI_Outline_Gradient.Enabled=false
-WindUI_Outline_stroke.Enabled=false
+AetheriaUI_Outline_Gradient.Enabled=false
+AetheriaUI_Outline_stroke.Enabled=false
 end
 end
 
 -- Custom cursor: hides the real system cursor and draws our own image following the
 -- mouse every frame — same technique as other UI libraries use, since Roblox's native
--- cursor customization is unreliable across executors. Reuses WindUI_BG_ResolveAsset so
+-- cursor customization is unreliable across executors. Reuses AetheriaUI_BG_ResolveAsset so
 -- the cursor image can be any URL too, not just rbxassetid://.
-local WindUI_Cursor_Gui
-local WindUI_Cursor_Image
-local WindUI_Cursor_Conn
-local function WindUI_Cursor_Ensure()
-if not WindUI_Cursor_Gui then
-WindUI_Cursor_Gui=Instance.new("ScreenGui")
-WindUI_Cursor_Gui.Name="AetheriaUI_Cursor"
-WindUI_Cursor_Gui.IgnoreGuiInset=true
-WindUI_Cursor_Gui.ResetOnSpawn=false
-WindUI_Cursor_Gui.DisplayOrder=2147483647
-local WindUI_Cursor_parented=pcall(function()
-WindUI_Cursor_Gui.Parent=game:GetService("CoreGui")
+local AetheriaUI_Cursor_Gui
+local AetheriaUI_Cursor_Image
+local AetheriaUI_Cursor_Conn
+local function AetheriaUI_Cursor_Ensure()
+if not AetheriaUI_Cursor_Gui then
+AetheriaUI_Cursor_Gui=Instance.new("ScreenGui")
+AetheriaUI_Cursor_Gui.Name="AetheriaUI_Cursor"
+AetheriaUI_Cursor_Gui.IgnoreGuiInset=true
+AetheriaUI_Cursor_Gui.ResetOnSpawn=false
+AetheriaUI_Cursor_Gui.DisplayOrder=2147483647
+local AetheriaUI_Cursor_parented=pcall(function()
+AetheriaUI_Cursor_Gui.Parent=game:GetService("CoreGui")
 end)
-if not WindUI_Cursor_parented or not WindUI_Cursor_Gui.Parent then
-WindUI_Cursor_Gui.Parent=game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
+if not AetheriaUI_Cursor_parented or not AetheriaUI_Cursor_Gui.Parent then
+AetheriaUI_Cursor_Gui.Parent=game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
 end
 
-WindUI_Cursor_Image=Instance.new("ImageLabel")
-WindUI_Cursor_Image.Name="Cursor"
-WindUI_Cursor_Image.BackgroundTransparency=1
-WindUI_Cursor_Image.Size=UDim2.fromOffset(24,24)
-WindUI_Cursor_Image.ZIndex=2147483647
-WindUI_Cursor_Image.Visible=false
-WindUI_Cursor_Image.Parent=WindUI_Cursor_Gui
+AetheriaUI_Cursor_Image=Instance.new("ImageLabel")
+AetheriaUI_Cursor_Image.Name="Cursor"
+AetheriaUI_Cursor_Image.BackgroundTransparency=1
+AetheriaUI_Cursor_Image.Size=UDim2.fromOffset(24,24)
+AetheriaUI_Cursor_Image.ZIndex=2147483647
+AetheriaUI_Cursor_Image.Visible=false
+AetheriaUI_Cursor_Image.Parent=AetheriaUI_Cursor_Gui
 end
-return WindUI_Cursor_Image
+return AetheriaUI_Cursor_Image
 end
 function ao.SetCursorImage(j,l)
-WindUI_Cursor_Ensure().Image=WindUI_BG_ResolveAsset(l)
+AetheriaUI_Cursor_Ensure().Image=AetheriaUI_BG_ResolveAsset(l)
 end
 function ao.SetCursorEnabled(j,l)
-local WindUI_Cursor_img=WindUI_Cursor_Ensure()
+local AetheriaUI_Cursor_img=AetheriaUI_Cursor_Ensure()
 if l then
 game:GetService("UserInputService").MouseIconEnabled=false
-WindUI_Cursor_img.Visible=true
-if not WindUI_Cursor_Conn then
-WindUI_Cursor_Conn=game:GetService("RunService").RenderStepped:Connect(function()
-local WindUI_Cursor_pos=game:GetService("UserInputService"):GetMouseLocation()
-WindUI_Cursor_img.Position=UDim2.fromOffset(WindUI_Cursor_pos.X,WindUI_Cursor_pos.Y)
+AetheriaUI_Cursor_img.Visible=true
+if not AetheriaUI_Cursor_Conn then
+AetheriaUI_Cursor_Conn=game:GetService("RunService").RenderStepped:Connect(function()
+local AetheriaUI_Cursor_pos=game:GetService("UserInputService"):GetMouseLocation()
+AetheriaUI_Cursor_img.Position=UDim2.fromOffset(AetheriaUI_Cursor_pos.X,AetheriaUI_Cursor_pos.Y)
 end)
 end
 else
 game:GetService("UserInputService").MouseIconEnabled=true
-WindUI_Cursor_img.Visible=false
-if WindUI_Cursor_Conn then
-WindUI_Cursor_Conn:Disconnect()
-WindUI_Cursor_Conn=nil
+AetheriaUI_Cursor_img.Visible=false
+if AetheriaUI_Cursor_Conn then
+AetheriaUI_Cursor_Conn:Disconnect()
+AetheriaUI_Cursor_Conn=nil
 end
 end
 end
@@ -15063,7 +15093,7 @@ task.wait(.06)
 ao.Closed=false
 
 ah(ao.UIElements.Main.Background,0.2,{
-ImageTransparency=ao.Transparent and an.WindUI.TransparencyValue or 0,
+ImageTransparency=ao.Transparent and an.AetheriaUI.TransparencyValue or 0,
 },Enum.EasingStyle.Quint,Enum.EasingDirection.Out):Play()
 
 if ao.UIElements.BackgroundGradient then
@@ -15111,7 +15141,7 @@ task.spawn(function()
 task.wait(.05)
 ao.UIElements.Main:WaitForChild"Main".Visible=true
 
-an.WindUI:ToggleAcrylic(true)
+an.AetheriaUI:ToggleAcrylic(true)
 end)
 end)
 end
@@ -15124,7 +15154,7 @@ af.SafeCallback(ao.OnCloseCallback)
 end)
 end
 
-an.WindUI:ToggleAcrylic(false)
+an.AetheriaUI:ToggleAcrylic(false)
 
 ao.UIElements.Main:WaitForChild"Main".Visible=false
 
@@ -15202,9 +15232,9 @@ end
 function ao.ToggleTransparency(m,p)
 
 ao.Transparent=p
-an.WindUI.Transparent=p
+an.AetheriaUI.Transparent=p
 
-ao.UIElements.Main.Background.ImageTransparency=p and an.WindUI.TransparencyValue or 0
+ao.UIElements.Main.Background.ImageTransparency=p and an.AetheriaUI.TransparencyValue or 0
 
 ao.UIElements.MainBar.Background.ImageTransparency=p and 0.97 or 0.95
 
@@ -15242,8 +15272,8 @@ end
 function ao.SetUIScale(m,p)
 local scaleVal=(type(m)=="number" and m) or (type(p)=="number" and p) or 1
 ao.UIScale=scaleVal
-an.WindUI.UIScale=scaleVal
-ah(an.WindUI.ScreenGui.UIScale,.2,{Scale=scaleVal},Enum.EasingStyle.Quint,Enum.EasingDirection.Out):Play()
+an.AetheriaUI.UIScale=scaleVal
+ah(an.AetheriaUI.ScreenGui.UIScale,.2,{Scale=scaleVal},Enum.EasingStyle.Quint,Enum.EasingDirection.Out):Play()
 if ao.Tabs then
 for _,tab in pairs(ao.Tabs) do
 if type(tab)=="table" and tab.UpdateBoxLayout then
@@ -15323,7 +15353,7 @@ end
 
 local m=a.load'Q'
 local p=a.load'R'
-local r=m.Init(ao,an.WindUI,an.Parent.Parent.ToolTips)
+local r=m.Init(ao,an.AetheriaUI,an.Parent.Parent.ToolTips)
 r:OnChange(function(x)ao.CurrentTab=x end)
 
 ao.TabModule=m
@@ -15337,7 +15367,7 @@ ao.TabManager=r
 
 function ao.Tab(x,z)
 z.Parent=ao.UIElements.SideBar.Frame
-local newTab=r.New(z,an.WindUI.UIScale)
+local newTab=r.New(z,an.AetheriaUI.UIScale)
 if not ao.Tabs then ao.Tabs={} end
 table.insert(ao.Tabs,newTab)
 if ao.TabLayoutType and newTab.SetLayoutType then
@@ -15351,7 +15381,7 @@ r:SelectTab(z)
 end
 
 function ao.Section(x,z)
-return p.New(z,ao.UIElements.SideBar.Frame,ao.Folder,an.WindUI.UIScale,ao)
+return p.New(z,ao.UIElements.SideBar.Frame,ao.Folder,an.AetheriaUI.UIScale,ao)
 end
 
 function ao.IsResizable(x,z)
@@ -15571,19 +15601,19 @@ return C
 end
 
 
-local WindUI_CloseDialog=nil
+local AetheriaUI_CloseDialog=nil
 
 ao:CreateTopbarButton("Close","x",function()
 -- Prevents the confirmation dialog from stacking on top of itself if the button gets
 -- clicked again while it's already open — a second click just hides the existing one
 -- instead of creating another Dialog on top of it.
-if WindUI_CloseDialog then
-pcall(function()WindUI_CloseDialog:Close()end)
-WindUI_CloseDialog=nil
+if AetheriaUI_CloseDialog then
+pcall(function()AetheriaUI_CloseDialog:Close()end)
+AetheriaUI_CloseDialog=nil
 return
 end
 ah(ao.UIElements.Main,0.35,{Position=UDim2.new(0.5,0,0.5,0)},Enum.EasingStyle.Quint,Enum.EasingDirection.Out):Play()
-WindUI_CloseDialog=ao:Dialog{
+AetheriaUI_CloseDialog=ao:Dialog{
 
 Title="Close Window",
 Content="Do you want to close this window? You will not be able to open it again.",
@@ -15591,7 +15621,7 @@ Buttons={
 {
 Title="Cancel",
 
-Callback=function()WindUI_CloseDialog=nil end,
+Callback=function()AetheriaUI_CloseDialog=nil end,
 Variant="Secondary",
 },
 {
@@ -15961,8 +15991,8 @@ local at=a.load'U'
 if not isfolder"AetheriaUI"then
 makefolder"AetheriaUI"
 end
-if not isfolder"WindUI"then
-makefolder"WindUI"
+if not isfolder"AetheriaUI"then
+makefolder"AetheriaUI"
 end
 if ar.Folder then
 makefolder(ar.Folder)
