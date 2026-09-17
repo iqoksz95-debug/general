@@ -10155,10 +10155,14 @@ local function WindUI_CreateActionButton(aa,ac,ad,parent,isBox,btnText,onClick)
     aa.AddSignal(btn.MouseButton1Down,function() ad(btn,0.05,{ImageTransparency=0.35}):Play() end)
     aa.AddSignal(btn.MouseButton1Up,function() ad(btn,0.08,{ImageTransparency=0.15}):Play() end)
     if onClick then
-        aa.AddSignal(btn.MouseButton1Click,onClick)
-        pcall(function()
-            aa.AddSignal(btn.Activated,onClick)
-        end)
+        local lastClick=0
+        local function SafeClick()
+            local now=os.clock()
+            if now-lastClick<0.2 then return end
+            lastClick=now
+            onClick()
+        end
+        aa.AddSignal(btn.MouseButton1Click,SafeClick)
     end
     return btn,btnLabel
 end
@@ -10273,8 +10277,11 @@ local function WindUI_CreateToggleDropdown(WindUI_af,WindUI_ag,isMulti)
             if isLocked then
                 currentDrop=val
                 ai.Value.Dropdown=val
-                local cb=cfg.DropdownCallback or cfg.Callback
-                aa.SafeCallback(cb,ai.Value)
+                ai.Value.Value=val
+                local cb=cfg.DropdownCallback or cfg.OnSelect or cfg.SelectCallback or cfg.Callback
+                if cb then
+                    aa.SafeCallback(cb,ai.Value,currentDrop)
+                end
             end
         end,
     })
@@ -10468,7 +10475,15 @@ local function WindUI_CreateButtonDropdown(WindUI_af,WindUI_ag,isMulti)
         UIElements={},
     }
     local currentDrop=initDrop
-    ai.Value={Dropdown=currentDrop}
+    ai.Value={Dropdown=currentDrop,Value=currentDrop}
+    setmetatable(ai.Value,{
+        __tostring=function()
+            if type(currentDrop)=="table" then
+                return table.concat(currentDrop,", ")
+            end
+            return tostring(currentDrop or "")
+        end
+    })
 
     local isBoxBtnDrop=(cfg.Window and cfg.Window.TabLayoutType=="Boxes") or (cfg.Tab and cfg.Tab.TabLayoutType=="Boxes") or (cfg.Parent and cfg.Parent.Name=="Content")
     local dropW=isBoxBtnDrop and 72 or 120
@@ -10544,11 +10559,18 @@ local function WindUI_CreateButtonDropdown(WindUI_af,WindUI_ag,isMulti)
     end)
     ai.UIElements.ActionButton=actionBtn
 
-    function ai.SetDropdown(self,val)
+    function ai.SetDropdown(self,val,fireCb)
         if not isLocked then return end
         currentDrop=val
         ai.Value.Dropdown=val
+        ai.Value.Value=val
         if dropObj and dropObj.Select then dropObj:Select(val) end
+        if fireCb~=false then
+            local cb=cfg.DropdownCallback or cfg.OnSelect or cfg.SelectCallback or cfg.Callback
+            if cb then
+                aa.SafeCallback(cb,ai.Value,currentDrop)
+            end
+        end
     end
     function ai.Select(self,val) return ai:SetDropdown(val) end
     function ai.Refresh(self,newVals) if dropObj and dropObj.Refresh then dropObj:Refresh(newVals) end end
@@ -10747,8 +10769,15 @@ function WindUI_ButtonColorPicker.New(WindUI_af,WindUI_ag)
                 cp.ColorpickerFrame:Open()
             end
         end
-        aa.AddSignal(colorBtn.MouseButton1Click,OpenColorPicker)
-        pcall(function() aa.AddSignal(colorBtn.Activated,OpenColorPicker) end)
+        local lastColorOpen=0
+        local function SafeOpenColorPicker()
+            if not isLocked then return end
+            local now=os.clock()
+            if now-lastColorOpen<0.3 then return end
+            lastColorOpen=now
+            OpenColorPicker()
+        end
+        aa.AddSignal(colorBtn.MouseButton1Click,SafeOpenColorPicker)
 
         function ai.SetBoxMode(self,isBoxes)
             isBoxBtnCol=isBoxes
@@ -11170,9 +11199,17 @@ function WindUI_ButtonKeybind.New(WindUI_af,WindUI_ag)
                 end
             end)
         end
-        aa.AddSignal(keyBadge.MouseButton1Click,PickKey)
-        pcall(function() aa.AddSignal(keyBadge.Activated,PickKey) end)
+        local lastPick=0
+        local function SafePickKey()
+            if not isLocked or isPicking then return end
+            local now=os.clock()
+            if now-lastPick<0.3 then return end
+            lastPick=now
+            PickKey()
+        end
+        aa.AddSignal(keyBadge.MouseButton1Click,SafePickKey)
 
+        local lastKeyTrigger=0
         aa.AddSignal(game:GetService("UserInputService").InputBegan,function(input)
             if isLocked and not isPicking then
                 local matches=false
@@ -11184,6 +11221,9 @@ function WindUI_ButtonKeybind.New(WindUI_af,WindUI_ag)
                     matches=true
                 end
                 if matches then
+                    local now=os.clock()
+                    if now-lastKeyTrigger<0.2 then return end
+                    lastKeyTrigger=now
                     local cb=cfg.ButtonCallback or cfg.ButtonClick or cfg.Callback
                     aa.SafeCallback(cb,ai.Value)
                 end
