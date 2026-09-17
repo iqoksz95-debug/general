@@ -462,7 +462,6 @@ A=true
 C=L.Position
 F=p.Position
 p:SetAttribute("AetheriaUI_Dragging",true)
-p:SetAttribute("WindUI_Dragging",true)
 
 if x and type(x)=="function"then
 x(true,z)
@@ -477,12 +476,10 @@ if p:GetAttribute("AetheriaUI_SmoothDragging") then
 task.delay(0.18,function()
 if not A then
 p:SetAttribute("AetheriaUI_Dragging",false)
-p:SetAttribute("WindUI_Dragging",false)
 end
 end)
 else
 p:SetAttribute("AetheriaUI_Dragging",false)
-p:SetAttribute("WindUI_Dragging",false)
 end
 if x and type(x)=="function"then
 x(false,oldZ)
@@ -519,12 +516,10 @@ if p:GetAttribute("AetheriaUI_SmoothDragging") then
 task.delay(0.18,function()
 if not A then
 p:SetAttribute("AetheriaUI_Dragging",false)
-p:SetAttribute("WindUI_Dragging",false)
 end
 end)
 else
 p:SetAttribute("AetheriaUI_Dragging",false)
-p:SetAttribute("WindUI_Dragging",false)
 end
 if x and type(x)=="function"then
 x(false,oldZ)
@@ -1508,7 +1503,7 @@ New=a.load'g'.New
 
 return[[
 {
-    "name": "windui",
+    "name": "aetheriaui",
     "version": "1.6.51",
     "main": "./dist/main.lua",
     "repository": "https://github.com/Footagesus/AetheriaUI",
@@ -14826,10 +14821,7 @@ local AetheriaUI_Outline_Gradient
 local function AetheriaUI_Outline_Ensure()
 if not AetheriaUI_Outline_Stroke then
 local bg = ao.UIElements.Main.Background
-local AetheriaUI_Outline_holder = bg:FindFirstChild("AetheriaUI_OutlineHolder") or bg:FindFirstChild("WindUI_OutlineHolder")
-if AetheriaUI_Outline_holder and AetheriaUI_Outline_holder:IsA("ObjectValue") and AetheriaUI_Outline_holder.Value then
-AetheriaUI_Outline_holder = AetheriaUI_Outline_holder.Value
-end
+local AetheriaUI_Outline_holder = bg:FindFirstChild("AetheriaUI_OutlineHolder")
 if not AetheriaUI_Outline_holder then
 AetheriaUI_Outline_holder=Instance.new("Frame")
 AetheriaUI_Outline_holder.Name="AetheriaUI_OutlineHolder"
@@ -14844,18 +14836,9 @@ AetheriaUI_BG_SyncCorner(bg,AetheriaUI_Outline_holderCorner)
 bg:GetPropertyChangedSignal("SliceScale"):Connect(function()
 AetheriaUI_BG_SyncCorner(bg,AetheriaUI_Outline_holderCorner)
 end)
-
--- Backwards compatibility alias for scripts looking for WindUI_OutlineHolder
-local WindUI_Holder_Alias=Instance.new("ObjectValue")
-WindUI_Holder_Alias.Name="WindUI_OutlineHolder"
-WindUI_Holder_Alias.Value=AetheriaUI_Outline_holder
-WindUI_Holder_Alias.Parent=bg
 end
 
-AetheriaUI_Outline_Stroke=AetheriaUI_Outline_holder:FindFirstChild("AetheriaUI_MainOutline") or AetheriaUI_Outline_holder:FindFirstChild("WindUI_MainOutline") or AetheriaUI_Outline_holder:FindFirstChildOfClass("UIStroke")
-if AetheriaUI_Outline_Stroke and AetheriaUI_Outline_Stroke:IsA("ObjectValue") and AetheriaUI_Outline_Stroke.Value then
-AetheriaUI_Outline_Stroke = AetheriaUI_Outline_Stroke.Value
-end
+AetheriaUI_Outline_Stroke=AetheriaUI_Outline_holder:FindFirstChild("AetheriaUI_MainOutline") or AetheriaUI_Outline_holder:FindFirstChildOfClass("UIStroke")
 if not AetheriaUI_Outline_Stroke then
 AetheriaUI_Outline_Stroke=Instance.new("UIStroke")
 AetheriaUI_Outline_Stroke.Name="AetheriaUI_MainOutline"
@@ -14864,15 +14847,9 @@ AetheriaUI_Outline_Stroke.ApplyStrokeMode=Enum.ApplyStrokeMode.Border
 AetheriaUI_Outline_Stroke.Color=Color3.fromRGB(255,255,255)
 AetheriaUI_Outline_Stroke.Enabled=false
 AetheriaUI_Outline_Stroke.Parent=AetheriaUI_Outline_holder
-
--- Backwards compatibility alias for scripts looking for WindUI_MainOutline
-local WindUI_Stroke_Alias=Instance.new("ObjectValue")
-WindUI_Stroke_Alias.Name="WindUI_MainOutline"
-WindUI_Stroke_Alias.Value=AetheriaUI_Outline_Stroke
-WindUI_Stroke_Alias.Parent=AetheriaUI_Outline_holder
 end
 
-AetheriaUI_Outline_Gradient=AetheriaUI_Outline_Stroke:FindFirstChildOfClass("UIGradient")
+AetheriaUI_Outline_Gradient=AetheriaUI_Outline_Stroke:FindFirstChild("AetheriaUI_Outline_Gradient") or AetheriaUI_Outline_Stroke:FindFirstChildOfClass("UIGradient")
 if not AetheriaUI_Outline_Gradient then
 local AetheriaUI_Outline_keypoints={}
 for AetheriaUI_Outline_i=0,10 do
@@ -15779,7 +15756,6 @@ Services=a.load'h',
 OnThemeChangeFunction=nil,
 }
 aa.AetheriaUI=aa
-aa.WindUI=aa
 
 
 local ac=game:GetService"HttpService"
@@ -15980,7 +15956,6 @@ end
 
 function aa.Popup(aq,ar)
 ar.AetheriaUI=aa
-ar.WindUI=aa
 return a.load'r'.new(ar)
 end
 
@@ -16001,7 +15976,6 @@ makefolder(ar.Title)
 end
 
 ar.AetheriaUI=aa
-ar.WindUI=aa
 ar.Parent=aa.ScreenGui.Window
 
 if aa.Window then
