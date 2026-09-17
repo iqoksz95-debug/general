@@ -5926,28 +5926,50 @@ end
 end
 
 local followConn = nil
+local scrollConn = nil
+local currentOpenId = 0
 
 local function UpdatePosition()
     if not an.Opened or not an.UIElements.Dropdown or not an.UIElements.Dropdown.Parent then
         if followConn then followConn:Disconnect() followConn = nil end
+        if scrollConn then scrollConn:Disconnect() scrollConn = nil end
         return
     end
     local ap = an.UIElements.Dropdown
     local aq = an.UIElements.MenuCanvas
 
+    if not ap.Visible then
+        an:Close(true)
+        return
+    end
+
+    local apPos = ap.AbsolutePosition
+    local apSize = ap.AbsoluteSize
+    local apTop = apPos.Y
+    local apBottom = apTop + apSize.Y
+
     local scrollParent = ap:FindFirstAncestorWhichIsA("ScrollingFrame")
+    local win = (am.Window and (am.Window.UIElements and am.Window.UIElements.Main or am.Window.Frame))
+
     if scrollParent then
         local sTop = scrollParent.AbsolutePosition.Y
         local sBottom = sTop + scrollParent.AbsoluteSize.Y
-        local apTop = ap.AbsolutePosition.Y
-        local apBottom = apTop + ap.AbsoluteSize.Y
-        if apBottom < sTop - 10 or apTop > sBottom + 10 then
-            an:Close()
+        if apBottom <= sTop or apTop >= sBottom then
+            an:Close(true)
             return
         end
     end
 
-    local ar = ae.ViewportSize.Y - (ap.AbsolutePosition.Y + ap.AbsoluteSize.Y) - ak.MenuPadding - 54
+    if win then
+        local wTop = win.AbsolutePosition.Y
+        local wBottom = wTop + win.AbsoluteSize.Y
+        if apBottom <= wTop or apTop >= wBottom then
+            an:Close(true)
+            return
+        end
+    end
+
+    local ar = ae.ViewportSize.Y - apBottom - ak.MenuPadding - 54
     local as = aq.AbsoluteSize.Y + ak.MenuPadding
 
     local at = -54
@@ -5955,12 +5977,24 @@ local function UpdatePosition()
         at = as - ar - 54
     end
 
-    aq.Position = UDim2.new(
-        0,
-        ap.AbsolutePosition.X + ap.AbsoluteSize.X,
-        0,
-        ap.AbsolutePosition.Y + ap.AbsoluteSize.Y - at + ak.MenuPadding
-    )
+    local targetY = apBottom - at + ak.MenuPadding
+    local targetX = apPos.X + apSize.X
+
+    if win then
+        local wTop = win.AbsolutePosition.Y
+        if targetY < wTop then
+            an:Close(true)
+            return
+        end
+    elseif scrollParent then
+        local sTop = scrollParent.AbsolutePosition.Y
+        if targetY < sTop then
+            an:Close(true)
+            return
+        end
+    end
+
+    aq.Position = UDim2.new(0, targetX, 0, targetY)
 end
 
 local ap
@@ -6212,6 +6246,8 @@ RecalculateListSize()
 
 function an.Open(aq)
 if ao then
+currentOpenId = currentOpenId + 1
+local thisOpenId = currentOpenId
 an.Opened=true
 an.UIElements.Menu.Visible=true
 an.UIElements.MenuCanvas.Visible=true
@@ -6230,7 +6266,9 @@ ImageTransparency=0.05
 
 task.spawn(function()
 task.wait(.1)
+if currentOpenId == thisOpenId then
 an.Opened=true
+end
 end)
 
 UpdatePosition()
@@ -6243,11 +6281,40 @@ followConn = game:GetService("RunService").RenderStepped:Connect(function()
         if followConn then followConn:Disconnect() followConn = nil end
     end
 end)
+
+if scrollConn then scrollConn:Disconnect() scrollConn = nil end
+local scrollParent = an.UIElements.Dropdown and an.UIElements.Dropdown:FindFirstAncestorWhichIsA("ScrollingFrame")
+if scrollParent then
+    scrollConn = scrollParent:GetPropertyChangedSignal("CanvasPosition"):Connect(function()
+        if an.Opened and an.UIElements.Dropdown and an.UIElements.Dropdown.Parent then
+            UpdatePosition()
+        else
+            if scrollConn then scrollConn:Disconnect() scrollConn = nil end
+        end
+    end)
 end
 end
-function an.Close(aq)
+end
+function an.Close(aq, instant)
+local isInstant = (aq == true) or (instant == true)
+currentOpenId = currentOpenId + 1
+local thisCloseId = currentOpenId
 an.Opened=false
 if followConn then followConn:Disconnect() followConn = nil end
+if scrollConn then scrollConn:Disconnect() scrollConn = nil end
+
+if isInstant then
+    if an.UIElements.MenuCanvas then
+        an.UIElements.MenuCanvas.Visible = false
+        an.UIElements.MenuCanvas.Active = false
+    end
+    if an.UIElements.Menu then
+        an.UIElements.Menu.Visible = false
+        an.UIElements.Menu.Size = UDim2.new(1,0, 0,0)
+        an.UIElements.Menu.ImageTransparency = 1
+    end
+    return
+end
 
 ah(an.UIElements.Menu,0.25,{
 Size=UDim2.new(
@@ -6260,13 +6327,19 @@ ImageTransparency=1,
 
 task.spawn(function()
 task.wait(.1)
-an.UIElements.Menu.Visible=false
+if currentOpenId == thisCloseId and not an.Opened then
+if an.UIElements.Menu then an.UIElements.Menu.Visible=false end
+end
 end)
 
 task.spawn(function()
 task.wait(.25)
+if currentOpenId == thisCloseId and not an.Opened then
+if an.UIElements.MenuCanvas then
 an.UIElements.MenuCanvas.Visible=false
 an.UIElements.MenuCanvas.Active=false
+end
+end
 end)
 end
 
