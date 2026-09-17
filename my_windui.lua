@@ -596,7 +596,7 @@ F.ImageLabel.Image=getcustomasset(G)
 end)
 end)
 if not H then
-warn("[ WindUI.Creator ]  '"..identifyexecutor().."' doesnt support the URL Images. Error: "..J)
+warn("[ AetheriaUI.Creator ]  '"..identifyexecutor().."' doesnt support the URL Images. Error: "..J)
 
 F:Destroy()
 end
@@ -3615,18 +3615,22 @@ end
 
 function ac.Init(ad,ae)
 if not ae.Folder then
-warn"[ WindUI.ConfigManager ] Window.Folder is not specified."
+warn"[ AetheriaUI.ConfigManager ] Window.Folder is not specified."
 return false
 end
 
 ab=ae
 ac.Folder=ab.Folder
+if not isfolder("AetheriaUI")then makefolder("AetheriaUI")end
+if isfolder("WindUI/"..ac.Folder) and not isfolder("AetheriaUI/"..ac.Folder) then
 ac.Path="WindUI/"..tostring(ac.Folder).."/config/"
-
-if not isfolder("WindUI/"..ac.Folder)then
-makefolder("WindUI/"..ac.Folder)
-if not isfolder("WindUI/"..ac.Folder.."/config/")then
-makefolder("WindUI/"..ac.Folder.."/config/")
+else
+ac.Path="AetheriaUI/"..tostring(ac.Folder).."/config/"
+if not isfolder("AetheriaUI/"..ac.Folder)then
+makefolder("AetheriaUI/"..ac.Folder)
+if not isfolder("AetheriaUI/"..ac.Folder.."/config/")then
+makefolder("AetheriaUI/"..ac.Folder.."/config/")
+end
 end
 end
 
@@ -4939,8 +4943,8 @@ end
 
 function ai.Set(am,an,ao)
 ai.Value=an
-local WindUI_knobDur=_G.WindUI_AnimatedToggles and 0.35 or 0.1
-local WindUI_knobStyle=_G.WindUI_AnimatedToggles and Enum.EasingStyle.Back or Enum.EasingStyle.Quint
+local WindUI_knobDur=(_G.AetheriaUI_AnimatedToggles or _G.WindUI_AnimatedToggles) and 0.35 or 0.1
+local WindUI_knobStyle=(_G.AetheriaUI_AnimatedToggles or _G.WindUI_AnimatedToggles) and Enum.EasingStyle.Back or Enum.EasingStyle.Quint
 local onPos=isBoxMode and UDim2.new(1,-17,0.5,0) or UDim2.new(1,-22,0.5,0)
 local offPos=isBoxMode and UDim2.new(0,3,0.5,0) or UDim2.new(0,4,0.5,0)
 if an then
@@ -8076,7 +8080,7 @@ WindUI_ag.Multi=true
 return a.load'H'.New(WindUI_af,WindUI_ag)
 end)
 if WindUI_ok then return WindUI_a,WindUI_b end
-warn("[WindUI] Multidropdown failed: "..tostring(WindUI_a))
+warn("[AetheriaUI] Multidropdown failed: "..tostring(WindUI_a))
 return"Multidropdown",{__type="Multidropdown",Title=WindUI_ag.Title or"Multidropdown"}
 end
 
@@ -8089,7 +8093,7 @@ WindUI_ag.Type="Checkbox"
 return a.load'D'.New(WindUI_af,WindUI_ag)
 end)
 if WindUI_ok then return WindUI_a,WindUI_b end
-warn("[WindUI] Checkboxtoggle failed: "..tostring(WindUI_a))
+warn("[AetheriaUI] Checkboxtoggle failed: "..tostring(WindUI_a))
 return"Checkboxtoggle",{__type="Checkboxtoggle",Title=WindUI_ag.Title or"Checkboxtoggle"}
 end
 
@@ -8155,7 +8159,7 @@ end
 return WindUI_ah.__type,WindUI_ah
 end)
 if WindUI_ok then return WindUI_a,WindUI_b end
-warn("[WindUI] Textinfo failed: "..tostring(WindUI_a))
+warn("[AetheriaUI] Textinfo failed: "..tostring(WindUI_a))
 return"Textinfo",{__type="Textinfo",Title=WindUI_ag.Title or"Textinfo"}
 end
 
@@ -8216,7 +8220,7 @@ end
 return WindUI_ah.__type,WindUI_ah
 end)
 if WindUI_ok then return WindUI_a,WindUI_b end
-warn("[WindUI] Textbox failed: "..tostring(WindUI_a))
+warn("[AetheriaUI] Textbox failed: "..tostring(WindUI_a))
 return"Textbox",{__type="Textbox",Title=WindUI_ag.Title or"Textbox"}
 end
 
@@ -8285,7 +8289,7 @@ end
 return"TextDivider",WindUI_ah
 end)
 if WindUI_ok then return WindUI_a,WindUI_b end
-warn("[WindUI] TextDivider failed: "..tostring(WindUI_a))
+warn("[AetheriaUI] TextDivider failed: "..tostring(WindUI_a))
 return"TextDivider",{__type="TextDivider",Title=WindUI_ag.Title or"Divider"}
 end
 
@@ -8338,7 +8342,7 @@ function WindUI_ToggleSlider.New(WindUI_af,WindUI_ag)
         local trackWidth=isBoxTogSl and 38 or 90
         local valWidth=isBoxTogSl and 22 or 34
         local switchWidth=isBoxTogSl and 36 or 42
-        local sH=isBoxTogSl and 22 or 26
+        local sH=isBoxTogSl and 22 or 34
         local rightWidth=isBoxTogSl and (trackWidth+valWidth+switchWidth+10) or (trackWidth+valWidth+switchWidth+10)
 
         ai.Frame=a.load'y'{
@@ -8401,7 +8405,7 @@ function WindUI_ToggleSlider.New(WindUI_af,WindUI_ag)
         })
 
         local valueLabel=ac("TextBox",{
-            Size=UDim2.new(0,valWidth,0,isBoxTogSl and 18 or 22),
+            Size=UDim2.new(0,valWidth,0,isBoxTogSl and 18 or 24),
             Text=FormatVal(currentVal),
             TextSize=isBoxTogSl and 11 or 13,
             TextXAlignment=Enum.TextXAlignment.Right,
@@ -8520,12 +8524,12 @@ function WindUI_ToggleSlider.New(WindUI_af,WindUI_ag)
             local trW=isBoxes and 38 or 90
             local vW=isBoxes and 22 or 34
             local sw=isBoxes and 36 or 42
-            local sh=isBoxes and 22 or 26
+            local sh=isBoxes and 22 or 34
             local rW=isBoxes and (trW+vW+sw+10) or (trW+vW+sw+10)
             rightHolder.Size=UDim2.new(0,rW,1,0)
             sliderFr.Size=UDim2.new(0,trW,0,4)
             if valueLabel then
-                valueLabel.Size=UDim2.new(0,vW,0,isBoxes and 18 or 22)
+                valueLabel.Size=UDim2.new(0,vW,0,isBoxes and 18 or 24)
                 valueLabel.TextSize=isBoxes and 11 or 13
             end
             if sliderRow then
@@ -8579,7 +8583,7 @@ function WindUI_ToggleSlider.New(WindUI_af,WindUI_ag)
         return ai.__type,ai
     end)
     if WindUI_ok then return WindUI_resA,WindUI_resB end
-    warn("[WindUI] ToggleSlider failed: "..tostring(WindUI_resA))
+    warn("[AetheriaUI] ToggleSlider failed: "..tostring(WindUI_resA))
     return"ToggleSlider",{__type="ToggleSlider",Title=WindUI_ag.Title or"ToggleSlider"}
 end
 
@@ -8630,9 +8634,9 @@ function WindUI_ToggleColorpicker.New(WindUI_af,WindUI_ag)
         local currentTransparency=initTransparency
 
         local isBoxTogCol=(WindUI_ag.Window and WindUI_ag.Window.TabLayoutType=="Boxes")
-        local colW=isBoxTogCol and 22 or 26
+        local colW=isBoxTogCol and 22 or 34
         local swW=isBoxTogCol and 36 or 42
-        local sH=isBoxTogCol and 22 or 26
+        local sH=isBoxTogCol and 22 or 34
         local rightWidth=colW+swW+(isBoxTogCol and 6 or 10)
 
         ai.Frame=a.load'y'{
@@ -8730,9 +8734,9 @@ function WindUI_ToggleColorpicker.New(WindUI_af,WindUI_ag)
 
         function ai.SetBoxMode(self,isBoxes)
             isBoxTogCol=isBoxes
-            local cW=isBoxes and 22 or 26
+            local cW=isBoxes and 22 or 34
             local sw=isBoxes and 36 or 42
-            local sh=isBoxes and 22 or 26
+            local sh=isBoxes and 22 or 34
             local rW=cW+sw+(isBoxes and 6 or 10)
             rightHolder.Size=UDim2.new(0,rW,1,0)
             colorBtn.Size=UDim2.new(0,cW,0,cW)
@@ -8808,7 +8812,7 @@ function WindUI_ToggleColorpicker.New(WindUI_af,WindUI_ag)
         return ai.__type,ai
     end)
     if WindUI_ok then return WindUI_resA,WindUI_resB end
-    warn("[WindUI] ToggleColorpicker failed: "..tostring(WindUI_resA))
+    warn("[AetheriaUI] ToggleColorpicker failed: "..tostring(WindUI_resA))
     return"ToggleColorpicker",{__type="ToggleColorpicker",Title=WindUI_ag.Title or"ToggleColorpicker"}
 end
 
@@ -8916,7 +8920,7 @@ function WindUI_ProgressBar.New(WindUI_af,WindUI_ag)
         return ai.__type,ai
     end)
     if WindUI_ok then return WindUI_resA,WindUI_resB end
-    warn("[WindUI] ProgressBar failed: "..tostring(WindUI_resA))
+    warn("[AetheriaUI] ProgressBar failed: "..tostring(WindUI_resA))
     return"ProgressBar",{__type="ProgressBar",Title=WindUI_ag.Title or"ProgressBar"}
 end
 
@@ -9092,7 +9096,7 @@ function WindUI_StatCard.New(WindUI_af,WindUI_ag)
         return ai.__type,ai
     end)
     if WindUI_ok then return WindUI_resA,WindUI_resB end
-    warn("[WindUI] StatCard failed: "..tostring(WindUI_resA))
+    warn("[AetheriaUI] StatCard failed: "..tostring(WindUI_resA))
     return"StatCard",{__type="StatCard",Title=WindUI_ag.Title or"StatCard"}
 end
 
@@ -9216,7 +9220,7 @@ function WindUI_ButtonGroup.New(WindUI_af,WindUI_ag)
         return ai.__type,ai
     end)
     if WindUI_ok then return WindUI_resA,WindUI_resB end
-    warn("[WindUI] ButtonGroup failed: "..tostring(WindUI_resA))
+    warn("[AetheriaUI] ButtonGroup failed: "..tostring(WindUI_resA))
     return"ButtonGroup",{__type="ButtonGroup",Title=WindUI_ag.Title or"ButtonGroup"}
 end
 
@@ -9419,7 +9423,7 @@ function WindUI_ToggleGroup.New(WindUI_af,WindUI_ag)
         return ai.__type,ai
     end)
     if WindUI_ok then return WindUI_resA,WindUI_resB end
-    warn("[WindUI] ToggleGroup failed: "..tostring(WindUI_resA))
+    warn("[AetheriaUI] ToggleGroup failed: "..tostring(WindUI_resA))
     return"ToggleGroup",{__type="ToggleGroup",Title=WindUI_ag.Title or"ToggleGroup"}
 end
 
@@ -9574,7 +9578,7 @@ function WindUI_SocialCard.New(WindUI_af,WindUI_ag)
         return ai.__type,ai
     end)
     if WindUI_ok then return WindUI_resA,WindUI_resB end
-    warn("[WindUI] SocialCard failed: "..tostring(WindUI_resA))
+    warn("[AetheriaUI] SocialCard failed: "..tostring(WindUI_resA))
     return"SocialCard",{__type="SocialCard",Title=WindUI_ag.Title or"SocialCard"}
 end
 
@@ -9875,7 +9879,7 @@ function WindUI_DualSlider.New(WindUI_af,WindUI_ag)
         return ai.__type,ai
     end)
     if WindUI_ok then return WindUI_resA,WindUI_resB end
-    warn("[WindUI] DualSlider failed: "..tostring(WindUI_resA))
+    warn("[AetheriaUI] DualSlider failed: "..tostring(WindUI_resA))
     return"DualSlider",{__type="DualSlider",Title=WindUI_ag.Title or"DualSlider"}
 end
 
@@ -9916,9 +9920,9 @@ function WindUI_ToggleInput.New(WindUI_af,WindUI_ag)
         ai.Value={Toggle=currentToggle,Input=currentInput}
 
         local isBoxTogIn=(WindUI_ag.Window and WindUI_ag.Window.TabLayoutType=="Boxes")
-        local inputWidth=isBoxTogIn and 55 or 110
+        local inputWidth=isBoxTogIn and 55 or 120
         local switchWidth=isBoxTogIn and 36 or 42
-        local inputH=isBoxTogIn and 22 or 26
+        local inputH=isBoxTogIn and 22 or 34
         local rightWidth=inputWidth+switchWidth+(isBoxTogIn and 6 or 10)
 
         ai.Frame=a.load'y'{
@@ -10025,10 +10029,10 @@ function WindUI_ToggleInput.New(WindUI_af,WindUI_ag)
 
         function ai.SetBoxMode(self,isBoxes)
             isBoxTogIn=isBoxes
-            local inW=isBoxes and 55 or 110
-            local inH=isBoxes and 22 or 26
+            local inW=isBoxes and 55 or 120
+            local inH=isBoxes and 22 or 34
             local sw=isBoxes and 36 or 42
-            local sh=isBoxes and 22 or 26
+            local sh=isBoxes and 22 or 34
             local rW=inW+sw+(isBoxes and 6 or 10)
             rightHolder.Size=UDim2.new(0,rW,1,0)
             inputContainer.Size=UDim2.new(0,inW,0,inH)
@@ -10080,7 +10084,7 @@ function WindUI_ToggleInput.New(WindUI_af,WindUI_ag)
         return ai.__type,ai
     end)
     if WindUI_ok then return WindUI_resA,WindUI_resB end
-    warn("[WindUI] ToggleInput failed: "..tostring(WindUI_resA))
+    warn("[AetheriaUI] ToggleInput failed: "..tostring(WindUI_resA))
     return"ToggleInput",{__type="ToggleInput",Title=WindUI_ag.Title or"ToggleInput"}
 end
 
@@ -10123,8 +10127,8 @@ function WindUI_ToggleKeybind.New(WindUI_af,WindUI_ag)
 
         local isBoxTogKey=(WindUI_ag.Window and WindUI_ag.Window.TabLayoutType=="Boxes")
         local swW=isBoxTogKey and 36 or 42
-        local boxH=isBoxTogKey and 22 or 26
-        local rightWidth=isBoxTogKey and 68 or 85
+        local boxH=isBoxTogKey and 22 or 34
+        local rightWidth=isBoxTogKey and 68 or 95
 
         ai.Frame=a.load'y'{
             Title=ai.Title,
@@ -10168,16 +10172,16 @@ function WindUI_ToggleKeybind.New(WindUI_af,WindUI_ag)
         local function UpdateKeySize()
             pcall(function()
                 local textWidth=togKeyText.TextBounds.X
-                togKeyText.TextSize=isBoxTogKey and 11 or 13
+                togKeyText.TextSize=isBoxTogKey and 11 or 14
                 if isBoxTogKey then
                     keyBadge.Frame.Frame.UIPadding.PaddingLeft=UDim.new(0,0)
                     keyBadge.Frame.Frame.UIPadding.PaddingRight=UDim.new(0,0)
                     keyBadge.Size=UDim2.new(0,math.max(24,textWidth+12),0,22)
                     togKeyScale.Scale=1
                 else
-                    keyBadge.Frame.Frame.UIPadding.PaddingLeft=UDim.new(0,6)
-                    keyBadge.Frame.Frame.UIPadding.PaddingRight=UDim.new(0,6)
-                    keyBadge.Size=UDim2.new(0,math.max(30,textWidth+16),0,26)
+                    keyBadge.Frame.Frame.UIPadding.PaddingLeft=UDim.new(0,8)
+                    keyBadge.Frame.Frame.UIPadding.PaddingRight=UDim.new(0,8)
+                    keyBadge.Size=UDim2.new(0,math.max(34,textWidth+18),0,34)
                     togKeyScale.Scale=1
                 end
             end)
@@ -10189,8 +10193,8 @@ function WindUI_ToggleKeybind.New(WindUI_af,WindUI_ag)
         function ai.SetBoxMode(self,isBoxes)
             isBoxTogKey=isBoxes
             local sw=isBoxes and 36 or 42
-            local bH=isBoxes and 22 or 26
-            rightWidth=isBoxes and 68 or 85
+            local bH=isBoxes and 22 or 34
+            rightWidth=isBoxes and 68 or 95
             rightHolder.Size=UDim2.new(0,rightWidth,1,0)
             if switchBtn then
                 switchBtn.Size=UDim2.new(0,sw,0,bH)
@@ -10330,7 +10334,7 @@ function WindUI_ToggleKeybind.New(WindUI_af,WindUI_ag)
         return ai.__type,ai
     end)
     if WindUI_ok then return WindUI_resA,WindUI_resB end
-    warn("[WindUI] ToggleKeybind failed: "..tostring(WindUI_resA))
+    warn("[AetheriaUI] ToggleKeybind failed: "..tostring(WindUI_resA))
     return"ToggleKeybind",{__type="ToggleKeybind",Title=WindUI_ag.Title or"ToggleKeybind"}
 end
 
@@ -10339,8 +10343,8 @@ end
 -- Action Button Helper for Composite Modules
 -- =========================================================================
 local function WindUI_CreateActionButton(aa,ac,ad,parent,isBox,btnText,onClick)
-    local w=isBox and 46 or 60
-    local h=isBox and 22 or 26
+    local w=isBox and 46 or 70
+    local h=isBox and 22 or 34
     local corner=isBox and 6 or 8
     local btn=aa.NewRoundFrame(corner,"Squircle",{
         Size=UDim2.new(0,w,0,h),
@@ -10353,7 +10357,7 @@ local function WindUI_CreateActionButton(aa,ac,ad,parent,isBox,btnText,onClick)
     local btnLabel=ac("TextLabel",{
         Size=UDim2.new(1,0,1,0),
         Text=tostring(btnText or"Action"),
-        TextSize=isBox and 11 or 13,
+        TextSize=isBox and 11 or 14,
         FontFace=Font.new(aa.Font,Enum.FontWeight.SemiBold),
         TextColor3=Color3.fromRGB(255,255,255),
         BackgroundTransparency=1,
@@ -10442,9 +10446,9 @@ local function WindUI_CreateToggleDropdown(WindUI_af,WindUI_ag,isMulti)
     ai.Value={Toggle=currentToggle,Dropdown=currentDrop}
 
     local isBoxTogDrop=(cfg.Window and cfg.Window.TabLayoutType=="Boxes") or (cfg.Tab and cfg.Tab.TabLayoutType=="Boxes")
-    local dropW=isBoxTogDrop and 72 or 120
+    local dropW=isBoxTogDrop and 72 or 130
     local swW=isBoxTogDrop and 36 or 42
-    local sH=isBoxTogDrop and 22 or 26
+    local sH=isBoxTogDrop and 22 or 34
     local rightWidth=dropW+swW+10
 
     ai.Frame=a.load'y'{
@@ -10580,9 +10584,9 @@ local function WindUI_CreateToggleDropdown(WindUI_af,WindUI_ag,isMulti)
 
     function ai.SetBoxMode(self,isBoxes)
         isBoxTogDrop=isBoxes
-        local dW=isBoxes and 72 or 120
+        local dW=isBoxes and 72 or 130
         local sW=isBoxes and 36 or 42
-        local boxH=isBoxes and 22 or 26
+        local boxH=isBoxes and 22 or 34
         local rW=dW+sW+10
         rightHolder.Size=UDim2.new(0,rW,1,0)
         dropBtn.Size=UDim2.new(0,dW,0,boxH)
@@ -10629,7 +10633,7 @@ local WindUI_ToggleDropdown={}
 function WindUI_ToggleDropdown.New(WindUI_af,WindUI_ag)
     local ok,resA,resB=pcall(function() return WindUI_CreateToggleDropdown(WindUI_af,WindUI_ag,false) end)
     if ok then return resA,resB end
-    warn("[WindUI] ToggleDropdown failed: "..tostring(resA))
+    warn("[AetheriaUI] ToggleDropdown failed: "..tostring(resA))
     return"ToggleDropdown",{__type="ToggleDropdown",Title=(WindUI_ag and WindUI_ag.Title) or (WindUI_af and WindUI_af.Title) or"ToggleDropdown"}
 end
 
@@ -10637,7 +10641,7 @@ local WindUI_ToggleMultiDropdown={}
 function WindUI_ToggleMultiDropdown.New(WindUI_af,WindUI_ag)
     local ok,resA,resB=pcall(function() return WindUI_CreateToggleDropdown(WindUI_af,WindUI_ag,true) end)
     if ok then return resA,resB end
-    warn("[WindUI] ToggleMultiDropdown failed: "..tostring(resA))
+    warn("[AetheriaUI] ToggleMultiDropdown failed: "..tostring(resA))
     return"ToggleMultiDropdown",{__type="ToggleMultiDropdown",Title=(WindUI_ag and WindUI_ag.Title) or (WindUI_af and WindUI_af.Title) or"ToggleMultiDropdown"}
 end
 
@@ -10699,9 +10703,9 @@ local function WindUI_CreateButtonDropdown(WindUI_af,WindUI_ag,isMulti)
     })
 
     local isBoxBtnDrop=(cfg.Window and cfg.Window.TabLayoutType=="Boxes") or (cfg.Tab and cfg.Tab.TabLayoutType=="Boxes")
-    local dropW=isBoxBtnDrop and 72 or 120
-    local bW=isBoxBtnDrop and 46 or 60
-    local h=isBoxBtnDrop and 22 or 26
+    local dropW=isBoxBtnDrop and 72 or 130
+    local bW=isBoxBtnDrop and 46 or 70
+    local h=isBoxBtnDrop and 22 or 34
     local rightWidth=dropW+bW+10
 
     ai.Frame=a.load'y'{
@@ -10792,15 +10796,15 @@ local function WindUI_CreateButtonDropdown(WindUI_af,WindUI_ag,isMulti)
 
     function ai.SetBoxMode(self,isBoxes)
         isBoxBtnDrop=isBoxes
-        local dW=isBoxes and 72 or 120
-        local actW=isBoxes and 46 or 60
-        local boxH=isBoxes and 22 or 26
+        local dW=isBoxes and 72 or 130
+        local actW=isBoxes and 46 or 70
+        local boxH=isBoxes and 22 or 34
         local rW=dW+actW+10
         rightHolder.Size=UDim2.new(0,rW,1,0)
         dropBtn.Size=UDim2.new(0,dW,0,boxH)
         dropLabel.TextSize=isBoxes and 11 or 13
         actionBtn.Size=UDim2.new(0,actW,0,boxH)
-        actionBtnLabel.TextSize=isBoxes and 11 or 13
+        actionBtnLabel.TextSize=isBoxes and 11 or 14
         local newOff=rW+(isBoxes and 12 or 15)
         if ai.Frame then
             ai.Frame.TextOffset=newOff
@@ -10837,7 +10841,7 @@ local WindUI_ButtonDropdown={}
 function WindUI_ButtonDropdown.New(WindUI_af,WindUI_ag)
     local ok,resA,resB=pcall(function() return WindUI_CreateButtonDropdown(WindUI_af,WindUI_ag,false) end)
     if ok then return resA,resB end
-    warn("[WindUI] ButtonDropdown failed: "..tostring(resA))
+    warn("[AetheriaUI] ButtonDropdown failed: "..tostring(resA))
     return"ButtonDropdown",{__type="ButtonDropdown",Title=(WindUI_ag and WindUI_ag.Title) or (WindUI_af and WindUI_af.Title) or"ButtonDropdown"}
 end
 
@@ -10845,7 +10849,7 @@ local WindUI_ButtonMultiDropdown={}
 function WindUI_ButtonMultiDropdown.New(WindUI_af,WindUI_ag)
     local ok,resA,resB=pcall(function() return WindUI_CreateButtonDropdown(WindUI_af,WindUI_ag,true) end)
     if ok then return resA,resB end
-    warn("[WindUI] ButtonMultiDropdown failed: "..tostring(resA))
+    warn("[AetheriaUI] ButtonMultiDropdown failed: "..tostring(resA))
     return"ButtonMultiDropdown",{__type="ButtonMultiDropdown",Title=(WindUI_ag and WindUI_ag.Title) or (WindUI_af and WindUI_af.Title) or"ButtonMultiDropdown"}
 end
 
@@ -10897,8 +10901,8 @@ function WindUI_ButtonColorPicker.New(WindUI_af,WindUI_ag)
         local currentTransparency=initTransparency
 
         local isBoxBtnCol=(cfg.Window and cfg.Window.TabLayoutType=="Boxes") or (cfg.Tab and cfg.Tab.TabLayoutType=="Boxes")
-        local colW=isBoxBtnCol and 22 or 26
-        local btnW=isBoxBtnCol and 46 or 60
+        local colW=isBoxBtnCol and 22 or 34
+        local btnW=isBoxBtnCol and 46 or 70
         local rightWidth=colW+btnW+10
 
         ai.Frame=a.load'y'{
@@ -11017,13 +11021,13 @@ function WindUI_ButtonColorPicker.New(WindUI_af,WindUI_ag)
 
         function ai.SetBoxMode(self,isBoxes)
             isBoxBtnCol=isBoxes
-            local cW=isBoxes and 22 or 26
-            local bWidth=isBoxes and 46 or 60
+            local cW=isBoxes and 22 or 34
+            local bWidth=isBoxes and 46 or 70
             local rW=cW+bWidth+10
             rightHolder.Size=UDim2.new(0,rW,1,0)
             colorBtn.Size=UDim2.new(0,cW,0,cW)
             actionBtn.Size=UDim2.new(0,bWidth,0,cW)
-            actionBtnLabel.TextSize=isBoxes and 11 or 13
+            actionBtnLabel.TextSize=isBoxes and 11 or 14
             local newOff=rW+(isBoxes and 12 or 15)
             if ai.Frame then
                 ai.Frame.TextOffset=newOff
@@ -11056,7 +11060,7 @@ function WindUI_ButtonColorPicker.New(WindUI_af,WindUI_ag)
         return ai.__type,ai
     end)
     if ok then return resA,resB end
-    warn("[WindUI] ButtonColorPicker failed: "..tostring(resA))
+    warn("[AetheriaUI] ButtonColorPicker failed: "..tostring(resA))
     return"ButtonColorPicker",{__type="ButtonColorPicker",Title=(WindUI_ag and WindUI_ag.Title) or (WindUI_af and WindUI_af.Title) or"ButtonColorPicker"}
 end
 
@@ -11105,8 +11109,8 @@ function WindUI_ButtonSlider.New(WindUI_af,WindUI_ag)
         local isBoxBtnSl=(cfg.Window and cfg.Window.TabLayoutType=="Boxes") or (cfg.Tab and cfg.Tab.TabLayoutType=="Boxes")
         local trackW=isBoxBtnSl and 38 or 90
         local valW=isBoxBtnSl and 22 or 34
-        local btnW=isBoxBtnSl and 46 or 60
-        local h=isBoxBtnSl and 22 or 26
+        local btnW=isBoxBtnSl and 46 or 70
+        local h=isBoxBtnSl and 22 or 34
         local rightWidth=trackW+valW+btnW+14
 
         ai.Frame=a.load'y'{
@@ -11149,7 +11153,7 @@ function WindUI_ButtonSlider.New(WindUI_af,WindUI_ag)
         })
 
         local valueLabel=ac("TextLabel",{
-            Size=UDim2.new(0,valW,0,isBoxBtnSl and 18 or 22),
+            Size=UDim2.new(0,valW,0,isBoxBtnSl and 18 or 24),
             Text=FormatVal(currentVal),
             TextSize=isBoxBtnSl and 11 or 13,
             FontFace=Font.new(aa.Font,Enum.FontWeight.Medium),
@@ -11258,16 +11262,16 @@ function WindUI_ButtonSlider.New(WindUI_af,WindUI_ag)
             isBoxBtnSl=isBoxes
             local trW=isBoxes and 38 or 90
             local vW=isBoxes and 22 or 34
-            local bWidth=isBoxes and 46 or 60
-            local sh=isBoxes and 22 or 26
+            local bWidth=isBoxes and 46 or 70
+            local sh=isBoxes and 22 or 34
             local rW=trW+vW+bWidth+14
             rightHolder.Size=UDim2.new(0,rW,1,0)
             sliderFr.Size=UDim2.new(0,trW,0,4)
-            valueLabel.Size=UDim2.new(0,vW,0,isBoxes and 18 or 22)
+            valueLabel.Size=UDim2.new(0,vW,0,isBoxes and 18 or 24)
             valueLabel.TextSize=isBoxes and 11 or 13
             sliderRow.Size=UDim2.new(0,trW+vW+6,0,sh)
             actionBtn.Size=UDim2.new(0,bWidth,0,sh)
-            actionBtnLabel.TextSize=isBoxes and 11 or 13
+            actionBtnLabel.TextSize=isBoxes and 11 or 14
             local newOff=rW+(isBoxes and 12 or 15)
             if ai.Frame then
                 ai.Frame.TextOffset=newOff
@@ -11300,7 +11304,7 @@ function WindUI_ButtonSlider.New(WindUI_af,WindUI_ag)
         return ai.__type,ai
     end)
     if ok then return resA,resB end
-    warn("[WindUI] ButtonSlider failed: "..tostring(resA))
+    warn("[AetheriaUI] ButtonSlider failed: "..tostring(resA))
     return"ButtonSlider",{__type="ButtonSlider",Title=(WindUI_ag and WindUI_ag.Title) or (WindUI_af and WindUI_af.Title) or"ButtonSlider"}
 end
 
@@ -11339,9 +11343,9 @@ function WindUI_ButtonKeybind.New(WindUI_af,WindUI_ag)
         ai.Value={Key=currentKey}
 
         local isBoxBtnKey=(cfg.Window and cfg.Window.TabLayoutType=="Boxes") or (cfg.Tab and cfg.Tab.TabLayoutType=="Boxes")
-        local keyW=isBoxBtnKey and 26 or 30
-        local btnW=isBoxBtnKey and 46 or 60
-        local h=isBoxBtnKey and 22 or 26
+        local keyW=isBoxBtnKey and 26 or 34
+        local btnW=isBoxBtnKey and 46 or 70
+        local h=isBoxBtnKey and 22 or 34
         local rightWidth=keyW+btnW+10
 
         ai.Frame=a.load'y'{
@@ -11386,16 +11390,16 @@ function WindUI_ButtonKeybind.New(WindUI_af,WindUI_ag)
         local function UpdateKeySize()
             pcall(function()
                 local textWidth=togKeyText.TextBounds.X
-                togKeyText.TextSize=isBoxBtnKey and 11 or 13
+                togKeyText.TextSize=isBoxBtnKey and 11 or 14
                 if isBoxBtnKey then
                     keyBadge.Frame.Frame.UIPadding.PaddingLeft=UDim.new(0,0)
                     keyBadge.Frame.Frame.UIPadding.PaddingRight=UDim.new(0,0)
                     keyBadge.Size=UDim2.new(0,math.max(24,textWidth+12),0,22)
                     togKeyScale.Scale=1
                 else
-                    keyBadge.Frame.Frame.UIPadding.PaddingLeft=UDim.new(0,6)
-                    keyBadge.Frame.Frame.UIPadding.PaddingRight=UDim.new(0,6)
-                    keyBadge.Size=UDim2.new(0,math.max(30,textWidth+16),0,26)
+                    keyBadge.Frame.Frame.UIPadding.PaddingLeft=UDim.new(0,8)
+                    keyBadge.Frame.Frame.UIPadding.PaddingRight=UDim.new(0,8)
+                    keyBadge.Size=UDim2.new(0,math.max(34,textWidth+18),0,34)
                     togKeyScale.Scale=1
                 end
             end)
@@ -11492,13 +11496,13 @@ function WindUI_ButtonKeybind.New(WindUI_af,WindUI_ag)
 
         function ai.SetBoxMode(self,isBoxes)
             isBoxBtnKey=isBoxes
-            local kW=isBoxes and 26 or 30
-            local bWidth=isBoxes and 46 or 60
-            local boxH=isBoxes and 22 or 26
+            local kW=isBoxes and 26 or 34
+            local bWidth=isBoxes and 46 or 70
+            local boxH=isBoxes and 22 or 34
             local rW=kW+bWidth+10
             rightHolder.Size=UDim2.new(0,rW,1,0)
             actionBtn.Size=UDim2.new(0,bWidth,0,boxH)
-            actionBtnLabel.TextSize=isBoxes and 11 or 13
+            actionBtnLabel.TextSize=isBoxes and 11 or 14
             UpdateKeySize()
             local newOff=rW+(isBoxes and 12 or 15)
             if ai.Frame then
@@ -11532,7 +11536,7 @@ function WindUI_ButtonKeybind.New(WindUI_af,WindUI_ag)
         return ai.__type,ai
     end)
     if ok then return resA,resB end
-    warn("[WindUI] ButtonKeybind failed: "..tostring(resA))
+    warn("[AetheriaUI] ButtonKeybind failed: "..tostring(resA))
     return"ButtonKeybind",{__type="ButtonKeybind",Title=(WindUI_ag and WindUI_ag.Title) or (WindUI_af and WindUI_af.Title) or"ButtonKeybind"}
 end
 
@@ -11569,9 +11573,9 @@ function WindUI_ButtonInput.New(WindUI_af,WindUI_ag)
         ai.Value={Input=currentInput}
 
         local isBoxBtnIn=(cfg.Window and cfg.Window.TabLayoutType=="Boxes") or (cfg.Tab and cfg.Tab.TabLayoutType=="Boxes")
-        local inputW=isBoxBtnIn and 55 or 110
-        local btnW=isBoxBtnIn and 46 or 60
-        local h=isBoxBtnIn and 22 or 26
+        local inputW=isBoxBtnIn and 55 or 120
+        local btnW=isBoxBtnIn and 46 or 70
+        local h=isBoxBtnIn and 22 or 34
         local rightWidth=inputW+btnW+10
 
         ai.Frame=a.load'y'{
@@ -11657,15 +11661,15 @@ function WindUI_ButtonInput.New(WindUI_af,WindUI_ag)
 
         function ai.SetBoxMode(self,isBoxes)
             isBoxBtnIn=isBoxes
-            local inW=isBoxes and 55 or 110
-            local bWidth=isBoxes and 46 or 60
-            local boxH=isBoxes and 22 or 26
+            local inW=isBoxes and 55 or 120
+            local bWidth=isBoxes and 46 or 70
+            local boxH=isBoxes and 22 or 34
             local rW=inW+bWidth+10
             rightHolder.Size=UDim2.new(0,rW,1,0)
             inputFr.Size=UDim2.new(0,inW,0,boxH)
             textBox.TextSize=isBoxes and 11 or 13
             actionBtn.Size=UDim2.new(0,bWidth,0,boxH)
-            actionBtnLabel.TextSize=isBoxes and 11 or 13
+            actionBtnLabel.TextSize=isBoxes and 11 or 14
             local newOff=rW+(isBoxes and 12 or 15)
             if ai.Frame then
                 ai.Frame.TextOffset=newOff
@@ -11698,7 +11702,7 @@ function WindUI_ButtonInput.New(WindUI_af,WindUI_ag)
         return ai.__type,ai
     end)
     if ok then return resA,resB end
-    warn("[WindUI] ButtonInput failed: "..tostring(resA))
+    warn("[AetheriaUI] ButtonInput failed: "..tostring(resA))
     return"ButtonInput",{__type="ButtonInput",Title=(WindUI_ag and WindUI_ag.Title) or (WindUI_af and WindUI_af.Title) or"ButtonInput"}
 end
 
@@ -13657,7 +13661,7 @@ writefile(aE,b)
 end)
 
 if not b then
-warn("[ WindUI.Background ]  Failed to download video: "..tostring(e))
+warn("[ AetheriaUI.Background ]  Failed to download video: "..tostring(e))
 return
 end
 end
@@ -14684,6 +14688,7 @@ end
 -- Animated Toggle Switches: a single shared flag every Toggle's internal switch (module
 -- a.B) reads each time it animates — no per-toggle wiring needed anywhere.
 function ao.SetAnimatedToggles(j,l)
+_G.AetheriaUI_AnimatedToggles=l
 _G.WindUI_AnimatedToggles=l
 end
 
@@ -14910,7 +14915,7 @@ local WindUI_Cursor_Conn
 local function WindUI_Cursor_Ensure()
 if not WindUI_Cursor_Gui then
 WindUI_Cursor_Gui=Instance.new("ScreenGui")
-WindUI_Cursor_Gui.Name="WindUI_Cursor"
+WindUI_Cursor_Gui.Name="AetheriaUI_Cursor"
 WindUI_Cursor_Gui.IgnoreGuiInset=true
 WindUI_Cursor_Gui.ResetOnSpawn=false
 WindUI_Cursor_Gui.DisplayOrder=2147483647
@@ -15723,6 +15728,7 @@ end
 return ao
 end end end
 local aa={
+Name="AetheriaUI",
 Window=nil,
 Theme=nil,
 Creator=a.load'a',
@@ -15742,6 +15748,8 @@ Services=a.load'h',
 
 OnThemeChangeFunction=nil,
 }
+aa.AetheriaUI=aa
+aa.WindUI=aa
 
 
 local ac=game:GetService"HttpService"
@@ -15776,7 +15784,7 @@ local ao=gethui and gethui()or game.CoreGui
 
 
 aa.ScreenGui=aj("ScreenGui",{
-Name="WindUI",
+Name="AetheriaUI",
 Parent=ao,
 IgnoreGuiInset=true,
 ScreenInsets="None",
@@ -15805,12 +15813,12 @@ Name="ToolTips"
 })
 
 aa.NotificationGui=aj("ScreenGui",{
-Name="WindUI/Notifications",
+Name="AetheriaUI/Notifications",
 Parent=ao,
 IgnoreGuiInset=true,
 })
 aa.DropdownGui=aj("ScreenGui",{
-Name="WindUI/Dropdowns",
+Name="AetheriaUI/Dropdowns",
 Parent=ao,
 IgnoreGuiInset=true,
 })
@@ -15941,6 +15949,7 @@ end
 
 
 function aa.Popup(aq,ar)
+ar.AetheriaUI=aa
 ar.WindUI=aa
 return a.load'r'.new(ar)
 end
@@ -15949,6 +15958,9 @@ end
 function aa.CreateWindow(aq,ar)
 local at=a.load'U'
 
+if not isfolder"AetheriaUI"then
+makefolder"AetheriaUI"
+end
 if not isfolder"WindUI"then
 makefolder"WindUI"
 end
@@ -15958,6 +15970,7 @@ else
 makefolder(ar.Title)
 end
 
+ar.AetheriaUI=aa
 ar.WindUI=aa
 ar.Parent=aa.ScreenGui.Window
 
