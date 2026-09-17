@@ -5925,24 +5925,42 @@ an.UIElements.MenuCanvas.Size=UDim2.fromOffset(an.UIElements.MenuCanvas.Absolute
 end
 end
 
-function UpdatePosition()
-local ap=an.UIElements.Dropdown
-local aq=an.UIElements.MenuCanvas
+local followConn = nil
 
-local ar=ae.ViewportSize.Y-(ap.AbsolutePosition.Y+ap.AbsoluteSize.Y)-ak.MenuPadding-54
-local as=aq.AbsoluteSize.Y+ak.MenuPadding
+local function UpdatePosition()
+    if not an.Opened or not an.UIElements.Dropdown or not an.UIElements.Dropdown.Parent then
+        if followConn then followConn:Disconnect() followConn = nil end
+        return
+    end
+    local ap = an.UIElements.Dropdown
+    local aq = an.UIElements.MenuCanvas
 
-local at=-54
-if ar<as then
-at=as-ar-54
-end
+    local scrollParent = ap:FindFirstAncestorWhichIsA("ScrollingFrame")
+    if scrollParent then
+        local sTop = scrollParent.AbsolutePosition.Y
+        local sBottom = sTop + scrollParent.AbsoluteSize.Y
+        local apTop = ap.AbsolutePosition.Y
+        local apBottom = apTop + ap.AbsoluteSize.Y
+        if apBottom < sTop - 10 or apTop > sBottom + 10 then
+            an:Close()
+            return
+        end
+    end
 
-aq.Position=UDim2.new(
-0,
-ap.AbsolutePosition.X+ap.AbsoluteSize.X,
-0,
-ap.AbsolutePosition.Y+ap.AbsoluteSize.Y-at+ak.MenuPadding
-)
+    local ar = ae.ViewportSize.Y - (ap.AbsolutePosition.Y + ap.AbsoluteSize.Y) - ak.MenuPadding - 54
+    local as = aq.AbsoluteSize.Y + ak.MenuPadding
+
+    local at = -54
+    if ar < as then
+        at = as - ar - 54
+    end
+
+    aq.Position = UDim2.new(
+        0,
+        ap.AbsolutePosition.X + ap.AbsoluteSize.X,
+        0,
+        ap.AbsolutePosition.Y + ap.AbsoluteSize.Y - at + ak.MenuPadding
+    )
 end
 
 local ap
@@ -6215,14 +6233,21 @@ task.wait(.1)
 an.Opened=true
 end)
 
-
-
-
 UpdatePosition()
+
+if followConn then followConn:Disconnect() followConn = nil end
+followConn = game:GetService("RunService").RenderStepped:Connect(function()
+    if an.Opened and an.UIElements.Dropdown and an.UIElements.Dropdown.Parent then
+        UpdatePosition()
+    else
+        if followConn then followConn:Disconnect() followConn = nil end
+    end
+end)
 end
 end
 function an.Close(aq)
 an.Opened=false
+if followConn then followConn:Disconnect() followConn = nil end
 
 ah(an.UIElements.Menu,0.25,{
 Size=UDim2.new(
@@ -8240,7 +8265,8 @@ function WindUI_ToggleSlider.New(WindUI_af,WindUI_ag)
         local trackWidth=isBoxTogSl and 38 or 90
         local valWidth=isBoxTogSl and 22 or 34
         local switchWidth=isBoxTogSl and 36 or 42
-        local rightWidth=isBoxTogSl and (trackWidth+valWidth+switchWidth+10) or (90+38+46+10)
+        local sH=isBoxTogSl and 24 or 52
+        local rightWidth=isBoxTogSl and (trackWidth+valWidth+switchWidth+10) or (trackWidth+valWidth+switchWidth+14)
 
         ai.Frame=a.load'y'{
             Title=ai.Title,
@@ -8302,9 +8328,9 @@ function WindUI_ToggleSlider.New(WindUI_af,WindUI_ag)
         })
 
         local valueLabel=ac("TextBox",{
-            Size=UDim2.new(0,34,0,18),
+            Size=UDim2.new(0,valWidth,0,isBoxTogSl and 18 or 24),
             Text=FormatVal(currentVal),
-            TextSize=12,
+            TextSize=isBoxTogSl and 11 or 13,
             TextXAlignment=Enum.TextXAlignment.Right,
             BackgroundTransparency=1,
             ThemeTag={TextColor3="Text"},
@@ -8323,7 +8349,7 @@ function WindUI_ToggleSlider.New(WindUI_af,WindUI_ag)
         end)
 
         local sliderRow=ac("Frame",{
-            Size=UDim2.new(0,trackWidth+38,0,26),
+            Size=UDim2.new(0,trackWidth+valWidth+6,0,sH),
             BackgroundTransparency=1,
             Parent=rightHolder,
         },{
@@ -8337,7 +8363,7 @@ function WindUI_ToggleSlider.New(WindUI_af,WindUI_ag)
         })
 
         local switchBtn=ac("TextButton",{
-            Size=UDim2.new(0,42,0,26),
+            Size=UDim2.new(0,switchWidth,0,sH),
             BackgroundTransparency=1,
             Text="",
             AutoButtonColor=false,
@@ -8417,19 +8443,20 @@ function WindUI_ToggleSlider.New(WindUI_af,WindUI_ag)
         end
 
         function ai.SetBoxMode(self,isBoxes)
+            isBoxTogSl=isBoxes
             local trW=isBoxes and 38 or 90
             local vW=isBoxes and 22 or 34
             local sw=isBoxes and 36 or 42
-            local sh=isBoxes and 22 or 26
-            local rW=isBoxes and (trW+vW+sw+10) or (90+38+46+10)
+            local sh=isBoxes and 24 or 52
+            local rW=isBoxes and (trW+vW+sw+10) or (trW+vW+sw+14)
             rightHolder.Size=UDim2.new(0,rW,1,0)
             sliderFr.Size=UDim2.new(0,trW,0,4)
             if valueLabel then
-                valueLabel.Size=UDim2.new(0,vW,0,18)
-                valueLabel.TextSize=isBoxes and 10 or 12
+                valueLabel.Size=UDim2.new(0,vW,0,isBoxes and 18 or 24)
+                valueLabel.TextSize=isBoxes and 11 or 13
             end
             if sliderRow then
-                sliderRow.Size=UDim2.new(0,trW+vW+4,0,isBoxes and 22 or 26)
+                sliderRow.Size=UDim2.new(0,trW+vW+6,0,sh)
             end
             if switchBtn then
                 switchBtn.Size=UDim2.new(0,sw,0,sh)
@@ -8530,7 +8557,10 @@ function WindUI_ToggleColorpicker.New(WindUI_af,WindUI_ag)
         local currentTransparency=initTransparency
 
         local isBoxTogCol=(WindUI_ag.Window and WindUI_ag.Window.TabLayoutType=="Boxes")
-        local rightWidth=isBoxTogCol and 64 or 85
+        local colW=isBoxTogCol and 24 or 52
+        local swW=isBoxTogCol and 36 or 42
+        local sH=isBoxTogCol and 24 or 52
+        local rightWidth=colW+swW+(isBoxTogCol and 6 or 10)
 
         ai.Frame=a.load'y'{
             Title=ai.Title,
@@ -8559,17 +8589,17 @@ function WindUI_ToggleColorpicker.New(WindUI_af,WindUI_ag)
             }),
         })
 
-        local colorBtn=aa.NewRoundFrame(8,"Squircle",{
+        local colorBtn=aa.NewRoundFrame(isBoxTogCol and 8 or 12,"Squircle",{
             ImageTransparency=currentTransparency,
             Active=true,
             ImageColor3=currentColor,
-            Size=UDim2.new(0,26,0,26),
+            Size=UDim2.new(0,colW,0,colW),
             Parent=rightHolder,
             ZIndex=2,
         },nil,true)
 
         local switchBtn=ac("TextButton",{
-            Size=UDim2.new(0,42,0,26),
+            Size=UDim2.new(0,swW,0,sH),
             BackgroundTransparency=1,
             Text="",
             AutoButtonColor=false,
@@ -8626,11 +8656,15 @@ function WindUI_ToggleColorpicker.New(WindUI_af,WindUI_ag)
         end
 
         function ai.SetBoxMode(self,isBoxes)
-            local rW=isBoxes and 64 or 85
+            isBoxTogCol=isBoxes
+            local cW=isBoxes and 24 or 52
+            local sw=isBoxes and 36 or 42
+            local sh=isBoxes and 24 or 52
+            local rW=cW+sw+(isBoxes and 6 or 10)
             rightHolder.Size=UDim2.new(0,rW,1,0)
-            colorBtn.Size=UDim2.new(0,isBoxes and 22 or 26,0,isBoxes and 22 or 26)
+            colorBtn.Size=UDim2.new(0,cW,0,cW)
             if switchBtn then
-                switchBtn.Size=UDim2.new(0,isBoxes and 36 or 42,0,isBoxes and 22 or 26)
+                switchBtn.Size=UDim2.new(0,sw,0,sh)
             end
             if switchObj and switchObj.SetBoxMode then
                 switchObj:SetBoxMode(isBoxes)
@@ -9809,10 +9843,10 @@ function WindUI_ToggleInput.New(WindUI_af,WindUI_ag)
         ai.Value={Toggle=currentToggle,Input=currentInput}
 
         local isBoxTogIn=(WindUI_ag.Window and WindUI_ag.Window.TabLayoutType=="Boxes")
-        local inputWidth=isBoxTogIn and 50 or 105
+        local inputWidth=isBoxTogIn and 55 or 150
         local switchWidth=isBoxTogIn and 36 or 42
-        local rightWidth=inputWidth+switchWidth+(isBoxTogIn and 6 or 8)
-        local inputH=isBoxTogIn and 22 or 28
+        local inputH=isBoxTogIn and 24 or 52
+        local rightWidth=inputWidth+switchWidth+(isBoxTogIn and 6 or 10)
 
         ai.Frame=a.load'y'{
             Title=ai.Title,
@@ -9841,15 +9875,15 @@ function WindUI_ToggleInput.New(WindUI_af,WindUI_ag)
             }),
         })
 
-        local inputContainer=aa.NewRoundFrame(8,"Squircle",{
+        local inputContainer=aa.NewRoundFrame(isBoxTogIn and 8 or 12,"Squircle",{
             Size=UDim2.new(0,inputWidth,0,inputH),
             ThemeTag={ImageColor3="Background"},
             ImageTransparency=0.3,
             Parent=rightHolder,
         },{
             ac("UIPadding",{
-                PaddingLeft=UDim.new(0,8),
-                PaddingRight=UDim.new(0,8),
+                PaddingLeft=UDim.new(0,10),
+                PaddingRight=UDim.new(0,10),
             }),
         })
 
@@ -9859,7 +9893,7 @@ function WindUI_ToggleInput.New(WindUI_af,WindUI_ag)
             Text=currentInput,
             PlaceholderText=ai.Placeholder,
             ClearTextOnFocus=false,
-            TextSize=12,
+            TextSize=isBoxTogIn and 12 or 16,
             TextTruncate=Enum.TextTruncate.AtEnd,
             TextXAlignment=Enum.TextXAlignment.Left,
             ThemeTag={TextColor3="Text",PlaceholderColor3="Placeholder"},
@@ -9869,7 +9903,7 @@ function WindUI_ToggleInput.New(WindUI_af,WindUI_ag)
         ai.UIElements.TextBox=textBox
 
         local switchBtn=ac("TextButton",{
-            Size=UDim2.new(0,42,0,26),
+            Size=UDim2.new(0,switchWidth,0,inputH),
             BackgroundTransparency=1,
             Text="",
             AutoButtonColor=false,
@@ -9917,11 +9951,12 @@ function WindUI_ToggleInput.New(WindUI_af,WindUI_ag)
         end
 
         function ai.SetBoxMode(self,isBoxes)
-            local inW=isBoxes and 50 or 105
-            local inH=isBoxes and 22 or 28
+            isBoxTogIn=isBoxes
+            local inW=isBoxes and 55 or 150
+            local inH=isBoxes and 24 or 52
             local sw=isBoxes and 36 or 42
-            local sh=isBoxes and 22 or 26
-            local rW=inW+sw+(isBoxes and 6 or 8)
+            local sh=isBoxes and 24 or 52
+            local rW=inW+sw+(isBoxes and 6 or 10)
             rightHolder.Size=UDim2.new(0,rW,1,0)
             inputContainer.Size=UDim2.new(0,inW,0,inH)
             if switchBtn then
@@ -9931,7 +9966,7 @@ function WindUI_ToggleInput.New(WindUI_af,WindUI_ag)
                 switchObj:SetBoxMode(isBoxes)
             end
             if textBox then
-                textBox.TextSize=isBoxes and 11 or 12
+                textBox.TextSize=isBoxes and 12 or 16
             end
             if ai.Frame and ai.Frame.SetTextOffset then
                 ai.Frame:SetTextOffset(rW+(isBoxes and 12 or 15))
@@ -10014,7 +10049,9 @@ function WindUI_ToggleKeybind.New(WindUI_af,WindUI_ag)
         ai.Value={Toggle=currentToggle,Key=currentKey}
 
         local isBoxTogKey=(WindUI_ag.Window and WindUI_ag.Window.TabLayoutType=="Boxes")
-        local rightWidth=isBoxTogKey and 68 or 120
+        local swW=isBoxTogKey and 36 or 42
+        local boxH=isBoxTogKey and 24 or 52
+        local rightWidth=isBoxTogKey and 68 or 135
 
         ai.Frame=a.load'y'{
             Title=ai.Title,
@@ -10053,21 +10090,22 @@ function WindUI_ToggleKeybind.New(WindUI_af,WindUI_ag)
             keyBadge.Frame.Frame.UIListLayout.HorizontalAlignment=Enum.HorizontalAlignment.Center
         end)
 
-        local togKeyScale=ac("UIScale",{Parent=keyBadge,Scale=isBoxTogKey and 1 or 0.85})
+        local togKeyScale=ac("UIScale",{Parent=keyBadge,Scale=1})
 
         local function UpdateKeySize()
             pcall(function()
                 local textWidth=togKeyText.TextBounds.X
+                togKeyText.TextSize=isBoxTogKey and 12 or 17
                 if isBoxTogKey then
                     keyBadge.Frame.Frame.UIPadding.PaddingLeft=UDim.new(0,0)
                     keyBadge.Frame.Frame.UIPadding.PaddingRight=UDim.new(0,0)
                     keyBadge.Size=UDim2.new(0,math.max(26,textWidth+14),0,24)
                     togKeyScale.Scale=1
                 else
-                    keyBadge.Frame.Frame.UIPadding.PaddingLeft=UDim.new(0,8)
-                    keyBadge.Frame.Frame.UIPadding.PaddingRight=UDim.new(0,8)
-                    keyBadge.Size=UDim2.new(0,24+textWidth,0,32)
-                    togKeyScale.Scale=0.85
+                    keyBadge.Frame.Frame.UIPadding.PaddingLeft=UDim.new(0,12)
+                    keyBadge.Frame.Frame.UIPadding.PaddingRight=UDim.new(0,12)
+                    keyBadge.Size=UDim2.new(0,math.max(48,textWidth+26),0,52)
+                    togKeyScale.Scale=1
                 end
             end)
         end
@@ -10077,10 +10115,12 @@ function WindUI_ToggleKeybind.New(WindUI_af,WindUI_ag)
 
         function ai.SetBoxMode(self,isBoxes)
             isBoxTogKey=isBoxes
-            rightWidth=isBoxes and 68 or 120
+            local sw=isBoxes and 36 or 42
+            local bH=isBoxes and 24 or 52
+            rightWidth=isBoxes and 68 or 135
             rightHolder.Size=UDim2.new(0,rightWidth,1,0)
             if switchBtn then
-                switchBtn.Size=UDim2.new(0,isBoxes and 36 or 42,0,isBoxes and 22 or 26)
+                switchBtn.Size=UDim2.new(0,sw,0,bH)
             end
             if switchObj and switchObj.SetBoxMode then
                 switchObj:SetBoxMode(isBoxes)
@@ -10095,7 +10135,7 @@ function WindUI_ToggleKeybind.New(WindUI_af,WindUI_ag)
         end
 
         local switchBtn=ac("TextButton",{
-            Size=UDim2.new(0,42,0,26),
+            Size=UDim2.new(0,swW,0,boxH),
             BackgroundTransparency=1,
             Text="",
             AutoButtonColor=false,
@@ -10226,9 +10266,10 @@ end
 -- Action Button Helper for Composite Modules
 -- =========================================================================
 local function WindUI_CreateActionButton(aa,ac,ad,parent,isBox,btnText,onClick)
-    local w=isBox and 46 or 60
-    local h=isBox and 22 or 26
-    local btn=aa.NewRoundFrame(8,"Squircle",{
+    local w=isBox and 48 or 85
+    local h=isBox and 24 or 52
+    local corner=isBox and 8 or 12
+    local btn=aa.NewRoundFrame(corner,"Squircle",{
         Size=UDim2.new(0,w,0,h),
         ImageTransparency=0.15,
         ThemeTag={ImageColor3="Accent"},
@@ -10239,7 +10280,7 @@ local function WindUI_CreateActionButton(aa,ac,ad,parent,isBox,btnText,onClick)
     local btnLabel=ac("TextLabel",{
         Size=UDim2.new(1,0,1,0),
         Text=tostring(btnText or"Action"),
-        TextSize=isBox and 11 or 13,
+        TextSize=isBox and 12 or 16,
         FontFace=Font.new(aa.Font,Enum.FontWeight.SemiBold),
         TextColor3=Color3.fromRGB(255,255,255),
         BackgroundTransparency=1,
@@ -10327,11 +10368,11 @@ local function WindUI_CreateToggleDropdown(WindUI_af,WindUI_ag,isMulti)
     local currentDrop=initDrop
     ai.Value={Toggle=currentToggle,Dropdown=currentDrop}
 
-    local isBoxTogDrop=(cfg.Window and cfg.Window.TabLayoutType=="Boxes") or (cfg.Tab and cfg.Tab.TabLayoutType=="Boxes") or (cfg.Parent and cfg.Parent.Name=="Content")
-    local dropW=isBoxTogDrop and 72 or 120
+    local isBoxTogDrop=(cfg.Window and cfg.Window.TabLayoutType=="Boxes") or (cfg.Tab and cfg.Tab.TabLayoutType=="Boxes")
+    local dropW=isBoxTogDrop and 75 or 150
     local swW=isBoxTogDrop and 36 or 42
-    local sH=isBoxTogDrop and 22 or 26
-    local rightWidth=dropW+swW+6
+    local sH=isBoxTogDrop and 24 or 52
+    local rightWidth=dropW+swW+10
 
     ai.Frame=a.load'y'{
         Title=ai.Title,
@@ -10389,7 +10430,7 @@ local function WindUI_CreateToggleDropdown(WindUI_af,WindUI_ag,isMulti)
     dropBtn.Parent=rightHolder
     dropBtn.Size=UDim2.new(0,dropW,0,sH)
     local dropLabel=dropBtn.Frame.Frame.TextLabel
-    dropLabel.TextSize=isBoxTogDrop and 11 or 13
+    dropLabel.TextSize=isBoxTogDrop and 12 or 16
 
     if dropObj.DropdownFrame and dropObj.DropdownFrame.UIElements and dropObj.DropdownFrame.UIElements.Main then
         dropObj.DropdownFrame.UIElements.Main.Visible=false
@@ -10466,13 +10507,13 @@ local function WindUI_CreateToggleDropdown(WindUI_af,WindUI_ag,isMulti)
 
     function ai.SetBoxMode(self,isBoxes)
         isBoxTogDrop=isBoxes
-        local dW=isBoxes and 72 or 120
+        local dW=isBoxes and 75 or 150
         local sW=isBoxes and 36 or 42
-        local boxH=isBoxes and 22 or 26
-        local rW=dW+sW+6
+        local boxH=isBoxes and 24 or 52
+        local rW=dW+sW+10
         rightHolder.Size=UDim2.new(0,rW,1,0)
         dropBtn.Size=UDim2.new(0,dW,0,boxH)
-        dropLabel.TextSize=isBoxes and 11 or 13
+        dropLabel.TextSize=isBoxes and 12 or 16
         if switchBtn then
             switchBtn.Size=UDim2.new(0,sW,0,boxH)
         end
@@ -10584,11 +10625,11 @@ local function WindUI_CreateButtonDropdown(WindUI_af,WindUI_ag,isMulti)
         end
     })
 
-    local isBoxBtnDrop=(cfg.Window and cfg.Window.TabLayoutType=="Boxes") or (cfg.Tab and cfg.Tab.TabLayoutType=="Boxes") or (cfg.Parent and cfg.Parent.Name=="Content")
-    local dropW=isBoxBtnDrop and 72 or 120
-    local bW=isBoxBtnDrop and 46 or 60
-    local h=isBoxBtnDrop and 22 or 26
-    local rightWidth=dropW+bW+6
+    local isBoxBtnDrop=(cfg.Window and cfg.Window.TabLayoutType=="Boxes") or (cfg.Tab and cfg.Tab.TabLayoutType=="Boxes")
+    local dropW=isBoxBtnDrop and 75 or 150
+    local bW=isBoxBtnDrop and 48 or 85
+    local h=isBoxBtnDrop and 24 or 52
+    local rightWidth=dropW+bW+10
 
     ai.Frame=a.load'y'{
         Title=ai.Title,
@@ -10643,7 +10684,7 @@ local function WindUI_CreateButtonDropdown(WindUI_af,WindUI_ag,isMulti)
     dropBtn.Parent=rightHolder
     dropBtn.Size=UDim2.new(0,dropW,0,h)
     local dropLabel=dropBtn.Frame.Frame.TextLabel
-    dropLabel.TextSize=isBoxBtnDrop and 11 or 13
+    dropLabel.TextSize=isBoxBtnDrop and 12 or 16
 
     if dropObj.DropdownFrame and dropObj.DropdownFrame.UIElements and dropObj.DropdownFrame.UIElements.Main then
         dropObj.DropdownFrame.UIElements.Main.Visible=false
@@ -10678,15 +10719,15 @@ local function WindUI_CreateButtonDropdown(WindUI_af,WindUI_ag,isMulti)
 
     function ai.SetBoxMode(self,isBoxes)
         isBoxBtnDrop=isBoxes
-        local dW=isBoxes and 72 or 120
-        local actW=isBoxes and 46 or 60
-        local boxH=isBoxes and 22 or 26
-        local rW=dW+actW+6
+        local dW=isBoxes and 75 or 150
+        local actW=isBoxes and 48 or 85
+        local boxH=isBoxes and 24 or 52
+        local rW=dW+actW+10
         rightHolder.Size=UDim2.new(0,rW,1,0)
         dropBtn.Size=UDim2.new(0,dW,0,boxH)
-        dropLabel.TextSize=isBoxes and 11 or 13
+        dropLabel.TextSize=isBoxes and 12 or 16
         actionBtn.Size=UDim2.new(0,actW,0,boxH)
-        actionBtnLabel.TextSize=isBoxes and 11 or 13
+        actionBtnLabel.TextSize=isBoxes and 12 or 16
         local newOff=rW+(isBoxes and 12 or 15)
         if ai.Frame then
             ai.Frame.TextOffset=newOff
@@ -10782,10 +10823,10 @@ function WindUI_ButtonColorPicker.New(WindUI_af,WindUI_ag)
         local currentColor=initColor
         local currentTransparency=initTransparency
 
-        local isBoxBtnCol=(cfg.Window and cfg.Window.TabLayoutType=="Boxes") or (cfg.Tab and cfg.Tab.TabLayoutType=="Boxes") or (cfg.Parent and cfg.Parent.Name=="Content")
-        local colW=isBoxBtnCol and 22 or 26
-        local btnW=isBoxBtnCol and 46 or 60
-        local rightWidth=colW+btnW+8
+        local isBoxBtnCol=(cfg.Window and cfg.Window.TabLayoutType=="Boxes") or (cfg.Tab and cfg.Tab.TabLayoutType=="Boxes")
+        local colW=isBoxBtnCol and 24 or 52
+        local btnW=isBoxBtnCol and 48 or 85
+        local rightWidth=colW+btnW+10
 
         ai.Frame=a.load'y'{
             Title=ai.Title,
@@ -10814,7 +10855,7 @@ function WindUI_ButtonColorPicker.New(WindUI_af,WindUI_ag)
             }),
         })
 
-        local colorBtn=aa.NewRoundFrame(8,"Squircle",{
+        local colorBtn=aa.NewRoundFrame(isBoxBtnCol and 8 or 12,"Squircle",{
             ImageTransparency=currentTransparency,
             Active=true,
             ImageColor3=currentColor,
@@ -10903,13 +10944,13 @@ function WindUI_ButtonColorPicker.New(WindUI_af,WindUI_ag)
 
         function ai.SetBoxMode(self,isBoxes)
             isBoxBtnCol=isBoxes
-            local cW=isBoxes and 22 or 26
-            local bWidth=isBoxes and 46 or 60
-            local rW=cW+bWidth+8
+            local cW=isBoxes and 24 or 52
+            local bWidth=isBoxes and 48 or 85
+            local rW=cW+bWidth+10
             rightHolder.Size=UDim2.new(0,rW,1,0)
             colorBtn.Size=UDim2.new(0,cW,0,cW)
-            actionBtn.Size=UDim2.new(0,bWidth,0,isBoxes and 22 or 26)
-            actionBtnLabel.TextSize=isBoxes and 11 or 13
+            actionBtn.Size=UDim2.new(0,bWidth,0,cW)
+            actionBtnLabel.TextSize=isBoxes and 12 or 16
             local newOff=rW+(isBoxes and 12 or 15)
             if ai.Frame then
                 ai.Frame.TextOffset=newOff
@@ -10988,12 +11029,12 @@ function WindUI_ButtonSlider.New(WindUI_af,WindUI_ag)
             return math.floor(v/ai.Step+0.5)*ai.Step
         end
 
-        local isBoxBtnSl=(cfg.Window and cfg.Window.TabLayoutType=="Boxes") or (cfg.Tab and cfg.Tab.TabLayoutType=="Boxes") or (cfg.Parent and cfg.Parent.Name=="Content")
+        local isBoxBtnSl=(cfg.Window and cfg.Window.TabLayoutType=="Boxes") or (cfg.Tab and cfg.Tab.TabLayoutType=="Boxes")
         local trackW=isBoxBtnSl and 38 or 90
         local valW=isBoxBtnSl and 24 or 34
-        local btnW=isBoxBtnSl and 46 or 60
-        local h=isBoxBtnSl and 22 or 26
-        local rightWidth=trackW+valW+btnW+12
+        local btnW=isBoxBtnSl and 48 or 85
+        local h=isBoxBtnSl and 24 or 52
+        local rightWidth=trackW+valW+btnW+14
 
         ai.Frame=a.load'y'{
             Title=ai.Title,
@@ -11023,7 +11064,7 @@ function WindUI_ButtonSlider.New(WindUI_af,WindUI_ag)
         })
 
         local sliderRow=ac("Frame",{
-            Size=UDim2.new(0,trackW+valW+4,0,h),
+            Size=UDim2.new(0,trackW+valW+6,0,h),
             BackgroundTransparency=1,
             Parent=rightHolder,
         },{
@@ -11035,9 +11076,9 @@ function WindUI_ButtonSlider.New(WindUI_af,WindUI_ag)
         })
 
         local valueLabel=ac("TextLabel",{
-            Size=UDim2.new(0,valW,0,18),
+            Size=UDim2.new(0,valW,0,isBoxBtnSl and 18 or 24),
             Text=FormatVal(currentVal),
-            TextSize=isBoxBtnSl and 11 or 12,
+            TextSize=isBoxBtnSl and 11 or 13,
             FontFace=Font.new(aa.Font,Enum.FontWeight.Medium),
             TextTransparency=0.3,
             TextXAlignment=Enum.TextXAlignment.Center,
@@ -11144,16 +11185,16 @@ function WindUI_ButtonSlider.New(WindUI_af,WindUI_ag)
             isBoxBtnSl=isBoxes
             local trW=isBoxes and 38 or 90
             local vW=isBoxes and 24 or 34
-            local bWidth=isBoxes and 46 or 60
-            local sh=isBoxes and 22 or 26
-            local rW=trW+vW+bWidth+12
+            local bWidth=isBoxes and 48 or 85
+            local sh=isBoxes and 24 or 52
+            local rW=trW+vW+bWidth+14
             rightHolder.Size=UDim2.new(0,rW,1,0)
             sliderFr.Size=UDim2.new(0,trW,0,4)
-            valueLabel.Size=UDim2.new(0,vW,0,18)
-            valueLabel.TextSize=isBoxes and 11 or 12
-            sliderRow.Size=UDim2.new(0,trW+vW+4,0,sh)
+            valueLabel.Size=UDim2.new(0,vW,0,isBoxes and 18 or 24)
+            valueLabel.TextSize=isBoxes and 11 or 13
+            sliderRow.Size=UDim2.new(0,trW+vW+6,0,sh)
             actionBtn.Size=UDim2.new(0,bWidth,0,sh)
-            actionBtnLabel.TextSize=isBoxes and 11 or 13
+            actionBtnLabel.TextSize=isBoxes and 12 or 16
             local newOff=rW+(isBoxes and 12 or 15)
             if ai.Frame then
                 ai.Frame.TextOffset=newOff
@@ -11224,10 +11265,11 @@ function WindUI_ButtonKeybind.New(WindUI_af,WindUI_ag)
         local isPicking=false
         ai.Value={Key=currentKey}
 
-        local isBoxBtnKey=(cfg.Window and cfg.Window.TabLayoutType=="Boxes") or (cfg.Tab and cfg.Tab.TabLayoutType=="Boxes") or (cfg.Parent and cfg.Parent.Name=="Content")
-        local keyW=isBoxBtnKey and 26 or 34
-        local btnW=isBoxBtnKey and 46 or 60
-        local rightWidth=keyW+btnW+8
+        local isBoxBtnKey=(cfg.Window and cfg.Window.TabLayoutType=="Boxes") or (cfg.Tab and cfg.Tab.TabLayoutType=="Boxes")
+        local keyW=isBoxBtnKey and 26 or 48
+        local btnW=isBoxBtnKey and 48 or 85
+        local h=isBoxBtnKey and 24 or 52
+        local rightWidth=keyW+btnW+10
 
         ai.Frame=a.load'y'{
             Title=ai.Title,
@@ -11266,21 +11308,22 @@ function WindUI_ButtonKeybind.New(WindUI_af,WindUI_ag)
             keyBadge.Frame.Frame.UIListLayout.HorizontalAlignment=Enum.HorizontalAlignment.Center
         end)
 
-        local togKeyScale=ac("UIScale",{Parent=keyBadge,Scale=isBoxBtnKey and 1 or 0.85})
+        local togKeyScale=ac("UIScale",{Parent=keyBadge,Scale=1})
 
         local function UpdateKeySize()
             pcall(function()
                 local textWidth=togKeyText.TextBounds.X
+                togKeyText.TextSize=isBoxBtnKey and 12 or 17
                 if isBoxBtnKey then
                     keyBadge.Frame.Frame.UIPadding.PaddingLeft=UDim.new(0,0)
                     keyBadge.Frame.Frame.UIPadding.PaddingRight=UDim.new(0,0)
-                    keyBadge.Size=UDim2.new(0,math.max(26,textWidth+14),0,22)
+                    keyBadge.Size=UDim2.new(0,math.max(26,textWidth+14),0,24)
                     togKeyScale.Scale=1
                 else
-                    keyBadge.Frame.Frame.UIPadding.PaddingLeft=UDim.new(0,8)
-                    keyBadge.Frame.Frame.UIPadding.PaddingRight=UDim.new(0,8)
-                    keyBadge.Size=UDim2.new(0,24+textWidth,0,30)
-                    togKeyScale.Scale=0.85
+                    keyBadge.Frame.Frame.UIPadding.PaddingLeft=UDim.new(0,12)
+                    keyBadge.Frame.Frame.UIPadding.PaddingRight=UDim.new(0,12)
+                    keyBadge.Size=UDim2.new(0,math.max(48,textWidth+26),0,52)
+                    togKeyScale.Scale=1
                 end
             end)
         end
@@ -11376,12 +11419,13 @@ function WindUI_ButtonKeybind.New(WindUI_af,WindUI_ag)
 
         function ai.SetBoxMode(self,isBoxes)
             isBoxBtnKey=isBoxes
-            local kW=isBoxes and 26 or 34
-            local bWidth=isBoxes and 46 or 60
-            local rW=kW+bWidth+8
+            local kW=isBoxes and 26 or 48
+            local bWidth=isBoxes and 48 or 85
+            local boxH=isBoxes and 24 or 52
+            local rW=kW+bWidth+10
             rightHolder.Size=UDim2.new(0,rW,1,0)
-            actionBtn.Size=UDim2.new(0,bWidth,0,isBoxes and 22 or 26)
-            actionBtnLabel.TextSize=isBoxes and 11 or 13
+            actionBtn.Size=UDim2.new(0,bWidth,0,boxH)
+            actionBtnLabel.TextSize=isBoxes and 12 or 16
             UpdateKeySize()
             local newOff=rW+(isBoxes and 12 or 15)
             if ai.Frame then
@@ -11451,11 +11495,11 @@ function WindUI_ButtonInput.New(WindUI_af,WindUI_ag)
         local currentInput=initInput
         ai.Value={Input=currentInput}
 
-        local isBoxBtnIn=(cfg.Window and cfg.Window.TabLayoutType=="Boxes") or (cfg.Tab and cfg.Tab.TabLayoutType=="Boxes") or (cfg.Parent and cfg.Parent.Name=="Content")
-        local inputW=isBoxBtnIn and 50 or 105
-        local btnW=isBoxBtnIn and 46 or 60
-        local h=isBoxBtnIn and 22 or 26
-        local rightWidth=inputW+btnW+8
+        local isBoxBtnIn=(cfg.Window and cfg.Window.TabLayoutType=="Boxes") or (cfg.Tab and cfg.Tab.TabLayoutType=="Boxes")
+        local inputW=isBoxBtnIn and 55 or 150
+        local btnW=isBoxBtnIn and 48 or 85
+        local h=isBoxBtnIn and 24 or 52
+        local rightWidth=inputW+btnW+10
 
         ai.Frame=a.load'y'{
             Title=ai.Title,
@@ -11484,7 +11528,7 @@ function WindUI_ButtonInput.New(WindUI_af,WindUI_ag)
             }),
         })
 
-        local inputFr=aa.NewRoundFrame(8,"Squircle",{
+        local inputFr=aa.NewRoundFrame(isBoxBtnIn and 8 or 12,"Squircle",{
             Size=UDim2.new(0,inputW,0,h),
             ImageTransparency=0.92,
             ThemeTag={ImageColor3="Text"},
@@ -11492,11 +11536,11 @@ function WindUI_ButtonInput.New(WindUI_af,WindUI_ag)
         })
 
         local textBox=ac("TextBox",{
-            Size=UDim2.new(1,-12,1,0),
-            Position=UDim2.new(0,6,0,0),
+            Size=UDim2.new(1,-16,1,0),
+            Position=UDim2.new(0,8,0,0),
             Text=currentInput,
             PlaceholderText=cfg.Placeholder or"...",
-            TextSize=isBoxBtnIn and 11 or 13,
+            TextSize=isBoxBtnIn and 12 or 16,
             FontFace=Font.new(aa.Font,Enum.FontWeight.Medium),
             BackgroundTransparency=1,
             TextXAlignment=Enum.TextXAlignment.Left,
@@ -11540,15 +11584,15 @@ function WindUI_ButtonInput.New(WindUI_af,WindUI_ag)
 
         function ai.SetBoxMode(self,isBoxes)
             isBoxBtnIn=isBoxes
-            local inW=isBoxes and 50 or 105
-            local bWidth=isBoxes and 46 or 60
-            local boxH=isBoxes and 22 or 26
-            local rW=inW+bWidth+8
+            local inW=isBoxes and 55 or 150
+            local bWidth=isBoxes and 48 or 85
+            local boxH=isBoxes and 24 or 52
+            local rW=inW+bWidth+10
             rightHolder.Size=UDim2.new(0,rW,1,0)
             inputFr.Size=UDim2.new(0,inW,0,boxH)
-            textBox.TextSize=isBoxes and 11 or 13
+            textBox.TextSize=isBoxes and 12 or 16
             actionBtn.Size=UDim2.new(0,bWidth,0,boxH)
-            actionBtnLabel.TextSize=isBoxes and 11 or 13
+            actionBtnLabel.TextSize=isBoxes and 12 or 16
             local newOff=rW+(isBoxes and 12 or 15)
             if ai.Frame then
                 ai.Frame.TextOffset=newOff
