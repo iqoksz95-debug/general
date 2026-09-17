@@ -6194,6 +6194,7 @@ RecalculateListSize()
 
 function an.Open(aq)
 if ao then
+an.Opened=true
 an.UIElements.Menu.Visible=true
 an.UIElements.MenuCanvas.Visible=true
 an.UIElements.MenuCanvas.Active=true
@@ -6244,8 +6245,16 @@ an.UIElements.MenuCanvas.Active=false
 end)
 end
 
+local lastDropClick=0
 af.AddSignal(an.UIElements.Dropdown.MouseButton1Click,function()
+local now=os.clock()
+if now-lastDropClick<0.2 then return end
+lastDropClick=now
+if an.Opened then
+an:Close()
+else
 an:Open()
+end
 end)
 
 af.AddSignal(aa.InputBegan,function(aq)
@@ -6253,6 +6262,10 @@ if
 aq.UserInputType==Enum.UserInputType.MouseButton1
 or aq.UserInputType==Enum.UserInputType.Touch
 then
+local dp,ds=an.UIElements.Dropdown.AbsolutePosition,an.UIElements.Dropdown.AbsoluteSize
+if ac.X>=dp.X and ac.X<=dp.X+ds.X and ac.Y>=dp.Y and ac.Y<=dp.Y+ds.Y then
+return
+end
 local ar,at=an.UIElements.MenuCanvas.AbsolutePosition,an.UIElements.MenuCanvas.AbsoluteSize
 if
 am.Window.CanDropdown
@@ -6760,6 +6773,24 @@ at:SetHSVFromRGB(at.Default)
 
 local au=a.load'l'.Init(aq)
 local av=au.Create()
+
+local origClose=av.Close
+function av.Close(...)
+at.Opened=false
+if ap and ap.ActiveColorpicker==at then
+ap.ActiveColorpicker=nil
+end
+return origClose(...)
+end
+
+local origOpen=av.Open
+function av.Open(...)
+at.Opened=true
+if ap then
+ap.ActiveColorpicker=at
+end
+return origOpen(...)
+end
 
 at.ColorpickerFrame=av
 
@@ -7443,14 +7474,50 @@ function aq.Set(at,au,av)
 return aq:Update(au,av)
 end
 
-aa.AddSignal(aq.UIElements.Colorpicker.MouseButton1Click,function()
-if ar then
-an:Colorpicker(aq,ap.Window,function(at,au)
+local lastColorToggle=0
+local function ToggleColorPickerWindow()
+if not ar then return end
+local now=os.clock()
+if now-lastColorToggle<0.25 then return end
+lastColorToggle=now
+
+if aq.ActiveColorpicker and aq.ActiveColorpicker.Opened then
+pcall(function() aq.ActiveColorpicker.ColorpickerFrame:Close() end)
+aq.ActiveColorpicker=nil
+return
+end
+
+local cp=an:Colorpicker(aq,ap.Window,function(at,au)
 aq:Update(at,au)
 aq.Default=at
 aq.Transparency=au
 aa.SafeCallback(aq.Callback,at,au)
-end).ColorpickerFrame:Open()
+end)
+aq.ActiveColorpicker=cp
+if cp and cp.ColorpickerFrame then
+cp.ColorpickerFrame:Open()
+end
+end
+
+aa.AddSignal(aq.UIElements.Colorpicker.MouseButton1Click,ToggleColorPickerWindow)
+
+aa.AddSignal(game:GetService("UserInputService").InputBegan,function(inp)
+if not ar then return end
+if inp.UserInputType==Enum.UserInputType.MouseButton1 or inp.UserInputType==Enum.UserInputType.Touch then
+if aq.ActiveColorpicker and aq.ActiveColorpicker.Opened then
+local m=game.Players.LocalPlayer:GetMouse()
+local btn=aq.UIElements.Colorpicker
+local p=btn.AbsolutePosition
+local s=btn.AbsoluteSize
+if m.X>=p.X and m.X<=p.X+s.X and m.Y>=p.Y and m.Y<=p.Y+s.Y then
+local now=os.clock()
+if now-lastColorToggle>=0.2 then
+lastColorToggle=now
+pcall(function() aq.ActiveColorpicker.ColorpickerFrame:Close() end)
+aq.ActiveColorpicker=nil
+end
+end
+end
 end
 end)
 
@@ -8576,13 +8643,45 @@ function WindUI_ToggleColorpicker.New(WindUI_af,WindUI_ag)
             end
         end
 
-        aa.AddSignal(colorBtn.MouseButton1Click,function()
-            if isLocked then
-                local cp=colorpickerModule:Colorpicker(ai,WindUI_ag.Window,function(newCol,newTrans)
-                    ai:UpdateColor(newCol,newTrans)
-                end)
-                if cp and cp.ColorpickerFrame then
-                    cp.ColorpickerFrame:Open()
+        local lastColorToggle=0
+        local function ToggleColorPickerWindow()
+            if not isLocked then return end
+            local now=os.clock()
+            if now-lastColorToggle<0.25 then return end
+            lastColorToggle=now
+
+            if ai.ActiveColorpicker and ai.ActiveColorpicker.Opened then
+                pcall(function() ai.ActiveColorpicker.ColorpickerFrame:Close() end)
+                ai.ActiveColorpicker=nil
+                return
+            end
+
+            local cp=colorpickerModule:Colorpicker(ai,WindUI_ag.Window,function(newCol,newTrans)
+                ai:UpdateColor(newCol,newTrans)
+            end)
+            ai.ActiveColorpicker=cp
+            if cp and cp.ColorpickerFrame then
+                cp.ColorpickerFrame:Open()
+            end
+        end
+
+        aa.AddSignal(colorBtn.MouseButton1Click,ToggleColorPickerWindow)
+
+        aa.AddSignal(game:GetService("UserInputService").InputBegan,function(inp)
+            if not isLocked then return end
+            if inp.UserInputType==Enum.UserInputType.MouseButton1 or inp.UserInputType==Enum.UserInputType.Touch then
+                if ai.ActiveColorpicker and ai.ActiveColorpicker.Opened then
+                    local m=game.Players.LocalPlayer:GetMouse()
+                    local p=colorBtn.AbsolutePosition
+                    local s=colorBtn.AbsoluteSize
+                    if m.X>=p.X and m.X<=p.X+s.X and m.Y>=p.Y and m.Y<=p.Y+s.Y then
+                        local now=os.clock()
+                        if now-lastColorToggle>=0.2 then
+                            lastColorToggle=now
+                            pcall(function() ai.ActiveColorpicker.ColorpickerFrame:Close() end)
+                            ai.ActiveColorpicker=nil
+                        end
+                    end
                 end
             end
         end)
@@ -10759,25 +10858,48 @@ function WindUI_ButtonColorPicker.New(WindUI_af,WindUI_ag)
             end
         end
 
-        local function OpenColorPicker()
+        local lastColorToggle=0
+        local function ToggleOpenColorPicker()
             if not isLocked then return end
+            local now=os.clock()
+            if now-lastColorToggle<0.25 then return end
+            lastColorToggle=now
+
+            if ai.ActiveColorpicker and ai.ActiveColorpicker.Opened then
+                pcall(function() ai.ActiveColorpicker.ColorpickerFrame:Close() end)
+                ai.ActiveColorpicker=nil
+                return
+            end
+
             local win=cfg.Window or (cfg.Tab and cfg.Tab.Window) or (ai.Frame and ai.Frame.Window) or Window
             local cp=colorpickerModule:Colorpicker(ai,win,function(newCol,newTrans)
                 ai:UpdateColor(newCol,newTrans)
             end)
+            ai.ActiveColorpicker=cp
             if cp and cp.ColorpickerFrame then
                 cp.ColorpickerFrame:Open()
             end
         end
-        local lastColorOpen=0
-        local function SafeOpenColorPicker()
+        aa.AddSignal(colorBtn.MouseButton1Click,ToggleOpenColorPicker)
+
+        aa.AddSignal(game:GetService("UserInputService").InputBegan,function(inp)
             if not isLocked then return end
-            local now=os.clock()
-            if now-lastColorOpen<0.3 then return end
-            lastColorOpen=now
-            OpenColorPicker()
-        end
-        aa.AddSignal(colorBtn.MouseButton1Click,SafeOpenColorPicker)
+            if inp.UserInputType==Enum.UserInputType.MouseButton1 or inp.UserInputType==Enum.UserInputType.Touch then
+                if ai.ActiveColorpicker and ai.ActiveColorpicker.Opened then
+                    local m=game.Players.LocalPlayer:GetMouse()
+                    local p=colorBtn.AbsolutePosition
+                    local s=colorBtn.AbsoluteSize
+                    if m.X>=p.X and m.X<=p.X+s.X and m.Y>=p.Y and m.Y<=p.Y+s.Y then
+                        local now=os.clock()
+                        if now-lastColorToggle>=0.2 then
+                            lastColorToggle=now
+                            pcall(function() ai.ActiveColorpicker.ColorpickerFrame:Close() end)
+                            ai.ActiveColorpicker=nil
+                        end
+                    end
+                end
+            end
+        end)
 
         function ai.SetBoxMode(self,isBoxes)
             isBoxBtnCol=isBoxes
