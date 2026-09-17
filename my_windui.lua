@@ -4599,6 +4599,7 @@ end
 af.SetBoxMode=SetRowBoxMode
 if ae.ElementTable then
 ae.ElementTable.SetRowBoxMode=SetRowBoxMode
+ae.ElementTable.SetTextOffset=af.SetTextOffset
 end
 
 af.UIElements.Main=as
@@ -10134,7 +10135,8 @@ local function WindUI_CreateActionButton(aa,ac,ad,parent,isBox,btnText,onClick)
         ThemeTag={ImageColor3="Accent"},
         Active=true,
         Parent=parent,
-    })
+    },nil,true) -- Pass true so aa.NewRoundFrame creates an ImageButton!
+
     local btnLabel=ac("TextLabel",{
         Size=UDim2.new(1,0,1,0),
         Text=tostring(btnText or"Action"),
@@ -10145,6 +10147,7 @@ local function WindUI_CreateActionButton(aa,ac,ad,parent,isBox,btnText,onClick)
         TextXAlignment=Enum.TextXAlignment.Center,
         TextYAlignment=Enum.TextYAlignment.Center,
         TextTruncate=Enum.TextTruncate.AtEnd,
+        Active=false, -- Must be false so it does not sink mouse input
         Parent=btn,
     })
     aa.AddSignal(btn.MouseEnter,function() ad(btn,0.08,{ImageTransparency=0}):Play() end)
@@ -10153,6 +10156,9 @@ local function WindUI_CreateActionButton(aa,ac,ad,parent,isBox,btnText,onClick)
     aa.AddSignal(btn.MouseButton1Up,function() ad(btn,0.08,{ImageTransparency=0.15}):Play() end)
     if onClick then
         aa.AddSignal(btn.MouseButton1Click,onClick)
+        pcall(function()
+            aa.AddSignal(btn.Activated,onClick)
+        end)
     end
     return btn,btnLabel
 end
@@ -10161,31 +10167,56 @@ end
 -- 1. ToggleDropdown & 2. ToggleMultiDropdown
 -- =========================================================================
 local function WindUI_CreateToggleDropdown(WindUI_af,WindUI_ag,isMulti)
+    local cfg = (type(WindUI_ag)=="table" and WindUI_ag) or (type(WindUI_af)=="table" and WindUI_af) or {}
     local aa=a.load'a'
     local ac=aa.New
     local createSwitch=a.load'B'.New
     local dropModule=a.load'H'
-    local isLocked=not WindUI_ag.Locked
+    local isLocked=not cfg.Locked
 
     local initToggle=false
     local initDrop=isMulti and {} or nil
-    if type(WindUI_ag.Value)=="table" then
-        initToggle=WindUI_ag.Value.Toggle or WindUI_ag.Value.toggle or WindUI_ag.Value[1] or false
-        initDrop=WindUI_ag.Value.Dropdown or WindUI_ag.Value.dropdown or WindUI_ag.Value.Value or WindUI_ag.Value.value or WindUI_ag.Value[2] or (isMulti and {} or nil)
-    elseif type(WindUI_ag.Value)=="boolean" then
-        initToggle=WindUI_ag.Value
-        initDrop=WindUI_ag.Dropdown or WindUI_ag.dropdown or (isMulti and {} or nil)
-    elseif type(WindUI_ag.Value)=="string" or type(WindUI_ag.Value)=="table" then
-        initDrop=WindUI_ag.Value
+
+    if isMulti then
+        if type(cfg.Value)=="table" then
+            local d = cfg.Value.Dropdown ~= nil and cfg.Value.Dropdown or cfg.Value.dropdown
+            if d ~= nil then
+                initDrop = type(d)=="table" and d or { tostring(d) }
+            else
+                initDrop = cfg.Value
+            end
+            initToggle = cfg.Value.Toggle ~= nil and cfg.Value.Toggle or cfg.Value.toggle or false
+        elseif type(cfg.Value)=="string" then
+            initDrop = { cfg.Value }
+        elseif type(cfg.Value)=="boolean" then
+            initToggle = cfg.Value
+            initDrop = type(cfg.Dropdown)=="table" and cfg.Dropdown or (cfg.Dropdown and { tostring(cfg.Dropdown) } or {})
+        elseif type(cfg.Dropdown)=="table" then
+            initDrop = cfg.Dropdown
+        elseif type(cfg.Dropdown)=="string" then
+            initDrop = { cfg.Dropdown }
+        else
+            initDrop = {}
+        end
+    else
+        if type(cfg.Value)=="table" then
+            initToggle = cfg.Value.Toggle ~= nil and cfg.Value.Toggle or cfg.Value.toggle or cfg.Value[1] or false
+            initDrop = cfg.Value.Dropdown ~= nil and cfg.Value.Dropdown or cfg.Value.dropdown or cfg.Value[2] or nil
+        elseif type(cfg.Value)=="boolean" then
+            initToggle = cfg.Value
+            initDrop = cfg.Dropdown or cfg.dropdown
+        elseif type(cfg.Value)=="string" then
+            initDrop = cfg.Value
+        end
     end
 
     local typeName=isMulti and "ToggleMultiDropdown" or "ToggleDropdown"
     local ai={
         __type=typeName,
-        Title=WindUI_ag.Title or typeName,
-        Desc=WindUI_ag.Desc or nil,
-        Locked=WindUI_ag.Locked or false,
-        Callback=WindUI_ag.Callback or function()end,
+        Title=cfg.Title or typeName,
+        Desc=cfg.Desc or nil,
+        Locked=cfg.Locked or false,
+        Callback=cfg.Callback or function()end,
         UIElements={},
     }
 
@@ -10193,20 +10224,21 @@ local function WindUI_CreateToggleDropdown(WindUI_af,WindUI_ag,isMulti)
     local currentDrop=initDrop
     ai.Value={Toggle=currentToggle,Dropdown=currentDrop}
 
-    local isBoxTogDrop=(WindUI_ag.Window and WindUI_ag.Window.TabLayoutType=="Boxes")
+    local isBoxTogDrop=(cfg.Window and cfg.Window.TabLayoutType=="Boxes") or (cfg.Tab and cfg.Tab.TabLayoutType=="Boxes") or (cfg.Parent and cfg.Parent.Name=="Content")
     local dropW=isBoxTogDrop and 72 or 120
     local swW=isBoxTogDrop and 36 or 42
+    local sH=isBoxTogDrop and 22 or 26
     local rightWidth=dropW+swW+6
 
     ai.Frame=a.load'y'{
         Title=ai.Title,
         Desc=ai.Desc,
-        Window=WindUI_ag.Window,
-        Parent=WindUI_ag.Parent,
+        Window=cfg.Window,
+        Parent=cfg.Parent,
         TextOffset=rightWidth+(isBoxTogDrop and 12 or 15),
         Hover=false,
-        Tab=WindUI_ag.Tab,
-        Index=WindUI_ag.Index,
+        Tab=cfg.Tab,
+        Index=cfg.Index,
         ElementTable=ai,
     }
 
@@ -10225,24 +10257,23 @@ local function WindUI_CreateToggleDropdown(WindUI_af,WindUI_ag,isMulti)
         }),
     })
 
-    -- Dropdown creation via a.load'H' with dummy container
     local dummyFolder=Instance.new("Folder")
     local _,dropObj=dropModule.New(dummyFolder,{
         Title=ai.Title,
-        Window=WindUI_ag.Window,
-        WindUI=WindUI_ag.WindUI,
+        Window=cfg.Window,
+        WindUI=cfg.WindUI,
         Parent=dummyFolder,
-        Values=WindUI_ag.Values or WindUI_ag.Items or{},
+        Values=cfg.Values or cfg.Items or{},
         Value=currentDrop,
         Multi=isMulti,
-        AllowNone=WindUI_ag.AllowNone,
-        SearchBarEnabled=WindUI_ag.SearchBarEnabled or false,
-        MenuWidth=WindUI_ag.MenuWidth,
+        AllowNone=cfg.AllowNone,
+        SearchBarEnabled=cfg.SearchBarEnabled or false,
+        MenuWidth=cfg.MenuWidth,
         Callback=function(val)
             if isLocked then
                 currentDrop=val
                 ai.Value.Dropdown=val
-                local cb=WindUI_ag.DropdownCallback or WindUI_ag.Callback
+                local cb=cfg.DropdownCallback or cfg.Callback
                 aa.SafeCallback(cb,ai.Value)
             end
         end,
@@ -10250,7 +10281,7 @@ local function WindUI_CreateToggleDropdown(WindUI_af,WindUI_ag,isMulti)
 
     local dropBtn=dropObj.UIElements.Dropdown
     dropBtn.Parent=rightHolder
-    dropBtn.Size=UDim2.new(0,dropW,0,isBoxTogDrop and 22 or 26)
+    dropBtn.Size=UDim2.new(0,dropW,0,sH)
     local dropLabel=dropBtn.Frame.Frame.TextLabel
     dropLabel.TextSize=isBoxTogDrop and 11 or 13
 
@@ -10260,20 +10291,19 @@ local function WindUI_CreateToggleDropdown(WindUI_af,WindUI_ag,isMulti)
 
     ai.UIElements.Dropdown=dropObj
 
-    -- Toggle switch creation
     local switchBtn=ac("TextButton",{
-        Size=UDim2.new(0,swW,0,isBoxTogDrop and 22 or 26),
+        Size=UDim2.new(0,swW,0,sH),
         BackgroundTransparency=1,
         Text="",
         AutoButtonColor=false,
         Parent=rightHolder,
     })
 
-    local switchFr,switchObj=createSwitch(currentToggle,WindUI_ag.Icon,switchBtn,function(st)
+    local switchFr,switchObj=createSwitch(currentToggle,cfg.Icon,switchBtn,function(st)
         if isLocked then
             currentToggle=st
             ai.Value.Toggle=st
-            local cb=WindUI_ag.ToggleCallback or WindUI_ag.Callback
+            local cb=cfg.ToggleCallback or cfg.Callback
             aa.SafeCallback(cb,ai.Value)
         end
     end)
@@ -10318,6 +10348,9 @@ local function WindUI_CreateToggleDropdown(WindUI_af,WindUI_ag,isMulti)
             local dVal = valTable.Dropdown ~= nil and valTable.Dropdown or valTable.dropdown
             if tVal~=nil then ai:SetToggle(tVal,triggerCb) end
             if dVal~=nil then ai:SetDropdown(dVal) end
+            if tVal==nil and dVal==nil and isMulti then
+                ai:SetDropdown(valTable)
+            end
         elseif type(valTable)=="boolean" then
             ai:SetToggle(valTable,triggerCb)
         else
@@ -10329,19 +10362,24 @@ local function WindUI_CreateToggleDropdown(WindUI_af,WindUI_ag,isMulti)
         isBoxTogDrop=isBoxes
         local dW=isBoxes and 72 or 120
         local sW=isBoxes and 36 or 42
-        local sH=isBoxes and 22 or 26
+        local boxH=isBoxes and 22 or 26
         local rW=dW+sW+6
         rightHolder.Size=UDim2.new(0,rW,1,0)
-        dropBtn.Size=UDim2.new(0,dW,0,sH)
+        dropBtn.Size=UDim2.new(0,dW,0,boxH)
         dropLabel.TextSize=isBoxes and 11 or 13
         if switchBtn then
-            switchBtn.Size=UDim2.new(0,sW,0,sH)
+            switchBtn.Size=UDim2.new(0,sW,0,boxH)
         end
         if switchObj and switchObj.SetBoxMode then
             switchObj:SetBoxMode(isBoxes)
         end
-        if ai.Frame and ai.Frame.SetTextOffset then
-            ai.Frame:SetTextOffset(rW+(isBoxes and 12 or 15))
+        local newOff=rW+(isBoxes and 12 or 15)
+        if ai.Frame then
+            ai.Frame.TextOffset=newOff
+            ai.Frame.BaseTextOffset=newOff
+            if ai.Frame.SetTextOffset then
+                ai.Frame:SetTextOffset(newOff)
+            end
         end
         if ai.SetRowBoxMode then
             ai:SetRowBoxMode(isBoxes)
@@ -10360,6 +10398,10 @@ local function WindUI_CreateToggleDropdown(WindUI_af,WindUI_ag,isMulti)
     end
     if ai.Locked then ai:Lock() end
 
+    if isBoxTogDrop and ai.SetRowBoxMode then
+        ai:SetRowBoxMode(true)
+    end
+
     return ai.__type,ai
 end
 
@@ -10368,7 +10410,7 @@ function WindUI_ToggleDropdown.New(WindUI_af,WindUI_ag)
     local ok,resA,resB=pcall(function() return WindUI_CreateToggleDropdown(WindUI_af,WindUI_ag,false) end)
     if ok then return resA,resB end
     warn("[WindUI] ToggleDropdown failed: "..tostring(resA))
-    return"ToggleDropdown",{__type="ToggleDropdown",Title=WindUI_ag.Title or"ToggleDropdown"}
+    return"ToggleDropdown",{__type="ToggleDropdown",Title=(WindUI_ag and WindUI_ag.Title) or (WindUI_af and WindUI_af.Title) or"ToggleDropdown"}
 end
 
 local WindUI_ToggleMultiDropdown={}
@@ -10376,52 +10418,73 @@ function WindUI_ToggleMultiDropdown.New(WindUI_af,WindUI_ag)
     local ok,resA,resB=pcall(function() return WindUI_CreateToggleDropdown(WindUI_af,WindUI_ag,true) end)
     if ok then return resA,resB end
     warn("[WindUI] ToggleMultiDropdown failed: "..tostring(resA))
-    return"ToggleMultiDropdown",{__type="ToggleMultiDropdown",Title=WindUI_ag.Title or"ToggleMultiDropdown"}
+    return"ToggleMultiDropdown",{__type="ToggleMultiDropdown",Title=(WindUI_ag and WindUI_ag.Title) or (WindUI_af and WindUI_af.Title) or"ToggleMultiDropdown"}
 end
 
 -- =========================================================================
 -- 3. ButtonDropdown & 4. ButtonMultiDropdown
 -- =========================================================================
 local function WindUI_CreateButtonDropdown(WindUI_af,WindUI_ag,isMulti)
+    local cfg = (type(WindUI_ag)=="table" and WindUI_ag) or (type(WindUI_af)=="table" and WindUI_af) or {}
     local aa=a.load'a'
     local ac=aa.New
     local ad=aa.Tween
     local dropModule=a.load'H'
-    local isLocked=not WindUI_ag.Locked
+    local isLocked=not cfg.Locked
 
     local initDrop=isMulti and {} or nil
-    if type(WindUI_ag.Value)=="table" then
-        initDrop=WindUI_ag.Value.Dropdown or WindUI_ag.Value.dropdown or WindUI_ag.Value[1] or (isMulti and {} or nil)
-    elseif type(WindUI_ag.Value)=="string" or type(WindUI_ag.Value)=="table" then
-        initDrop=WindUI_ag.Value
+    if isMulti then
+        if type(cfg.Value)=="table" then
+            local d = cfg.Value.Dropdown ~= nil and cfg.Value.Dropdown or cfg.Value.dropdown
+            if d ~= nil then
+                initDrop = type(d)=="table" and d or { tostring(d) }
+            else
+                initDrop = cfg.Value
+            end
+        elseif type(cfg.Value)=="string" then
+            initDrop = { cfg.Value }
+        elseif type(cfg.Dropdown)=="table" then
+            initDrop = cfg.Dropdown
+        elseif type(cfg.Dropdown)=="string" then
+            initDrop = { cfg.Dropdown }
+        else
+            initDrop = {}
+        end
+    else
+        if type(cfg.Value)=="table" then
+            initDrop = cfg.Value.Dropdown or cfg.Value.dropdown or cfg.Value[1]
+        else
+            initDrop = cfg.Value or cfg.Dropdown
+        end
     end
 
     local typeName=isMulti and "ButtonMultiDropdown" or "ButtonDropdown"
     local ai={
         __type=typeName,
-        Title=WindUI_ag.Title or typeName,
-        Desc=WindUI_ag.Desc or nil,
-        Locked=WindUI_ag.Locked or false,
-        Callback=WindUI_ag.Callback or function()end,
+        Title=cfg.Title or typeName,
+        Desc=cfg.Desc or nil,
+        Locked=cfg.Locked or false,
+        Callback=cfg.Callback or function()end,
         UIElements={},
     }
     local currentDrop=initDrop
     ai.Value={Dropdown=currentDrop}
 
-    local isBoxBtnDrop=(WindUI_ag.Window and WindUI_ag.Window.TabLayoutType=="Boxes")
+    local isBoxBtnDrop=(cfg.Window and cfg.Window.TabLayoutType=="Boxes") or (cfg.Tab and cfg.Tab.TabLayoutType=="Boxes") or (cfg.Parent and cfg.Parent.Name=="Content")
     local dropW=isBoxBtnDrop and 72 or 120
     local bW=isBoxBtnDrop and 46 or 60
+    local h=isBoxBtnDrop and 22 or 26
     local rightWidth=dropW+bW+6
 
     ai.Frame=a.load'y'{
         Title=ai.Title,
         Desc=ai.Desc,
-        Window=WindUI_ag.Window,
-        Parent=WindUI_ag.Parent,
+        Window=cfg.Window,
+        Parent=cfg.Parent,
         TextOffset=rightWidth+(isBoxBtnDrop and 12 or 15),
         Hover=false,
-        Tab=WindUI_ag.Tab,
-        Index=WindUI_ag.Index,
+        Tab=cfg.Tab,
+        Index=cfg.Index,
         ElementTable=ai,
     }
 
@@ -10443,20 +10506,20 @@ local function WindUI_CreateButtonDropdown(WindUI_af,WindUI_ag,isMulti)
     local dummyFolder=Instance.new("Folder")
     local _,dropObj=dropModule.New(dummyFolder,{
         Title=ai.Title,
-        Window=WindUI_ag.Window,
-        WindUI=WindUI_ag.WindUI,
+        Window=cfg.Window,
+        WindUI=cfg.WindUI,
         Parent=dummyFolder,
-        Values=WindUI_ag.Values or WindUI_ag.Items or{},
+        Values=cfg.Values or cfg.Items or{},
         Value=currentDrop,
         Multi=isMulti,
-        AllowNone=WindUI_ag.AllowNone,
-        SearchBarEnabled=WindUI_ag.SearchBarEnabled or false,
-        MenuWidth=WindUI_ag.MenuWidth,
+        AllowNone=cfg.AllowNone,
+        SearchBarEnabled=cfg.SearchBarEnabled or false,
+        MenuWidth=cfg.MenuWidth,
         Callback=function(val)
             if isLocked then
                 currentDrop=val
                 ai.Value.Dropdown=val
-                local cb=WindUI_ag.DropdownCallback or WindUI_ag.Callback
+                local cb=cfg.DropdownCallback or cfg.Callback
                 aa.SafeCallback(cb,ai.Value)
             end
         end,
@@ -10464,7 +10527,7 @@ local function WindUI_CreateButtonDropdown(WindUI_af,WindUI_ag,isMulti)
 
     local dropBtn=dropObj.UIElements.Dropdown
     dropBtn.Parent=rightHolder
-    dropBtn.Size=UDim2.new(0,dropW,0,isBoxBtnDrop and 22 or 26)
+    dropBtn.Size=UDim2.new(0,dropW,0,h)
     local dropLabel=dropBtn.Frame.Frame.TextLabel
     dropLabel.TextSize=isBoxBtnDrop and 11 or 13
 
@@ -10473,9 +10536,9 @@ local function WindUI_CreateButtonDropdown(WindUI_af,WindUI_ag,isMulti)
     end
     ai.UIElements.Dropdown=dropObj
 
-    local actionBtn,actionBtnLabel=WindUI_CreateActionButton(aa,ac,ad,rightHolder,isBoxBtnDrop,WindUI_ag.ButtonText,function()
+    local actionBtn,actionBtnLabel=WindUI_CreateActionButton(aa,ac,ad,rightHolder,isBoxBtnDrop,cfg.ButtonText,function()
         if isLocked then
-            local cb=WindUI_ag.ButtonCallback or WindUI_ag.ButtonClick or WindUI_ag.Callback
+            local cb=cfg.ButtonCallback or cfg.ButtonClick or cfg.Callback
             aa.SafeCallback(cb,ai.Value)
         end
     end)
@@ -10496,15 +10559,20 @@ local function WindUI_CreateButtonDropdown(WindUI_af,WindUI_ag,isMulti)
         isBoxBtnDrop=isBoxes
         local dW=isBoxes and 72 or 120
         local actW=isBoxes and 46 or 60
-        local h=isBoxes and 22 or 26
+        local boxH=isBoxes and 22 or 26
         local rW=dW+actW+6
         rightHolder.Size=UDim2.new(0,rW,1,0)
-        dropBtn.Size=UDim2.new(0,dW,0,h)
+        dropBtn.Size=UDim2.new(0,dW,0,boxH)
         dropLabel.TextSize=isBoxes and 11 or 13
-        actionBtn.Size=UDim2.new(0,actW,0,h)
+        actionBtn.Size=UDim2.new(0,actW,0,boxH)
         actionBtnLabel.TextSize=isBoxes and 11 or 13
-        if ai.Frame and ai.Frame.SetTextOffset then
-            ai.Frame:SetTextOffset(rW+(isBoxes and 12 or 15))
+        local newOff=rW+(isBoxes and 12 or 15)
+        if ai.Frame then
+            ai.Frame.TextOffset=newOff
+            ai.Frame.BaseTextOffset=newOff
+            if ai.Frame.SetTextOffset then
+                ai.Frame:SetTextOffset(newOff)
+            end
         end
         if ai.SetRowBoxMode then
             ai:SetRowBoxMode(isBoxes)
@@ -10523,6 +10591,10 @@ local function WindUI_CreateButtonDropdown(WindUI_af,WindUI_ag,isMulti)
     end
     if ai.Locked then ai:Lock() end
 
+    if isBoxBtnDrop and ai.SetRowBoxMode then
+        ai:SetRowBoxMode(true)
+    end
+
     return ai.__type,ai
 end
 
@@ -10531,7 +10603,7 @@ function WindUI_ButtonDropdown.New(WindUI_af,WindUI_ag)
     local ok,resA,resB=pcall(function() return WindUI_CreateButtonDropdown(WindUI_af,WindUI_ag,false) end)
     if ok then return resA,resB end
     warn("[WindUI] ButtonDropdown failed: "..tostring(resA))
-    return"ButtonDropdown",{__type="ButtonDropdown",Title=WindUI_ag.Title or"ButtonDropdown"}
+    return"ButtonDropdown",{__type="ButtonDropdown",Title=(WindUI_ag and WindUI_ag.Title) or (WindUI_af and WindUI_af.Title) or"ButtonDropdown"}
 end
 
 local WindUI_ButtonMultiDropdown={}
@@ -10539,7 +10611,7 @@ function WindUI_ButtonMultiDropdown.New(WindUI_af,WindUI_ag)
     local ok,resA,resB=pcall(function() return WindUI_CreateButtonDropdown(WindUI_af,WindUI_ag,true) end)
     if ok then return resA,resB end
     warn("[WindUI] ButtonMultiDropdown failed: "..tostring(resA))
-    return"ButtonMultiDropdown",{__type="ButtonMultiDropdown",Title=WindUI_ag.Title or"ButtonMultiDropdown"}
+    return"ButtonMultiDropdown",{__type="ButtonMultiDropdown",Title=(WindUI_ag and WindUI_ag.Title) or (WindUI_af and WindUI_af.Title) or"ButtonMultiDropdown"}
 end
 
 -- =========================================================================
@@ -10548,6 +10620,7 @@ end
 local WindUI_ButtonColorPicker={}
 function WindUI_ButtonColorPicker.New(WindUI_af,WindUI_ag)
     local ok,resA,resB=pcall(function()
+        local cfg = (type(WindUI_ag)=="table" and WindUI_ag) or (type(WindUI_af)=="table" and WindUI_af) or {}
         local aa=a.load'a'
         local ac=aa.New
         local ad=aa.Tween
@@ -10555,31 +10628,31 @@ function WindUI_ButtonColorPicker.New(WindUI_af,WindUI_ag)
 
         local initColor=Color3.fromRGB(255,255,255)
         local initTransparency=0
-        if type(WindUI_ag.Value)=="table" then
-            if WindUI_ag.Value.Color or WindUI_ag.Value.color then
-                local c=WindUI_ag.Value.Color or WindUI_ag.Value.color
+        if type(cfg.Value)=="table" then
+            if cfg.Value.Color or cfg.Value.color then
+                local c=cfg.Value.Color or cfg.Value.color
                 if typeof(c)=="string" then c=Color3.fromHex(c) end
                 initColor=c
             end
-            if WindUI_ag.Value.Transparency or WindUI_ag.Value.transparency then
-                initTransparency=WindUI_ag.Value.Transparency or WindUI_ag.Value.transparency
+            if cfg.Value.Transparency or cfg.Value.transparency then
+                initTransparency=cfg.Value.Transparency or cfg.Value.transparency
             end
-        elseif typeof(WindUI_ag.Value)=="Color3" then
-            initColor=WindUI_ag.Value
-        elseif type(WindUI_ag.Value)=="string" then
-            initColor=Color3.fromHex(WindUI_ag.Value)
+        elseif typeof(cfg.Value)=="Color3" then
+            initColor=cfg.Value
+        elseif type(cfg.Value)=="string" then
+            initColor=Color3.fromHex(cfg.Value)
         end
-        if WindUI_ag.Default then initColor=WindUI_ag.Default end
-        if WindUI_ag.Transparency then initTransparency=WindUI_ag.Transparency end
+        if cfg.Default then initColor=cfg.Default end
+        if cfg.Transparency then initTransparency=cfg.Transparency end
 
         local ai={
             __type="ButtonColorPicker",
-            Title=WindUI_ag.Title or"ButtonColorPicker",
-            Desc=WindUI_ag.Desc or nil,
-            Locked=WindUI_ag.Locked or false,
+            Title=cfg.Title or"ButtonColorPicker",
+            Desc=cfg.Desc or nil,
+            Locked=cfg.Locked or false,
             Default=initColor,
             Transparency=initTransparency,
-            Callback=WindUI_ag.Callback or function()end,
+            Callback=cfg.Callback or function()end,
             UIElements={},
         }
         ai.Value={Color=initColor,Transparency=initTransparency}
@@ -10588,7 +10661,7 @@ function WindUI_ButtonColorPicker.New(WindUI_af,WindUI_ag)
         local currentColor=initColor
         local currentTransparency=initTransparency
 
-        local isBoxBtnCol=(WindUI_ag.Window and WindUI_ag.Window.TabLayoutType=="Boxes")
+        local isBoxBtnCol=(cfg.Window and cfg.Window.TabLayoutType=="Boxes") or (cfg.Tab and cfg.Tab.TabLayoutType=="Boxes") or (cfg.Parent and cfg.Parent.Name=="Content")
         local colW=isBoxBtnCol and 22 or 26
         local btnW=isBoxBtnCol and 46 or 60
         local rightWidth=colW+btnW+8
@@ -10596,12 +10669,12 @@ function WindUI_ButtonColorPicker.New(WindUI_af,WindUI_ag)
         ai.Frame=a.load'y'{
             Title=ai.Title,
             Desc=ai.Desc,
-            Window=WindUI_ag.Window,
-            Parent=WindUI_ag.Parent,
+            Window=cfg.Window,
+            Parent=cfg.Parent,
             TextOffset=rightWidth+(isBoxBtnCol and 12 or 15),
             Hover=false,
-            Tab=WindUI_ag.Tab,
-            Index=WindUI_ag.Index,
+            Tab=cfg.Tab,
+            Index=cfg.Index,
             ElementTable=ai,
         }
 
@@ -10629,9 +10702,9 @@ function WindUI_ButtonColorPicker.New(WindUI_af,WindUI_ag)
             ZIndex=2,
         },nil,true)
 
-        local actionBtn,actionBtnLabel=WindUI_CreateActionButton(aa,ac,ad,rightHolder,isBoxBtnCol,WindUI_ag.ButtonText,function()
+        local actionBtn,actionBtnLabel=WindUI_CreateActionButton(aa,ac,ad,rightHolder,isBoxBtnCol,cfg.ButtonText,function()
             if isLocked then
-                local cb=WindUI_ag.ButtonCallback or WindUI_ag.ButtonClick or WindUI_ag.Callback
+                local cb=cfg.ButtonCallback or cfg.ButtonClick or cfg.Callback
                 aa.SafeCallback(cb,ai.Value)
             end
         end)
@@ -10645,7 +10718,7 @@ function WindUI_ButtonColorPicker.New(WindUI_af,WindUI_ag)
             ai.Transparency=currentTransparency
             ai.Value.Color=currentColor
             ai.Value.Transparency=currentTransparency
-            local cb=WindUI_ag.ColorCallback or WindUI_ag.Callback
+            local cb=cfg.ColorCallback or cfg.Callback
             aa.SafeCallback(cb,ai.Value)
         end
 
@@ -10664,16 +10737,18 @@ function WindUI_ButtonColorPicker.New(WindUI_af,WindUI_ag)
             end
         end
 
-        aa.AddSignal(colorBtn.MouseButton1Click,function()
-            if isLocked then
-                local cp=colorpickerModule:Colorpicker(ai,WindUI_ag.Window,function(newCol,newTrans)
-                    ai:UpdateColor(newCol,newTrans)
-                end)
-                if cp and cp.ColorpickerFrame then
-                    cp.ColorpickerFrame:Open()
-                end
+        local function OpenColorPicker()
+            if not isLocked then return end
+            local win=cfg.Window or (cfg.Tab and cfg.Tab.Window) or (ai.Frame and ai.Frame.Window) or Window
+            local cp=colorpickerModule:Colorpicker(ai,win,function(newCol,newTrans)
+                ai:UpdateColor(newCol,newTrans)
+            end)
+            if cp and cp.ColorpickerFrame then
+                cp.ColorpickerFrame:Open()
             end
-        end)
+        end
+        aa.AddSignal(colorBtn.MouseButton1Click,OpenColorPicker)
+        pcall(function() aa.AddSignal(colorBtn.Activated,OpenColorPicker) end)
 
         function ai.SetBoxMode(self,isBoxes)
             isBoxBtnCol=isBoxes
@@ -10684,8 +10759,13 @@ function WindUI_ButtonColorPicker.New(WindUI_af,WindUI_ag)
             colorBtn.Size=UDim2.new(0,cW,0,cW)
             actionBtn.Size=UDim2.new(0,bWidth,0,isBoxes and 22 or 26)
             actionBtnLabel.TextSize=isBoxes and 11 or 13
-            if ai.Frame and ai.Frame.SetTextOffset then
-                ai.Frame:SetTextOffset(rW+(isBoxes and 12 or 15))
+            local newOff=rW+(isBoxes and 12 or 15)
+            if ai.Frame then
+                ai.Frame.TextOffset=newOff
+                ai.Frame.BaseTextOffset=newOff
+                if ai.Frame.SetTextOffset then
+                    ai.Frame:SetTextOffset(newOff)
+                end
             end
             if ai.SetRowBoxMode then
                 ai:SetRowBoxMode(isBoxes)
@@ -10704,11 +10784,15 @@ function WindUI_ButtonColorPicker.New(WindUI_af,WindUI_ag)
         end
         if ai.Locked then ai:Lock() end
 
+        if isBoxBtnCol and ai.SetRowBoxMode then
+            ai:SetRowBoxMode(true)
+        end
+
         return ai.__type,ai
     end)
     if ok then return resA,resB end
     warn("[WindUI] ButtonColorPicker failed: "..tostring(resA))
-    return"ButtonColorPicker",{__type="ButtonColorPicker",Title=WindUI_ag.Title or"ButtonColorPicker"}
+    return"ButtonColorPicker",{__type="ButtonColorPicker",Title=(WindUI_ag and WindUI_ag.Title) or (WindUI_af and WindUI_af.Title) or"ButtonColorPicker"}
 end
 
 -- =========================================================================
@@ -10717,27 +10801,28 @@ end
 local WindUI_ButtonSlider={}
 function WindUI_ButtonSlider.New(WindUI_af,WindUI_ag)
     local ok,resA,resB=pcall(function()
+        local cfg = (type(WindUI_ag)=="table" and WindUI_ag) or (type(WindUI_af)=="table" and WindUI_af) or {}
         local aa=a.load'a'
         local ac=aa.New
         local ad=aa.Tween
 
         local ai={
             __type="ButtonSlider",
-            Title=WindUI_ag.Title or"ButtonSlider",
-            Desc=WindUI_ag.Desc or nil,
-            Locked=WindUI_ag.Locked or false,
-            Step=WindUI_ag.Step or 1,
-            Min=WindUI_ag.Min or(WindUI_ag.Value and WindUI_ag.Value.Min)or 0,
-            Max=WindUI_ag.Max or(WindUI_ag.Value and WindUI_ag.Value.Max)or 100,
-            Callback=WindUI_ag.Callback or function()end,
+            Title=cfg.Title or"ButtonSlider",
+            Desc=cfg.Desc or nil,
+            Locked=cfg.Locked or false,
+            Step=cfg.Step or 1,
+            Min=cfg.Min or(cfg.Value and cfg.Value.Min)or 0,
+            Max=cfg.Max or(cfg.Value and cfg.Value.Max)or 100,
+            Callback=cfg.Callback or function()end,
             UIElements={},
         }
 
         local initSlider=ai.Min
-        if type(WindUI_ag.Value)=="table" then
-            initSlider=WindUI_ag.Value.Slider or WindUI_ag.Value.slider or WindUI_ag.Value[1] or ai.Min
-        elseif type(WindUI_ag.Value)=="number" then
-            initSlider=WindUI_ag.Value
+        if type(cfg.Value)=="table" then
+            initSlider=cfg.Value.Slider or cfg.Value.slider or cfg.Value[1] or ai.Min
+        elseif type(cfg.Value)=="number" then
+            initSlider=cfg.Value
         end
         ai.Value={Slider=initSlider}
 
@@ -10752,21 +10837,22 @@ function WindUI_ButtonSlider.New(WindUI_af,WindUI_ag)
             return math.floor(v/ai.Step+0.5)*ai.Step
         end
 
-        local isBoxBtnSl=(WindUI_ag.Window and WindUI_ag.Window.TabLayoutType=="Boxes")
+        local isBoxBtnSl=(cfg.Window and cfg.Window.TabLayoutType=="Boxes") or (cfg.Tab and cfg.Tab.TabLayoutType=="Boxes") or (cfg.Parent and cfg.Parent.Name=="Content")
         local trackW=isBoxBtnSl and 38 or 90
         local valW=isBoxBtnSl and 24 or 34
         local btnW=isBoxBtnSl and 46 or 60
+        local h=isBoxBtnSl and 22 or 26
         local rightWidth=trackW+valW+btnW+12
 
         ai.Frame=a.load'y'{
             Title=ai.Title,
             Desc=ai.Desc,
-            Window=WindUI_ag.Window,
-            Parent=WindUI_ag.Parent,
+            Window=cfg.Window,
+            Parent=cfg.Parent,
             TextOffset=rightWidth+(isBoxBtnSl and 12 or 15),
             Hover=false,
-            Tab=WindUI_ag.Tab,
-            Index=WindUI_ag.Index,
+            Tab=cfg.Tab,
+            Index=cfg.Index,
             ElementTable=ai,
         }
 
@@ -10786,7 +10872,7 @@ function WindUI_ButtonSlider.New(WindUI_af,WindUI_ag)
         })
 
         local sliderRow=ac("Frame",{
-            Size=UDim2.new(0,trackW+valW+4,0,isBoxBtnSl and 22 or 26),
+            Size=UDim2.new(0,trackW+valW+4,0,h),
             BackgroundTransparency=1,
             Parent=rightHolder,
         },{
@@ -10851,7 +10937,7 @@ function WindUI_ButtonSlider.New(WindUI_af,WindUI_ag)
             valueLabel.Text=FormatVal(val)
             ad(fillFr,0.06,{Size=UDim2.new(pct,0,1,0)}):Play()
             if fireCb~=false then
-                local cb=WindUI_ag.SliderCallback or WindUI_ag.Callback
+                local cb=cfg.SliderCallback or cfg.Callback
                 aa.SafeCallback(cb,ai.Value)
             end
         end
@@ -10883,9 +10969,9 @@ function WindUI_ButtonSlider.New(WindUI_af,WindUI_ag)
             end
         end)
 
-        local actionBtn,actionBtnLabel=WindUI_CreateActionButton(aa,ac,ad,rightHolder,isBoxBtnSl,WindUI_ag.ButtonText,function()
+        local actionBtn,actionBtnLabel=WindUI_CreateActionButton(aa,ac,ad,rightHolder,isBoxBtnSl,cfg.ButtonText,function()
             if isLocked then
-                local cb=WindUI_ag.ButtonCallback or WindUI_ag.ButtonClick or WindUI_ag.Callback
+                local cb=cfg.ButtonCallback or cfg.ButtonClick or cfg.Callback
                 aa.SafeCallback(cb,ai.Value)
             end
         end)
@@ -10893,7 +10979,6 @@ function WindUI_ButtonSlider.New(WindUI_af,WindUI_ag)
         function ai.SetSlider(self,val,fireCb)
             SetSliderPos(val,fireCb)
         end
-        function ai.SetButtonText(self,txt) actionBtnLabel.Text=tostring(txt or "Action") end
         function ai.Set(self,v,fireCb)
             if type(v)=="table" then
                 local sv=v.Slider ~= nil and v.Slider or v.slider or v[1]
@@ -10902,6 +10987,7 @@ function WindUI_ButtonSlider.New(WindUI_af,WindUI_ag)
                 SetSliderPos(v,fireCb)
             end
         end
+        function ai.SetButtonText(self,txt) actionBtnLabel.Text=tostring(txt or "Action") end
 
         function ai.SetBoxMode(self,isBoxes)
             isBoxBtnSl=isBoxes
@@ -10917,8 +11003,13 @@ function WindUI_ButtonSlider.New(WindUI_af,WindUI_ag)
             sliderRow.Size=UDim2.new(0,trW+vW+4,0,sh)
             actionBtn.Size=UDim2.new(0,bWidth,0,sh)
             actionBtnLabel.TextSize=isBoxes and 11 or 13
-            if ai.Frame and ai.Frame.SetTextOffset then
-                ai.Frame:SetTextOffset(rW+(isBoxes and 12 or 15))
+            local newOff=rW+(isBoxes and 12 or 15)
+            if ai.Frame then
+                ai.Frame.TextOffset=newOff
+                ai.Frame.BaseTextOffset=newOff
+                if ai.Frame.SetTextOffset then
+                    ai.Frame:SetTextOffset(newOff)
+                end
             end
             if ai.SetRowBoxMode then
                 ai:SetRowBoxMode(isBoxes)
@@ -10937,11 +11028,15 @@ function WindUI_ButtonSlider.New(WindUI_af,WindUI_ag)
         end
         if ai.Locked then ai:Lock() end
 
+        if isBoxBtnSl and ai.SetRowBoxMode then
+            ai:SetRowBoxMode(true)
+        end
+
         return ai.__type,ai
     end)
     if ok then return resA,resB end
     warn("[WindUI] ButtonSlider failed: "..tostring(resA))
-    return"ButtonSlider",{__type="ButtonSlider",Title=WindUI_ag.Title or"ButtonSlider"}
+    return"ButtonSlider",{__type="ButtonSlider",Title=(WindUI_ag and WindUI_ag.Title) or (WindUI_af and WindUI_af.Title) or"ButtonSlider"}
 end
 
 -- =========================================================================
@@ -10950,34 +11045,35 @@ end
 local WindUI_ButtonKeybind={}
 function WindUI_ButtonKeybind.New(WindUI_af,WindUI_ag)
     local ok,resA,resB=pcall(function()
+        local cfg = (type(WindUI_ag)=="table" and WindUI_ag) or (type(WindUI_af)=="table" and WindUI_af) or {}
         local aa=a.load'a'
         local ac=aa.New
         local ad=aa.Tween
         local createKeyBadge=a.load's'.New
-        local isLocked=not WindUI_ag.Locked
+        local isLocked=not cfg.Locked
 
         local initKey="F"
-        if type(WindUI_ag.Value)=="table" then
-            initKey=tostring(WindUI_ag.Value.Key or WindUI_ag.Value.key or WindUI_ag.Value[1] or"F")
-        elseif type(WindUI_ag.Value)=="string" then
-            initKey=WindUI_ag.Value
-        elseif WindUI_ag.Key or WindUI_ag.Bind then
-            initKey=tostring(WindUI_ag.Key or WindUI_ag.Bind)
+        if type(cfg.Value)=="table" then
+            initKey=tostring(cfg.Value.Key or cfg.Value.key or cfg.Value[1] or"F")
+        elseif type(cfg.Value)=="string" then
+            initKey=cfg.Value
+        elseif cfg.Key or cfg.Bind then
+            initKey=tostring(cfg.Key or cfg.Bind)
         end
 
         local ai={
             __type="ButtonKeybind",
-            Title=WindUI_ag.Title or"ButtonKeybind",
-            Desc=WindUI_ag.Desc or nil,
-            Locked=WindUI_ag.Locked or false,
-            Callback=WindUI_ag.Callback or function()end,
+            Title=cfg.Title or"ButtonKeybind",
+            Desc=cfg.Desc or nil,
+            Locked=cfg.Locked or false,
+            Callback=cfg.Callback or function()end,
             UIElements={},
         }
         local currentKey=initKey
         local isPicking=false
         ai.Value={Key=currentKey}
 
-        local isBoxBtnKey=(WindUI_ag.Window and WindUI_ag.Window.TabLayoutType=="Boxes")
+        local isBoxBtnKey=(cfg.Window and cfg.Window.TabLayoutType=="Boxes") or (cfg.Tab and cfg.Tab.TabLayoutType=="Boxes") or (cfg.Parent and cfg.Parent.Name=="Content")
         local keyW=isBoxBtnKey and 26 or 34
         local btnW=isBoxBtnKey and 46 or 60
         local rightWidth=keyW+btnW+8
@@ -10985,12 +11081,12 @@ function WindUI_ButtonKeybind.New(WindUI_af,WindUI_ag)
         ai.Frame=a.load'y'{
             Title=ai.Title,
             Desc=ai.Desc,
-            Window=WindUI_ag.Window,
-            Parent=WindUI_ag.Parent,
+            Window=cfg.Window,
+            Parent=cfg.Parent,
             TextOffset=rightWidth+(isBoxBtnKey and 12 or 15),
             Hover=false,
-            Tab=WindUI_ag.Tab,
-            Index=WindUI_ag.Index,
+            Tab=cfg.Tab,
+            Index=cfg.Index,
             ElementTable=ai,
         }
 
@@ -11040,7 +11136,7 @@ function WindUI_ButtonKeybind.New(WindUI_af,WindUI_ag)
         UpdateKeySize()
         aa.AddSignal(togKeyText:GetPropertyChangedSignal("TextBounds"),UpdateKeySize)
 
-        aa.AddSignal(keyBadge.MouseButton1Click,function()
+        local function PickKey()
             if not isLocked or isPicking then return end
             isPicking=true
             togKeyText.Text="..."
@@ -11067,13 +11163,15 @@ function WindUI_ButtonKeybind.New(WindUI_af,WindUI_ag)
                             currentKey=captured
                             ai.Value.Key=captured
                             togKeyText.Text=captured
-                            local cb=WindUI_ag.KeybindCallback or WindUI_ag.Callback
+                            local cb=cfg.KeybindCallback or cfg.Callback
                             aa.SafeCallback(cb,ai.Value)
                         end
                     end)
                 end
             end)
-        end)
+        end
+        aa.AddSignal(keyBadge.MouseButton1Click,PickKey)
+        pcall(function() aa.AddSignal(keyBadge.Activated,PickKey) end)
 
         aa.AddSignal(game:GetService("UserInputService").InputBegan,function(input)
             if isLocked and not isPicking then
@@ -11086,15 +11184,15 @@ function WindUI_ButtonKeybind.New(WindUI_af,WindUI_ag)
                     matches=true
                 end
                 if matches then
-                    local cb=WindUI_ag.ButtonCallback or WindUI_ag.ButtonClick or WindUI_ag.Callback
+                    local cb=cfg.ButtonCallback or cfg.ButtonClick or cfg.Callback
                     aa.SafeCallback(cb,ai.Value)
                 end
             end
         end)
 
-        local actionBtn,actionBtnLabel=WindUI_CreateActionButton(aa,ac,ad,rightHolder,isBoxBtnKey,WindUI_ag.ButtonText,function()
+        local actionBtn,actionBtnLabel=WindUI_CreateActionButton(aa,ac,ad,rightHolder,isBoxBtnKey,cfg.ButtonText,function()
             if isLocked then
-                local cb=WindUI_ag.ButtonCallback or WindUI_ag.ButtonClick or WindUI_ag.Callback
+                local cb=cfg.ButtonCallback or cfg.ButtonClick or cfg.Callback
                 aa.SafeCallback(cb,ai.Value)
             end
         end)
@@ -11104,7 +11202,6 @@ function WindUI_ButtonKeybind.New(WindUI_af,WindUI_ag)
             ai.Value.Key=currentKey
             togKeyText.Text=currentKey
         end
-        function ai.SetButtonText(self,txt) actionBtnLabel.Text=tostring(txt or "Action") end
         function ai.Set(self,v)
             if type(v)=="table" then
                 local k=v.Key or v.key or v[1]
@@ -11113,6 +11210,7 @@ function WindUI_ButtonKeybind.New(WindUI_af,WindUI_ag)
                 ai:SetKey(v)
             end
         end
+        function ai.SetButtonText(self,txt) actionBtnLabel.Text=tostring(txt or "Action") end
 
         function ai.SetBoxMode(self,isBoxes)
             isBoxBtnKey=isBoxes
@@ -11123,8 +11221,13 @@ function WindUI_ButtonKeybind.New(WindUI_af,WindUI_ag)
             actionBtn.Size=UDim2.new(0,bWidth,0,isBoxes and 22 or 26)
             actionBtnLabel.TextSize=isBoxes and 11 or 13
             UpdateKeySize()
-            if ai.Frame and ai.Frame.SetTextOffset then
-                ai.Frame:SetTextOffset(rW+(isBoxes and 12 or 15))
+            local newOff=rW+(isBoxes and 12 or 15)
+            if ai.Frame then
+                ai.Frame.TextOffset=newOff
+                ai.Frame.BaseTextOffset=newOff
+                if ai.Frame.SetTextOffset then
+                    ai.Frame:SetTextOffset(newOff)
+                end
             end
             if ai.SetRowBoxMode then
                 ai:SetRowBoxMode(isBoxes)
@@ -11143,11 +11246,15 @@ function WindUI_ButtonKeybind.New(WindUI_af,WindUI_ag)
         end
         if ai.Locked then ai:Lock() end
 
+        if isBoxBtnKey and ai.SetRowBoxMode then
+            ai:SetRowBoxMode(true)
+        end
+
         return ai.__type,ai
     end)
     if ok then return resA,resB end
     warn("[WindUI] ButtonKeybind failed: "..tostring(resA))
-    return"ButtonKeybind",{__type="ButtonKeybind",Title=WindUI_ag.Title or"ButtonKeybind"}
+    return"ButtonKeybind",{__type="ButtonKeybind",Title=(WindUI_ag and WindUI_ag.Title) or (WindUI_af and WindUI_af.Title) or"ButtonKeybind"}
 end
 
 -- =========================================================================
@@ -11156,45 +11263,47 @@ end
 local WindUI_ButtonInput={}
 function WindUI_ButtonInput.New(WindUI_af,WindUI_ag)
     local ok,resA,resB=pcall(function()
+        local cfg = (type(WindUI_ag)=="table" and WindUI_ag) or (type(WindUI_af)=="table" and WindUI_af) or {}
         local aa=a.load'a'
         local ac=aa.New
         local ad=aa.Tween
-        local isLocked=not WindUI_ag.Locked
+        local isLocked=not cfg.Locked
 
         local initInput=""
-        if type(WindUI_ag.Value)=="table" then
-            initInput=tostring(WindUI_ag.Value.Input or WindUI_ag.Value.input or WindUI_ag.Value[1] or"")
-        elseif type(WindUI_ag.Value)=="string" then
-            initInput=WindUI_ag.Value
-        elseif WindUI_ag.Input or WindUI_ag.Text then
-            initInput=tostring(WindUI_ag.Input or WindUI_ag.Text)
+        if type(cfg.Value)=="table" then
+            initInput=tostring(cfg.Value.Input or cfg.Value.input or cfg.Value[1] or"")
+        elseif type(cfg.Value)=="string" then
+            initInput=cfg.Value
+        elseif cfg.Input or cfg.Text then
+            initInput=tostring(cfg.Input or cfg.Text)
         end
 
         local ai={
             __type="ButtonInput",
-            Title=WindUI_ag.Title or"ButtonInput",
-            Desc=WindUI_ag.Desc or nil,
-            Locked=WindUI_ag.Locked or false,
-            Callback=WindUI_ag.Callback or function()end,
+            Title=cfg.Title or"ButtonInput",
+            Desc=cfg.Desc or nil,
+            Locked=cfg.Locked or false,
+            Callback=cfg.Callback or function()end,
             UIElements={},
         }
         local currentInput=initInput
         ai.Value={Input=currentInput}
 
-        local isBoxBtnIn=(WindUI_ag.Window and WindUI_ag.Window.TabLayoutType=="Boxes")
+        local isBoxBtnIn=(cfg.Window and cfg.Window.TabLayoutType=="Boxes") or (cfg.Tab and cfg.Tab.TabLayoutType=="Boxes") or (cfg.Parent and cfg.Parent.Name=="Content")
         local inputW=isBoxBtnIn and 50 or 105
         local btnW=isBoxBtnIn and 46 or 60
+        local h=isBoxBtnIn and 22 or 26
         local rightWidth=inputW+btnW+8
 
         ai.Frame=a.load'y'{
             Title=ai.Title,
             Desc=ai.Desc,
-            Window=WindUI_ag.Window,
-            Parent=WindUI_ag.Parent,
+            Window=cfg.Window,
+            Parent=cfg.Parent,
             TextOffset=rightWidth+(isBoxBtnIn and 12 or 15),
             Hover=false,
-            Tab=WindUI_ag.Tab,
-            Index=WindUI_ag.Index,
+            Tab=cfg.Tab,
+            Index=cfg.Index,
             ElementTable=ai,
         }
 
@@ -11214,7 +11323,7 @@ function WindUI_ButtonInput.New(WindUI_af,WindUI_ag)
         })
 
         local inputFr=aa.NewRoundFrame(8,"Squircle",{
-            Size=UDim2.new(0,inputW,0,isBoxBtnIn and 22 or 26),
+            Size=UDim2.new(0,inputW,0,h),
             ImageTransparency=0.92,
             ThemeTag={ImageColor3="Text"},
             Parent=rightHolder,
@@ -11224,7 +11333,7 @@ function WindUI_ButtonInput.New(WindUI_af,WindUI_ag)
             Size=UDim2.new(1,-12,1,0),
             Position=UDim2.new(0,6,0,0),
             Text=currentInput,
-            PlaceholderText=WindUI_ag.Placeholder or"...",
+            PlaceholderText=cfg.Placeholder or"...",
             TextSize=isBoxBtnIn and 11 or 13,
             FontFace=Font.new(aa.Font,Enum.FontWeight.Medium),
             BackgroundTransparency=1,
@@ -11238,16 +11347,16 @@ function WindUI_ButtonInput.New(WindUI_af,WindUI_ag)
             if isLocked then
                 currentInput=textBox.Text
                 ai.Value.Input=currentInput
-                local cb=WindUI_ag.InputCallback or WindUI_ag.Callback
+                local cb=cfg.InputCallback or cfg.Callback
                 aa.SafeCallback(cb,ai.Value)
             end
         end)
 
-        local actionBtn,actionBtnLabel=WindUI_CreateActionButton(aa,ac,ad,rightHolder,isBoxBtnIn,WindUI_ag.ButtonText or"Submit",function()
+        local actionBtn,actionBtnLabel=WindUI_CreateActionButton(aa,ac,ad,rightHolder,isBoxBtnIn,cfg.ButtonText or"Submit",function()
             if isLocked then
                 currentInput=textBox.Text
                 ai.Value.Input=currentInput
-                local cb=WindUI_ag.ButtonCallback or WindUI_ag.ButtonClick or WindUI_ag.Callback
+                local cb=cfg.ButtonCallback or cfg.ButtonClick or cfg.Callback
                 aa.SafeCallback(cb,ai.Value)
             end
         end)
@@ -11257,7 +11366,6 @@ function WindUI_ButtonInput.New(WindUI_af,WindUI_ag)
             ai.Value.Input=currentInput
             textBox.Text=currentInput
         end
-        function ai.SetButtonText(self,txt) actionBtnLabel.Text=tostring(txt or "Action") end
         function ai.Set(self,v)
             if type(v)=="table" then
                 local inp=v.Input or v.input or v[1]
@@ -11266,20 +11374,26 @@ function WindUI_ButtonInput.New(WindUI_af,WindUI_ag)
                 ai:SetInput(v)
             end
         end
+        function ai.SetButtonText(self,txt) actionBtnLabel.Text=tostring(txt or "Action") end
 
         function ai.SetBoxMode(self,isBoxes)
             isBoxBtnIn=isBoxes
             local inW=isBoxes and 50 or 105
             local bWidth=isBoxes and 46 or 60
-            local h=isBoxes and 22 or 26
+            local boxH=isBoxes and 22 or 26
             local rW=inW+bWidth+8
             rightHolder.Size=UDim2.new(0,rW,1,0)
-            inputFr.Size=UDim2.new(0,inW,0,h)
+            inputFr.Size=UDim2.new(0,inW,0,boxH)
             textBox.TextSize=isBoxes and 11 or 13
-            actionBtn.Size=UDim2.new(0,bWidth,0,h)
+            actionBtn.Size=UDim2.new(0,bWidth,0,boxH)
             actionBtnLabel.TextSize=isBoxes and 11 or 13
-            if ai.Frame and ai.Frame.SetTextOffset then
-                ai.Frame:SetTextOffset(rW+(isBoxes and 12 or 15))
+            local newOff=rW+(isBoxes and 12 or 15)
+            if ai.Frame then
+                ai.Frame.TextOffset=newOff
+                ai.Frame.BaseTextOffset=newOff
+                if ai.Frame.SetTextOffset then
+                    ai.Frame:SetTextOffset(newOff)
+                end
             end
             if ai.SetRowBoxMode then
                 ai:SetRowBoxMode(isBoxes)
@@ -11298,11 +11412,15 @@ function WindUI_ButtonInput.New(WindUI_af,WindUI_ag)
         end
         if ai.Locked then ai:Lock() end
 
+        if isBoxBtnIn and ai.SetRowBoxMode then
+            ai:SetRowBoxMode(true)
+        end
+
         return ai.__type,ai
     end)
     if ok then return resA,resB end
     warn("[WindUI] ButtonInput failed: "..tostring(resA))
-    return"ButtonInput",{__type="ButtonInput",Title=WindUI_ag.Title or"ButtonInput"}
+    return"ButtonInput",{__type="ButtonInput",Title=(WindUI_ag and WindUI_ag.Title) or (WindUI_af and WindUI_af.Title) or"ButtonInput"}
 end
 
 
@@ -11994,6 +12112,20 @@ if al.Boxes then
 for _,box in ipairs(al.Boxes) do
 if box.SetBoxMode then
 box:SetBoxMode(isBoxes)
+end
+end
+end
+
+if al.Elements then
+for _,elem in ipairs(al.Elements) do
+if type(elem)=="table" then
+pcall(function()
+if elem.SetBoxMode then
+elem:SetBoxMode(isBoxes)
+elseif elem.SetRowBoxMode then
+elem:SetRowBoxMode(isBoxes)
+end
+end)
 end
 end
 end
@@ -14824,13 +14956,23 @@ return p
 end
 
 function ao.SetUIScale(m,p)
-an.WindUI.UIScale=p
-ah(an.WindUI.ScreenGui.UIScale,.2,{Scale=p},Enum.EasingStyle.Quint,Enum.EasingDirection.Out):Play()
+local scaleVal=(type(m)=="number" and m) or (type(p)=="number" and p) or 1
+ao.UIScale=scaleVal
+an.WindUI.UIScale=scaleVal
+ah(an.WindUI.ScreenGui.UIScale,.2,{Scale=scaleVal},Enum.EasingStyle.Quint,Enum.EasingDirection.Out):Play()
+if ao.Tabs then
+for _,tab in pairs(ao.Tabs) do
+if type(tab)=="table" and tab.UpdateBoxLayout then
+tab:UpdateBoxLayout(false)
+end
+end
+end
 end
 
 function ao.SetTabLayoutType(x,z)
 local targetType=(type(x)=="string" and x) or (type(z)=="string" and z) or "Default"
 ao.TabLayoutType=targetType
+local isBoxes=(targetType=="Boxes")
 local tabList=ao.Tabs
 if (not tabList or #tabList==0) and ao.TabManager and ao.TabManager.Tabs then
 tabList=ao.TabManager.Tabs
@@ -14839,6 +14981,19 @@ if tabList then
 for _,tab in pairs(tabList) do
 if type(tab)=="table" and tab.SetLayoutType then
 tab:SetLayoutType(targetType)
+end
+end
+end
+if ao.AllElements then
+for _,elem in ipairs(ao.AllElements) do
+if type(elem)=="table" then
+pcall(function()
+if elem.SetBoxMode then
+elem:SetBoxMode(isBoxes)
+elseif elem.SetRowBoxMode then
+elem:SetRowBoxMode(isBoxes)
+end
+end)
 end
 end
 end
