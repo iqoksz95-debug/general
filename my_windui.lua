@@ -12476,20 +12476,20 @@ ai.SelectedTab=ak
 
 for al,am in next,ai.Tabs do
 if not am.Locked then
-af(am.UIElements.Main,0.15,{ImageTransparency=1}):Play()
-af(am.UIElements.Main.Outline,0.15,{ImageTransparency=1}):Play()
-af(am.UIElements.Main.Frame.TextLabel,0.15,{TextTransparency=0.3}):Play()
+af(am.UIElements.Main,0.24,{ImageTransparency=1},Enum.EasingStyle.Quad,Enum.EasingDirection.Out):Play()
+af(am.UIElements.Main.Outline,0.24,{ImageTransparency=1},Enum.EasingStyle.Quad,Enum.EasingDirection.Out):Play()
+af(am.UIElements.Main.Frame.TextLabel,0.24,{TextTransparency=0.3},Enum.EasingStyle.Quad,Enum.EasingDirection.Out):Play()
 if am.UIElements.Icon then
-af(am.UIElements.Icon.ImageLabel,0.15,{ImageTransparency=0.4}):Play()
+af(am.UIElements.Icon.ImageLabel,0.24,{ImageTransparency=0.4},Enum.EasingStyle.Quad,Enum.EasingDirection.Out):Play()
 end
 am.Selected=false
 end
 end
-af(ai.Tabs[ak].UIElements.Main,0.15,{ImageTransparency=0.95}):Play()
-af(ai.Tabs[ak].UIElements.Main.Outline,0.15,{ImageTransparency=0.85}):Play()
-af(ai.Tabs[ak].UIElements.Main.Frame.TextLabel,0.15,{TextTransparency=0}):Play()
+af(ai.Tabs[ak].UIElements.Main,0.24,{ImageTransparency=0.95},Enum.EasingStyle.Quad,Enum.EasingDirection.Out):Play()
+af(ai.Tabs[ak].UIElements.Main.Outline,0.24,{ImageTransparency=0.85},Enum.EasingStyle.Quad,Enum.EasingDirection.Out):Play()
+af(ai.Tabs[ak].UIElements.Main.Frame.TextLabel,0.24,{TextTransparency=0},Enum.EasingStyle.Quad,Enum.EasingDirection.Out):Play()
 if ai.Tabs[ak].UIElements.Icon then
-af(ai.Tabs[ak].UIElements.Icon.ImageLabel,0.15,{ImageTransparency=0.1}):Play()
+af(ai.Tabs[ak].UIElements.Icon.ImageLabel,0.24,{ImageTransparency=0.1},Enum.EasingStyle.Quad,Enum.EasingDirection.Out):Play()
 end
 ai.Tabs[ak].Selected=true
 
@@ -12499,8 +12499,9 @@ local dir=1
 if prevTab and type(prevTab)=="number" and type(ak)=="number" then
 if ak>prevTab then dir=1 elseif ak<prevTab then dir=-1 else dir=0 end
 end
-if Window and Window.UIElements and Window.UIElements.MainBar then
-Window.UIElements.MainBar.ClipsDescendants=true
+if ai._activeTabTween then
+pcall(function() ai._activeTabTween:Cancel() end)
+ai._activeTabTween=nil
 end
 for an,ao in next,ai.Containers do
 ao.AnchorPoint=Vector2.new(0,0)
@@ -12510,8 +12511,9 @@ end
 ai.Containers[ak].Visible=true
 ai.Containers[ak].AnchorPoint=Vector2.new(0,0)
 if dir~=0 then
-ai.Containers[ak].Position=UDim2.new(0,dir*30,0,0)
-af(ai.Containers[ak],0.32,{Position=UDim2.new(0,0,0,0)},Enum.EasingStyle.Quint,Enum.EasingDirection.Out):Play()
+ai.Containers[ak].Position=UDim2.new(0,dir*20,0,0)
+ai._activeTabTween=af(ai.Containers[ak],0.24,{Position=UDim2.new(0,0,0,0)},Enum.EasingStyle.Quad,Enum.EasingDirection.Out)
+ai._activeTabTween:Play()
 else
 ai.Containers[ak].Position=UDim2.new(0,0,0,0)
 end
