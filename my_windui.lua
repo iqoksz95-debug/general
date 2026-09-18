@@ -12471,6 +12471,7 @@ end
 
 function ai.SelectTab(aj,ak)
 if not ai.Tabs[ak].Locked then
+local prevTab=ai.SelectedTab
 ai.SelectedTab=ak
 
 for al,am in next,ai.Tabs do
@@ -12494,12 +12495,26 @@ ai.Tabs[ak].Selected=true
 
 
 task.spawn(function()
+local dir=1
+if prevTab and type(prevTab)=="number" and type(ak)=="number" then
+if ak>prevTab then dir=1 elseif ak<prevTab then dir=-1 else dir=0 end
+end
+if Window and Window.UIElements and Window.UIElements.MainBar then
+Window.UIElements.MainBar.ClipsDescendants=true
+end
 for an,ao in next,ai.Containers do
-ao.AnchorPoint=Vector2.new(0,0.03)
+ao.AnchorPoint=Vector2.new(0,0)
+ao.Position=UDim2.new(0,0,0,0)
 ao.Visible=false
 end
 ai.Containers[ak].Visible=true
-af(ai.Containers[ak],0.35,{AnchorPoint=Vector2.new(0,0)},Enum.EasingStyle.Quint,Enum.EasingDirection.Out):Play()
+ai.Containers[ak].AnchorPoint=Vector2.new(0,0)
+if dir~=0 then
+ai.Containers[ak].Position=UDim2.new(0,dir*30,0,0)
+af(ai.Containers[ak],0.32,{Position=UDim2.new(0,0,0,0)},Enum.EasingStyle.Quint,Enum.EasingDirection.Out):Play()
+else
+ai.Containers[ak].Position=UDim2.new(0,0,0,0)
+end
 if Window and Window.TabLayoutType=="Boxes" and ai.Tabs[ak] and ai.Tabs[ak].UpdateBoxLayout then
 task.defer(function()
 ai.Tabs[ak]:UpdateBoxLayout(false)
