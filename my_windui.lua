@@ -12495,11 +12495,11 @@ ai.Tabs[ak].Selected=true
 
 task.spawn(function()
 for an,ao in next,ai.Containers do
-ao.AnchorPoint=Vector2.new(0,0.05)
+ao.AnchorPoint=Vector2.new(0,0.03)
 ao.Visible=false
 end
 ai.Containers[ak].Visible=true
-af(ai.Containers[ak],0.15,{AnchorPoint=Vector2.new(0,0)},Enum.EasingStyle.Quart,Enum.EasingDirection.Out):Play()
+af(ai.Containers[ak],0.35,{AnchorPoint=Vector2.new(0,0)},Enum.EasingStyle.Quint,Enum.EasingDirection.Out):Play()
 if Window and Window.TabLayoutType=="Boxes" and ai.Tabs[ak] and ai.Tabs[ak].UpdateBoxLayout then
 task.defer(function()
 ai.Tabs[ak]:UpdateBoxLayout(false)
