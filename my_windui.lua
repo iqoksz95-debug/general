@@ -4853,9 +4853,10 @@ local ac=ab.New
 local ad=ab.Tween
 
 
-function aa.New(ae,af,ag,ah)
+function aa.New(ae,af,ag,ah,isBoxModeInit)
 local ai={}
-local isBoxMode=false
+local isBoxMode=(isBoxModeInit==true)
+ai.Value=ae
 
 local aj=13
 local ak
@@ -4873,13 +4874,17 @@ ImageColor3=Color3.new(0,0,0),
 })
 end
 
+local initTrackSize=isBoxMode and UDim2.new(0,36,0,22) or UDim2.new(0,41.6,0,26)
+local initKnobSize=isBoxMode and UDim2.new(0,14,0,14) or UDim2.new(0,18,0,18)
+local initKnobPos=isBoxMode and (ae and UDim2.new(1,-17,0.5,0) or UDim2.new(0,3,0.5,0)) or (ae and UDim2.new(1,-22,0.5,0) or UDim2.new(0,4,0.5,0))
+
 local al=ab.NewRoundFrame(aj,"Squircle",{
 ImageTransparency=.93,
 ThemeTag={
 ImageColor3="Text"
 },
 Parent=ag,
-Size=UDim2.new(0,41.6,0,26),
+Size=initTrackSize,
 },{
 ab.NewRoundFrame(aj,"Squircle",{
 Size=UDim2.new(1,0,1,0),
@@ -4904,16 +4909,12 @@ NumberSequenceKeypoint.new(1,1),
 })
 }),
 
-
 ab.NewRoundFrame(aj,"Squircle",{
-Size=UDim2.new(0,18,0,18),
-Position=UDim2.new(0,3,0.5,0),
+Size=initKnobSize,
+Position=initKnobPos,
 AnchorPoint=Vector2.new(0,0.5),
 ImageTransparency=0,
 ImageColor3=Color3.new(1,1,1),
-
-
-
 Name="Frame",
 },{
 ak,
@@ -4921,36 +4922,39 @@ ak,
 })
 
 function ai.SetBoxMode(self,isBoxes)
-isBoxMode=isBoxes
-if isBoxes then
-al.Size=UDim2.new(0,36,0,22)
-al.Frame.Size=UDim2.new(0,14,0,14)
-if ai.Value then
-al.Frame.Position=UDim2.new(1,-17,0.5,0)
-else
-al.Frame.Position=UDim2.new(0,3,0.5,0)
-end
-else
-al.Size=UDim2.new(0,41.6,0,26)
-al.Frame.Size=UDim2.new(0,18,0,18)
-if ai.Value then
-al.Frame.Position=UDim2.new(1,-22,0.5,0)
-else
-al.Frame.Position=UDim2.new(0,4,0.5,0)
-end
-end
+local isBoxesVal=(isBoxes~=nil and isBoxes) or (type(self)=="boolean" and self) or false
+isBoxMode=isBoxesVal
+local onPos=isBoxesVal and UDim2.new(1,-17,0.5,0) or UDim2.new(1,-22,0.5,0)
+local offPos=isBoxesVal and UDim2.new(0,3,0.5,0) or UDim2.new(0,4,0.5,0)
+local knobSz=isBoxesVal and UDim2.new(0,14,0,14) or UDim2.new(0,18,0,18)
+local trackSz=isBoxesVal and UDim2.new(0,36,0,22) or UDim2.new(0,41.6,0,26)
+
+al.Size=trackSz
+al.Frame.Size=knobSz
+al.Frame.Position=ai.Value and onPos or offPos
 end
 
 function ai.Set(am,an,ao)
-ai.Value=an
-local AetheriaUI_knobDur=(_G.AetheriaUI_AnimatedToggles or _G.AetheriaUI_AnimatedToggles) and 0.35 or 0.1
-local AetheriaUI_knobStyle=(_G.AetheriaUI_AnimatedToggles or _G.AetheriaUI_AnimatedToggles) and Enum.EasingStyle.Back or Enum.EasingStyle.Quint
-local onPos=isBoxMode and UDim2.new(1,-17,0.5,0) or UDim2.new(1,-22,0.5,0)
-local offPos=isBoxMode and UDim2.new(0,3,0.5,0) or UDim2.new(0,4,0.5,0)
-if an then
+local targetVal=(type(am)=="boolean" and am) or (type(an)=="boolean" and an) or (am==true or an==true)
+local triggerCb=(type(an)=="boolean" and ao) or (type(am)=="boolean" and an)
+if triggerCb~=false then triggerCb=true end
+ai.Value=targetVal
+
+local isBoxNow=isBoxMode
+if al and al.Size and al.Size.Y.Offset>0 then
+isBoxNow=(al.Size.Y.Offset<=24)
+end
+
+local AetheriaUI_knobDur=(_G.AetheriaUI_AnimatedToggles) and 0.35 or 0.1
+local AetheriaUI_knobStyle=(_G.AetheriaUI_AnimatedToggles) and Enum.EasingStyle.Back or Enum.EasingStyle.Quint
+local onPos=isBoxNow and UDim2.new(1,-17,0.5,0) or UDim2.new(1,-22,0.5,0)
+local offPos=isBoxNow and UDim2.new(0,3,0.5,0) or UDim2.new(0,4,0.5,0)
+local knobSz=isBoxNow and UDim2.new(0,14,0,14) or UDim2.new(0,18,0,18)
+
+if targetVal then
 ad(al.Frame,AetheriaUI_knobDur,{
 Position=onPos,
-
+Size=knobSz,
 },AetheriaUI_knobStyle,Enum.EasingDirection.Out):Play()
 ad(al.Layer,0.1,{
 ImageTransparency=0,
@@ -4967,7 +4971,7 @@ end
 else
 ad(al.Frame,AetheriaUI_knobDur,{
 Position=offPos,
-Size=isBoxMode and UDim2.new(0,14,0,14) or UDim2.new(0,18,0,18),
+Size=knobSz,
 },AetheriaUI_knobStyle,Enum.EasingDirection.Out):Play()
 ad(al.Layer,0.1,{
 ImageTransparency=1,
@@ -4983,20 +4987,15 @@ ImageTransparency=1,
 end
 end
 
-if ao~=false then ao=true end
-
 task.spawn(function()
-if ah and ao then
-ab.SafeCallback(ah,an)
+if ah and triggerCb then
+ab.SafeCallback(ah,targetVal)
 end
 end)
-
-
 end
 
 return al,ai
 end
-
 
 return aa end function a.C()
 local aa={}
@@ -5122,16 +5121,13 @@ Type=ah.Type or"Toggle",
 Callback=ah.Callback or function()end,
 UIElements={}
 }
+local isBoxToggle=(ah.Window and ah.Window.TabLayoutType=="Boxes")
 ai.ToggleFrame=a.load'y'{
 Title=ai.Title,
 Desc=ai.Desc,
-
-
-
-
 Window=ah.Window,
 Parent=ah.Parent,
-TextOffset=44,
+TextOffset=isBoxToggle and 42 or 44,
 Hover=false,
 Tab=ah.Tab,
 Index=ah.Index,
@@ -5143,8 +5139,6 @@ local aj=true
 if ai.Value==nil then
 ai.Value=false
 end
-
-
 
 function ai.Lock(ak)
 ai.Locked=true
@@ -5165,27 +5159,29 @@ local ak=ai.Value
 
 local al,am
 if ai.Type=="Toggle"then
-al,am=ad(ak,ai.Icon,ai.ToggleFrame.UIElements.Main,function(...)if ai.Callback then return ai.Callback(...)end end)
+al,am=ad(ak,ai.Icon,ai.ToggleFrame.UIElements.Main,function(...)if ai.Callback then return ai.Callback(...)end end,isBoxToggle)
 elseif ai.Type=="Checkbox"then
 al,am=ae(ak,ai.Icon,ai.ToggleFrame.UIElements.Main,function(...)if ai.Callback then return ai.Callback(...)end end)
 else
 error("Unknown Toggle Type: "..tostring(ai.Type))
 end
 
-local isBoxToggle=(ah.Window and ah.Window.TabLayoutType=="Boxes")
 if isBoxToggle then
 al.AnchorPoint=Vector2.new(1,0.5)
 al.Position=UDim2.new(1,0,0.5,0)
+ai.ToggleFrame:SetTextOffset(42)
 if am and am.SetBoxMode then
 am:SetBoxMode(true)
 end
 else
 al.AnchorPoint=Vector2.new(1,0)
 al.Position=UDim2.new(1,0,0,0)
+ai.ToggleFrame:SetTextOffset(44)
 end
 
 function ai.SetBoxMode(self,isBoxes)
-if isBoxes then
+local isBoxesVal=(isBoxes~=nil and isBoxes) or (type(self)=="boolean" and self) or false
+if isBoxesVal then
 al.AnchorPoint=Vector2.new(1,0.5)
 al.Position=UDim2.new(1,0,0.5,0)
 ai.ToggleFrame:SetTextOffset(42)
@@ -5195,18 +5191,20 @@ al.Position=UDim2.new(1,0,0,0)
 ai.ToggleFrame:SetTextOffset(44)
 end
 if am and am.SetBoxMode then
-am:SetBoxMode(isBoxes)
+am:SetBoxMode(isBoxesVal)
 end
 if ai.ToggleFrame and ai.ToggleFrame.SetBoxMode then
-ai.ToggleFrame:SetBoxMode(isBoxes)
+ai.ToggleFrame:SetBoxMode(isBoxesVal)
 end
 end
 
 function ai.Set(an,ao,ap)
+local targetVal=(type(an)=="boolean" and an) or (type(ao)=="boolean" and ao) or false
+local triggerCb=(type(an)=="boolean" and ao) or ap
 if aj then
-am:Set(ao,ap)
-ak=ao
-ai.Value=ao
+am:Set(targetVal,triggerCb)
+ak=targetVal
+ai.Value=targetVal
 end
 end
 
@@ -8453,7 +8451,7 @@ function AetheriaUI_ToggleSlider.New(AetheriaUI_af,AetheriaUI_ag)
                 ai.Value.Toggle=st
                 aa.SafeCallback(ai.Callback,ai.Value)
             end
-        end)
+        end,isBoxTogSl)
         switchFr.Position=UDim2.new(0.5,0,0.5,0)
         switchFr.AnchorPoint=Vector2.new(0.5,0.5)
 
@@ -8689,7 +8687,7 @@ function AetheriaUI_ToggleColorpicker.New(AetheriaUI_af,AetheriaUI_ag)
                 ai.Value.Toggle=st
                 aa.SafeCallback(ai.Callback,ai.Value)
             end
-        end)
+        end,isBoxTogCol)
         switchFr.Position=UDim2.new(0.5,0,0.5,0)
         switchFr.AnchorPoint=Vector2.new(0.5,0.5)
 
@@ -9993,7 +9991,7 @@ function AetheriaUI_ToggleInput.New(AetheriaUI_af,AetheriaUI_ag)
                 ai.Value.Toggle=st
                 aa.SafeCallback(ai.Callback,ai.Value)
             end
-        end)
+        end,isBoxTogIn)
         switchFr.Position=UDim2.new(0.5,0,0.5,0)
         switchFr.AnchorPoint=Vector2.new(0.5,0.5)
 
@@ -10225,7 +10223,7 @@ function AetheriaUI_ToggleKeybind.New(AetheriaUI_af,AetheriaUI_ag)
                 ai.Value.Toggle=st
                 aa.SafeCallback(ai.Callback,ai.Value)
             end
-        end)
+        end,isBoxTogKey)
         switchFr.Position=UDim2.new(0.5,0,0.5,0)
         switchFr.AnchorPoint=Vector2.new(0.5,0.5)
 
@@ -10530,7 +10528,7 @@ local function AetheriaUI_CreateToggleDropdown(AetheriaUI_af,AetheriaUI_ag,isMul
             local cb=cfg.ToggleCallback or cfg.Callback
             aa.SafeCallback(cb,ai.Value)
         end
-    end)
+    end,isBoxTogDrop)
     switchFr.Position=UDim2.new(0.5,0,0.5,0)
     switchFr.AnchorPoint=Vector2.new(0.5,0.5)
 
@@ -12614,7 +12612,15 @@ am.Expandable=true
 ao.Visible=true
 end
 ar.Parent=ap.Content
-return ag.New(ar,ak)
+local newTab=ag.New(ar,ak)
+if al then
+if not al.Tabs then al.Tabs={} end
+table.insert(al.Tabs,newTab)
+if al.TabLayoutType and newTab.SetLayoutType then
+newTab:SetLayoutType(al.TabLayoutType)
+end
+end
+return newTab
 end
 
 function am.Open(aq)
@@ -15264,17 +15270,17 @@ function ao.SetTabLayoutType(x,z)
 local targetType=(type(x)=="string" and x) or (type(z)=="string" and z) or "Default"
 ao.TabLayoutType=targetType
 local isBoxes=(targetType=="Boxes")
-local tabList=ao.Tabs
-if (not tabList or #tabList==0) and ao.TabManager and ao.TabManager.Tabs then
-tabList=ao.TabManager.Tabs
-end
-if tabList then
-for _,tab in pairs(tabList) do
-if type(tab)=="table" and tab.SetLayoutType then
+local processedTabs={}
+local function updateTab(tab)
+if type(tab)=="table" and not processedTabs[tab] then
+processedTabs[tab]=true
+if tab.SetLayoutType then
 tab:SetLayoutType(targetType)
 end
 end
 end
+if ao.Tabs then for _,tab in pairs(ao.Tabs) do updateTab(tab) end end
+if ao.TabManager and ao.TabManager.Tabs then for _,tab in pairs(ao.TabManager.Tabs) do updateTab(tab) end end
 if ao.AllElements then
 for _,elem in ipairs(ao.AllElements) do
 if type(elem)=="table" then
