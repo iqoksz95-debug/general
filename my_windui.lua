@@ -4935,9 +4935,20 @@ al.Frame.Position=ai.Value and onPos or offPos
 end
 
 function ai.Set(am,an,ao)
-local targetVal=(type(am)=="boolean" and am) or (type(an)=="boolean" and an) or (am==true or an==true)
-local triggerCb=(type(an)=="boolean" and ao) or (type(am)=="boolean" and an)
+local targetVal
+local triggerCb
+
+if type(am)=="table" or am==ai then
+targetVal=an
+triggerCb=ao
+else
+targetVal=am
+triggerCb=an
+end
+
+if targetVal==nil then targetVal=false end
 if triggerCb~=false then triggerCb=true end
+
 ai.Value=targetVal
 
 local isBoxNow=isBoxMode
@@ -5199,8 +5210,20 @@ end
 end
 
 function ai.Set(an,ao,ap)
-local targetVal=(type(an)=="boolean" and an) or (type(ao)=="boolean" and ao) or false
-local triggerCb=(type(an)=="boolean" and ao) or ap
+local targetVal
+local triggerCb
+
+if type(an)=="table" or an==ai then
+targetVal=ao
+triggerCb=ap
+else
+targetVal=an
+triggerCb=ao
+end
+
+if targetVal==nil then targetVal=false end
+if triggerCb~=false then triggerCb=true end
+
 if aj then
 am:Set(targetVal,triggerCb)
 ak=targetVal
