@@ -4277,6 +4277,7 @@ local currentPad=isBoxesMode and 6 or defaultPad
 local af={
 Title=ae.Title,
 Desc=ae.Desc or nil,
+LockedTitle=ae.LockedTitle or"This element is locked",
 Hover=ae.Hover,
 Thumbnail=ae.Thumbnail,
 ThumbnailSize=ae.ThumbnailSize or 80,
@@ -4453,23 +4454,46 @@ ae.Window.Folder,
 "Lock",
 false
 )
-ao.Size=UDim2.new(0,20,0,20)
+ao.Size=UDim2.new(0,16,0,16)
+ao.AnchorPoint=Vector2.new(1,0.5)
+ao.Position=UDim2.new(1,-10,0.5,0)
+ao.ZIndex=2
 ao.ImageLabel.ImageColor3=Color3.new(1,1,1)
-ao.ImageLabel.ImageTransparency=.4
+ao.ImageLabel.ImageTransparency=.15
 
 local ap=ab("TextLabel",{
-Text="Locked",
-TextSize=18,
+Text=af.LockedTitle,
+TextSize=13,
 FontFace=Font.new(aa.Font,Enum.FontWeight.Medium),
 AutomaticSize="XY",
 BackgroundTransparency=1,
 TextColor3=Color3.new(1,1,1),
 TextTransparency=.05,
+TextWrapped=false,
+})
+
+local apTooltip=ac(8,"Squircle",{
+AutomaticSize="XY",
+ImageColor3=Color3.new(0,0,0),
+ImageTransparency=.1,
+AnchorPoint=Vector2.new(1,1),
+Position=UDim2.new(1,4,0,-8),
+Visible=false,
+ZIndex=999999999,
+Parent=ao,
+},{
+ab("UIPadding",{
+PaddingTop=UDim.new(0,5),
+PaddingBottom=UDim.new(0,5),
+PaddingLeft=UDim.new(0,8),
+PaddingRight=UDim.new(0,8),
+}),
+ap,
 })
 
 local aq,ar=ac(af.UICorner,"Squircle",{
 Size=UDim2.new(1,af.UIPadding*2,1,af.UIPadding*2),
-ImageTransparency=.25,
+ImageTransparency=.82,
 AnchorPoint=Vector2.new(0.5,0.5),
 Position=UDim2.new(0.5,0,0.5,0),
 ImageColor3=Color3.new(0,0,0),
@@ -4477,14 +4501,15 @@ Visible=false,
 Active=false,
 ZIndex=9999999,
 },{
-ab("UIListLayout",{
-FillDirection="Horizontal",
-VerticalAlignment="Center",
-HorizontalAlignment="Center",
-Padding=UDim.new(0,8)
-}),
-ao,ap
+ao,
 },nil,true)
+
+aa.AddSignal(aq.MouseEnter,function()
+apTooltip.Visible=true
+end)
+aa.AddSignal(aq.MouseLeave,function()
+apTooltip.Visible=false
+end)
 
 local mainUIPadding=ab("UIPadding",{
 PaddingTop=UDim.new(0,isBoxesMode and (hasDesc and 6 or 0) or af.UIPadding),
@@ -4676,6 +4701,12 @@ function af.Unlock(au)
 ai=true
 aq.Active=false
 aq.Visible=false
+apTooltip.Visible=false
+end
+
+function af.SetLockedTitle(au,text)
+af.LockedTitle=text or af.LockedTitle
+ap.Text=af.LockedTitle
 end
 
 function af.UpdateShape(au)
@@ -4770,6 +4801,7 @@ local ag=true
 af.ButtonFrame=a.load'y'{
 Title=af.Title,
 Desc=af.Desc,
+LockedTitle=ae.LockedTitle,
 Parent=ae.Parent,
 
 
@@ -5136,6 +5168,7 @@ local isBoxToggle=(ah.Window and ah.Window.TabLayoutType=="Boxes")
 ai.ToggleFrame=a.load'y'{
 Title=ai.Title,
 Desc=ai.Desc,
+LockedTitle=ah.LockedTitle,
 Window=ah.Window,
 Parent=ah.Parent,
 TextOffset=isBoxToggle and 42 or 44,
@@ -5296,6 +5329,7 @@ end
 ai.SliderFrame=a.load'y'{
 Title=ai.Title,
 Desc=ai.Desc,
+LockedTitle=ah.LockedTitle,
 Parent=ah.Parent,
 TextOffset=ai.Width+sliderGap,
 Hover=false,
@@ -5495,6 +5529,7 @@ local ak=true
 aj.KeybindFrame=a.load'y'{
 Title=aj.Title,
 Desc=aj.Desc,
+LockedTitle=ai.LockedTitle,
 Parent=ai.Parent,
 TextOffset=85,
 Hover=aj.CanChange,
@@ -5656,6 +5691,7 @@ local ak=true
 aj.InputFrame=a.load'y'{
 Title=aj.Title,
 Desc=aj.Desc,
+LockedTitle=ai.LockedTitle,
 Parent=ai.Parent,
 TextOffset=aj.Width,
 Hover=false,
@@ -5794,6 +5830,7 @@ local ao=true
 an.DropdownFrame=a.load'y'{
 Title=an.Title,
 Desc=an.Desc,
+LockedTitle=am.LockedTitle,
 Parent=am.Parent,
 TextOffset=an.Width,
 Hover=false,
@@ -7520,6 +7557,7 @@ local isBoxCol=(ap.Window and ap.Window.TabLayoutType=="Boxes")
 aq.ColorpickerFrame=a.load'y'{
 Title=aq.Title,
 Desc=aq.Desc,
+LockedTitle=ap.LockedTitle,
 Parent=ap.Parent,
 TextOffset=isBoxCol and 34 or 40,
 Hover=false,
@@ -7675,6 +7713,8 @@ Elements={},
 Expandable=false,
 Opened=ah.Opened~=nil and ah.Opened or (isBoxesMode and true or false),
 IsLooseBox=ah.IsLooseBox or false,
+Box=ah.Box or false,
+BoxBorder=ah.BoxBorder or false,
 }
 
 local aj
@@ -7866,13 +7906,15 @@ am:Destroy()
 end
 
 function ai.SetBoxMode(ao,isBoxes)
-BoxBackground.Visible=isBoxes
-BoxOutline.Visible=isBoxes
-BoxDivider.Visible=isBoxes and (not ai.IsLooseBox)
+local showBg=isBoxes or ai.Box
+local showBorder=isBoxes or ai.BoxBorder
+BoxBackground.Visible=showBg
+BoxOutline.Visible=showBorder
+BoxDivider.Visible=showBg and (not ai.IsLooseBox)
 
-ai.HeaderSize=isBoxes and 38 or 42
-ai.IconSize=isBoxes and 18 or 20
-ai.TextSize=isBoxes and 15 or 19
+ai.HeaderSize=showBg and 38 or 42
+ai.IconSize=showBg and 18 or 20
+ai.TextSize=showBg and 15 or 19
 al.TextSize=ai.TextSize
 am.Top.Size=UDim2.new(1,0,0,ai.HeaderSize)
 BoxDivider.Position=UDim2.new(0.5,0,0,ai.HeaderSize-1)
@@ -7900,15 +7942,16 @@ else
 ak.ImageLabel.Rotation=0
 end
 else
-contentPadding.PaddingLeft=UDim.new(0,0)
-contentPadding.PaddingRight=UDim.new(0,0)
-contentPadding.PaddingBottom=UDim.new(0,0)
-contentPadding.PaddingTop=UDim.new(0,0)
-topPadding.PaddingLeft=UDim.new(0,0)
-topPadding.PaddingRight=UDim.new(0,0)
+contentPadding.PaddingLeft=UDim.new(0,showBg and 8 or 0)
+contentPadding.PaddingRight=UDim.new(0,showBg and 8 or 0)
+contentPadding.PaddingBottom=UDim.new(0,showBg and 6 or 0)
+contentPadding.PaddingTop=UDim.new(0,showBg and (ai.IsLooseBox and 8 or 4) or 0)
+topPadding.PaddingLeft=UDim.new(0,showBg and 10 or 0)
+topPadding.PaddingRight=UDim.new(0,showBg and 10 or 0)
 local cH=am.Content.UIListLayout.AbsoluteContentSize.Y
 local hSize=ai.IsLooseBox and 0 or ai.HeaderSize
-local totalH=ai.Opened and(hSize+(cH/(ah.UIScale or 1)))or hSize
+local pad=showBg and (ai.IsLooseBox and 14 or 10) or 0
+local totalH=ai.Opened and(hSize+((cH+pad)/(ah.UIScale or 1)))or hSize
 am.Size=UDim2.new(1,0,0,totalH)
 am.Position=UDim2.new(0,0,0,0)
 if ai.Opened then
@@ -7934,6 +7977,10 @@ end
 end)
 end
 end
+end
+
+if ai.Box or ai.BoxBorder then
+ai:SetBoxMode(isBoxesMode)
 end
 
 function ai.Open(ao)
