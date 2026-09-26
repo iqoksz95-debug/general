@@ -7776,19 +7776,21 @@ Size=UDim2.new(1,0,0,0),
 TextWrapped=true,
 })
 
-local BoxBackground=aa.NewRoundFrame(ah.Tab and ah.Tab.UICorner or 10,"Squircle",{
+local AetheriaUI_BoxTransparency=(ah.Window and ah.Window.AetheriaUI and ah.Window.AetheriaUI.TransparencyValue)or 0.15
+
+local BoxBackground=aa.NewRoundFrame(16,"Squircle",{
 Size=UDim2.new(1,0,1,0),
-ThemeTag={ImageColor3="Dialog"},
-ImageTransparency=0.1,
+ThemeTag={ImageColor3="Background"},
+ImageTransparency=AetheriaUI_BoxTransparency,
 Name="BoxBackground",
 Visible=false,
 ZIndex=1,
 })
 
-local BoxOutline=aa.NewRoundFrame(ah.Tab and ah.Tab.UICorner or 10,"SquircleOutline",{
+local BoxOutline=aa.NewRoundFrame(16,"SquircleOutline",{
 Size=UDim2.new(1,0,1,0),
 ThemeTag={ImageColor3="Outline"},
-ImageTransparency=0.55,
+ImageTransparency=0.7,
 Name="BoxOutline",
 Visible=false,
 ZIndex=2,
@@ -7907,10 +7909,10 @@ end
 
 function ai.SetBoxMode(ao,isBoxes)
 local showBg=isBoxes or ai.Box
-local showBorder=isBoxes or ai.BoxBorder
+local showBorder=ai.BoxBorder
 BoxBackground.Visible=showBg
 BoxOutline.Visible=showBorder
-BoxDivider.Visible=showBg and (not ai.IsLooseBox)
+BoxDivider.Visible=false
 
 ai.HeaderSize=showBg and 38 or 42
 ai.IconSize=showBg and 18 or 20
@@ -7982,6 +7984,148 @@ end
 if ai.Box or ai.BoxBorder then
 ai:SetBoxMode(isBoxesMode)
 end
+
+-- ===== Detachable Section: pop this Section out into its own floating, draggable window =====
+ai.Detached=false
+local AetheriaUI_DetachGui,AetheriaUI_DetachOuter,AetheriaUI_Placeholder
+
+local AetheriaUI_DetachIcon=aa.Icon"external-link"
+local AetheriaUI_DetachHandle=ac("ImageLabel",{
+Size=UDim2.new(0,16,0,16),
+AnchorPoint=Vector2.new(1,0.5),
+Position=UDim2.new(1,-8-ai.IconSize-8,0.5,0),
+BackgroundTransparency=1,
+Image=AetheriaUI_DetachIcon[1],
+ImageRectSize=AetheriaUI_DetachIcon[2].ImageRectSize,
+ImageRectOffset=AetheriaUI_DetachIcon[2].ImageRectPosition,
+ThemeTag={ImageColor3="Icon"},
+ImageTransparency=.4,
+Visible=false,
+ZIndex=4,
+Parent=am.Top,
+},{
+ac("TextButton",{
+Size=UDim2.new(2,8,2,8),
+Position=UDim2.new(0.5,0,0.5,0),
+AnchorPoint=Vector2.new(0.5,0.5),
+BackgroundTransparency=1,
+Text="",
+Name="Btn",
+ZIndex=5,
+}),
+})
+
+local function AetheriaUI_SetDetachIcon(name)
+local ic=aa.Icon(name)
+AetheriaUI_DetachHandle.Image=ic[1]
+AetheriaUI_DetachHandle.ImageRectSize=ic[2].ImageRectSize
+AetheriaUI_DetachHandle.ImageRectOffset=ic[2].ImageRectPosition
+end
+
+local function AetheriaUI_Reattach()
+if not ai.Detached then return end
+ai.Detached=false
+if AetheriaUI_Placeholder then
+am.Parent=AetheriaUI_Placeholder.Parent
+am.LayoutOrder=AetheriaUI_Placeholder.LayoutOrder
+AetheriaUI_Placeholder:Destroy()
+AetheriaUI_Placeholder=nil
+end
+if AetheriaUI_DetachGui then
+AetheriaUI_DetachGui:Destroy()
+AetheriaUI_DetachGui=nil
+end
+am.Size=UDim2.new(1,0,0,0)
+ai:SetBoxMode(isBoxesMode)
+AetheriaUI_SetDetachIcon"external-link"
+end
+
+local function AetheriaUI_Detach()
+if ai.Detached then return end
+if not(ah.Window and ah.Window.SectionDetachEnabled)then return end
+ai.Detached=true
+
+local origParent=am.Parent
+AetheriaUI_Placeholder=ac("Frame",{
+Size=UDim2.new(1,0,0,ai.HeaderSize),
+BackgroundTransparency=1,
+LayoutOrder=am.LayoutOrder,
+Parent=origParent,
+},{
+ac("TextLabel",{
+Size=UDim2.new(1,-10,1,0),
+Position=UDim2.new(0,5,0,0),
+BackgroundTransparency=1,
+Text=ai.Title.." (detached — drag its window back or click the dock icon)",
+TextXAlignment="Left",
+TextSize=12,
+FontFace=Font.new(aa.Font,Enum.FontWeight.Medium),
+TextTransparency=.4,
+ThemeTag={TextColor3="Text"},
+}),
+})
+
+AetheriaUI_DetachGui=ac("ScreenGui",{
+Name="AetheriaUI_Detached_"..tostring(ai.Title),
+ResetOnSpawn=false,
+IgnoreGuiInset=true,
+Parent=game:GetService("CoreGui"),
+})
+
+AetheriaUI_DetachOuter=aa.NewRoundFrame(16,"Squircle",{
+Size=UDim2.new(0,300,0,ai.HeaderSize),
+Position=UDim2.new(0.5,-150,0.5,-100),
+ThemeTag={ImageColor3="Background"},
+ImageTransparency=0,
+AutomaticSize="Y",
+Parent=AetheriaUI_DetachGui,
+},{
+aa.NewRoundFrame(16,"SquircleOutline",{
+Size=UDim2.new(1,0,1,0),
+ThemeTag={ImageColor3="Outline"},
+ImageTransparency=.55,
+}),
+})
+
+am.Parent=AetheriaUI_DetachOuter
+am.Size=UDim2.new(1,0,0,0)
+BoxBackground.Visible=false
+BoxOutline.Visible=false
+
+local AetheriaUI_MainFrame=ah.Window and ah.Window.UIElements and ah.Window.UIElements.Main
+AetheriaUI_DetachOuter:SetAttribute("AetheriaUI_SmoothDragging",AetheriaUI_MainFrame and AetheriaUI_MainFrame:GetAttribute("AetheriaUI_SmoothDragging")or false)
+aa.Drag(AetheriaUI_DetachOuter,{am.Top})
+
+AetheriaUI_SetDetachIcon"corner-down-left"
+end
+
+AetheriaUI_DetachHandle.Btn.MouseButton1Click:Connect(function()
+if ai.Detached then AetheriaUI_Reattach()else AetheriaUI_Detach()end
+end)
+
+function ai.SetDetachable(self,enabled)
+AetheriaUI_DetachHandle.Visible=enabled and true or false
+if(not enabled)and ai.Detached then AetheriaUI_Reattach()end
+end
+
+AetheriaUI_DetachHandle.Visible=(ah.Window and ah.Window.SectionDetachEnabled)and true or false
+
+if ah.Window then
+ah.Window.UIElements=ah.Window.UIElements or{}
+ah.Window.UIElements.AetheriaUI_AllSections=ah.Window.UIElements.AetheriaUI_AllSections or{}
+table.insert(ah.Window.UIElements.AetheriaUI_AllSections,ai)
+if not ah.Window.SetSectionDetachEnabled then
+function ah.Window.SetSectionDetachEnabled(self,state)
+ah.Window.SectionDetachEnabled=state and true or false
+for _,AetheriaUI_sec in ipairs(ah.Window.UIElements.AetheriaUI_AllSections)do
+if AetheriaUI_sec.SetDetachable then
+AetheriaUI_sec:SetDetachable(ah.Window.SectionDetachEnabled)
+end
+end
+end
+end
+end
+-- ===== End Detachable Section =====
 
 function ai.Open(ao)
 if ai.Expandable then
@@ -10020,12 +10164,22 @@ function AetheriaUI_ToggleInput.New(AetheriaUI_af,AetheriaUI_ag)
             }),
         })
 
-        local inputContainer=aa.NewRoundFrame(isBoxTogIn and 6 or 8,"Squircle",{
+        local AetheriaUI_TogInCorner=isBoxTogIn and 10 or 12
+        local inputContainer=ac("Frame",{
             Size=UDim2.new(0,inputWidth,0,inputH),
-            ThemeTag={ImageColor3="Background"},
-            ImageTransparency=0.3,
+            BackgroundTransparency=1,
             Parent=rightHolder,
         },{
+            aa.NewRoundFrame(AetheriaUI_TogInCorner,"Squircle",{
+                ThemeTag={ImageColor3="Accent"},
+                Size=UDim2.new(1,0,1,0),
+                ImageTransparency=.85,
+            }),
+            aa.NewRoundFrame(AetheriaUI_TogInCorner,"SquircleOutline",{
+                ThemeTag={ImageColor3="Outline"},
+                Size=UDim2.new(1,0,1,0),
+                ImageTransparency=.95,
+            }),
             ac("UIPadding",{
                 PaddingLeft=UDim.new(0,10),
                 PaddingRight=UDim.new(0,10),
@@ -11673,11 +11827,22 @@ function AetheriaUI_ButtonInput.New(AetheriaUI_af,AetheriaUI_ag)
             }),
         })
 
-        local inputFr=aa.NewRoundFrame(isBoxBtnIn and 6 or 8,"Squircle",{
+        local AetheriaUI_BtnInCorner=isBoxBtnIn and 10 or 12
+        local inputFr=ac("Frame",{
             Size=UDim2.new(0,inputW,0,h),
-            ImageTransparency=0.92,
-            ThemeTag={ImageColor3="Text"},
+            BackgroundTransparency=1,
             Parent=rightHolder,
+        },{
+            aa.NewRoundFrame(AetheriaUI_BtnInCorner,"Squircle",{
+                ThemeTag={ImageColor3="Accent"},
+                Size=UDim2.new(1,0,1,0),
+                ImageTransparency=.85,
+            }),
+            aa.NewRoundFrame(AetheriaUI_BtnInCorner,"SquircleOutline",{
+                ThemeTag={ImageColor3="Outline"},
+                Size=UDim2.new(1,0,1,0),
+                ImageTransparency=.95,
+            }),
         })
 
         local textBox=ac("TextBox",{
