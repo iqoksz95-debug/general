@@ -8084,6 +8084,7 @@ AetheriaUI_DetachGui=ac("ScreenGui",{
 Name="AetheriaUI_Detached_"..tostring(ai.Title),
 ResetOnSpawn=false,
 IgnoreGuiInset=true,
+DisplayOrder=2147483646, -- render above the main hub window; one below the cursor overlay's max
 Parent=game:GetService("CoreGui"),
 })
 
@@ -8121,11 +8122,14 @@ AetheriaUI_SavedBox=ai.Box
 AetheriaUI_SavedBoxBorder=ai.BoxBorder
 ai.Box=true
 
--- Give Roblox one frame to actually re-run layout under the new parent before reading
--- any Absolute*/UIListLayout sizes off of it -- reading them in the same tick as the
--- reparent can return stale numbers from the old parent, which is what made the box
--- render at the wrong height for a moment (looked like content popping in late).
-task.wait()
+-- Give Roblox a few frames to actually re-run layout under the new parent (new width,
+-- new ancestry) before reading any Absolute*/UIListLayout sizes off of it. A single
+-- task.wait() was not always enough for sections with more rows, which is what made the
+-- window (and the row positions inside it) settle to the wrong size/place initially.
+local AetheriaUI_RS=game:GetService("RunService")
+for AetheriaUI_i=1,3 do
+AetheriaUI_RS.Heartbeat:Wait()
+end
 
 ai:SetBoxMode(false)
 
