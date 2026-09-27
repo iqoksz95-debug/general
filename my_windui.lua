@@ -7987,8 +7987,9 @@ end
 
 -- ===== Detachable Section: pop this Section out into its own floating, draggable window =====
 ai.Detached=false
-local AetheriaUI_DetachGui,AetheriaUI_DetachOuter,AetheriaUI_Placeholder
+local AetheriaUI_DetachGui,AetheriaUI_DetachOuter,AetheriaUI_Placeholder,AetheriaUI_ScrollFrame
 local AetheriaUI_SavedBox,AetheriaUI_SavedBoxBorder
+local AetheriaUI_MAXH=420 -- capped visible height of a detached box before it scrolls
 
 local AetheriaUI_DetachIcon=aa.Icon"external-link"
 local AetheriaUI_DetachHandle=ac("ImageLabel",{
@@ -8035,17 +8036,29 @@ end
 if AetheriaUI_DetachGui then
 AetheriaUI_DetachGui:Destroy()
 AetheriaUI_DetachGui=nil
+AetheriaUI_ScrollFrame=nil
 end
 ai.Box=AetheriaUI_SavedBox
 ai.BoxBorder=AetheriaUI_SavedBoxBorder
-ai:SetBoxMode(isBoxesMode)
+-- Re-derive the CURRENT global Boxes mode live, rather than the isBoxesMode value
+-- captured once back when this Section was first created -- the user may have flipped
+-- "Modules Layout" in between, and reattaching with a stale snapshot could leave the
+-- background switched off even though it should still be on (or vice versa).
+local AetheriaUI_LiveBoxesMode=(ah.Window and ah.Window.TabLayoutType=="Boxes")
+ai:SetBoxMode(AetheriaUI_LiveBoxesMode)
 AetheriaUI_SetDetachIcon"external-link"
 end
 
-local function AetheriaUI_Detach()
+local function AetheriaUI_Detach(AetheriaUI_AtX,AetheriaUI_AtY)
 if ai.Detached then return end
 if not(ah.Window and ah.Window.SectionDetachEnabled)then return end
 ai.Detached=true
+
+-- Capture the width the row layouts were actually built for BEFORE moving anything.
+-- Elements position their label/control split as fixed pixel math computed for THIS
+-- width; forcing a different fixed width (e.g. 300) after reparenting made every row
+-- text overflow off the left edge instead of lining up under its control.
+local AetheriaUI_OrigWidth=math.max(am.AbsoluteSize.X,220)
 
 local origParent=am.Parent
 AetheriaUI_Placeholder=ac("Frame",{
@@ -8058,7 +8071,7 @@ ac("TextLabel",{
 Size=UDim2.new(1,-10,1,0),
 Position=UDim2.new(0,5,0,0),
 BackgroundTransparency=1,
-Text=ai.Title.." (detached — drag its window back or click the dock icon)",
+Text=ai.Title.." (detached -- drag its window, or click the dock icon to bring it back)",
 TextXAlignment="Left",
 TextSize=12,
 FontFace=Font.new(aa.Font,Enum.FontWeight.Medium),
@@ -8075,11 +8088,11 @@ Parent=game:GetService("CoreGui"),
 })
 
 AetheriaUI_DetachOuter=aa.NewRoundFrame(16,"Squircle",{
-Size=UDim2.new(0,300,0,ai.HeaderSize),
-Position=UDim2.new(0.5,-150,0.5,-100),
+Size=UDim2.new(0,AetheriaUI_OrigWidth,0,ai.HeaderSize),
+Position=UDim2.new(0,(AetheriaUI_AtX or 400)-AetheriaUI_OrigWidth/2,0,(AetheriaUI_AtY or 300)-ai.HeaderSize/2),
 ThemeTag={ImageColor3="Background"},
 ImageTransparency=0,
-AutomaticSize="Y",
+Visible=false,
 Parent=AetheriaUI_DetachGui,
 },{
 aa.NewRoundFrame(16,"SquircleOutline",{
@@ -8089,20 +8102,38 @@ ImageTransparency=.55,
 }),
 })
 
-am.Parent=AetheriaUI_DetachOuter
+AetheriaUI_ScrollFrame=ac("ScrollingFrame",{
+Size=UDim2.new(1,0,1,-ai.HeaderSize),
+Position=UDim2.new(0,0,0,ai.HeaderSize),
+BackgroundTransparency=1,
+BorderSizePixel=0,
+ScrollBarThickness=4,
+ScrollBarImageTransparency=.3,
+CanvasSize=UDim2.new(0,0,0,0),
+Parent=AetheriaUI_DetachOuter,
+})
+
+am.Parent=AetheriaUI_ScrollFrame
 am.Position=UDim2.new(0,0,0,0)
 
--- Force the box background on while floating (readability over arbitrary game content),
--- and recompute the REAL content height via the existing SetBoxMode math instead of
--- zeroing it out — am has ClipsDescendants=true, so a stale/zero height was hiding
--- everything inside it, including am.Top (our drag handle). isBoxes=false keeps the
--- full-width layout branch (not the 2-column masonry one reserved for global Boxes mode).
+-- Force the box background on while floating (readability over arbitrary game content).
 AetheriaUI_SavedBox=ai.Box
 AetheriaUI_SavedBoxBorder=ai.BoxBorder
 ai.Box=true
+
+-- Give Roblox one frame to actually re-run layout under the new parent before reading
+-- any Absolute*/UIListLayout sizes off of it -- reading them in the same tick as the
+-- reparent can return stale numbers from the old parent, which is what made the box
+-- render at the wrong height for a moment (looked like content popping in late).
+task.wait()
+
 ai:SetBoxMode(false)
 
-AetheriaUI_DetachOuter.Size=UDim2.new(0,300,0,ai.HeaderSize+am.Size.Y.Offset)
+local AetheriaUI_FullH=am.Size.Y.Offset
+local AetheriaUI_VisibleH=math.min(AetheriaUI_FullH,AetheriaUI_MAXH)
+AetheriaUI_ScrollFrame.CanvasSize=UDim2.new(0,0,0,AetheriaUI_FullH)
+AetheriaUI_DetachOuter.Size=UDim2.new(0,AetheriaUI_OrigWidth,0,ai.HeaderSize+AetheriaUI_VisibleH)
+AetheriaUI_DetachOuter.Visible=true
 
 local AetheriaUI_MainFrame=ah.Window and ah.Window.UIElements and ah.Window.UIElements.Main
 AetheriaUI_DetachOuter:SetAttribute("AetheriaUI_SmoothDragging",AetheriaUI_MainFrame and AetheriaUI_MainFrame:GetAttribute("AetheriaUI_SmoothDragging")or false)
@@ -8111,8 +8142,39 @@ aa.Drag(AetheriaUI_DetachOuter,{am.Top})
 AetheriaUI_SetDetachIcon"corner-down-left"
 end
 
-AetheriaUI_DetachHandle.Btn.MouseButton1Click:Connect(function()
-if ai.Detached then AetheriaUI_Reattach()else AetheriaUI_Detach()end
+-- Drag-to-detach: press the handle and move it past a small threshold to tear the
+-- section off the window at the cursor; a plain click (no real movement) does nothing
+-- while attached. Once detached, the SAME handle click re-docks it (no drag needed for that).
+local AetheriaUI_UIS=game:GetService("UserInputService")
+AetheriaUI_DetachHandle.Btn.InputBegan:Connect(function(input)
+if input.UserInputType~=Enum.UserInputType.MouseButton1 and input.UserInputType~=Enum.UserInputType.Touch then return end
+if ai.Detached then
+AetheriaUI_Reattach()
+return
+end
+if not(ah.Window and ah.Window.SectionDetachEnabled)then return end
+
+local startPos=input.Position
+local moved=false
+local moveConn,endConn
+
+moveConn=AetheriaUI_UIS.InputChanged:Connect(function(moveInput)
+if moveInput.UserInputType~=Enum.UserInputType.MouseMovement and moveInput.UserInputType~=Enum.UserInputType.Touch then return end
+local delta=moveInput.Position-startPos
+if not moved and(math.abs(delta.X)>6 or math.abs(delta.Y)>6)then
+moved=true
+AetheriaUI_Detach(moveInput.Position.X,moveInput.Position.Y)
+elseif moved and AetheriaUI_DetachOuter then
+AetheriaUI_DetachOuter.Position=UDim2.new(0,moveInput.Position.X-AetheriaUI_DetachOuter.Size.X.Offset/2,0,moveInput.Position.Y-12)
+end
+end)
+
+endConn=AetheriaUI_UIS.InputEnded:Connect(function(endInput)
+if endInput.UserInputType==Enum.UserInputType.MouseButton1 or endInput.UserInputType==Enum.UserInputType.Touch then
+if moveConn then moveConn:Disconnect()end
+if endConn then endConn:Disconnect()end
+end
+end)
 end)
 
 function ai.SetDetachable(self,enabled)
