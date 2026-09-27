@@ -7988,8 +7988,24 @@ end
 -- ===== Detachable Section: pop this Section out into its own floating, draggable window =====
 ai.Detached=false
 local AetheriaUI_DetachGui,AetheriaUI_DetachOuter,AetheriaUI_Placeholder,AetheriaUI_ScrollFrame
-local AetheriaUI_SavedBox,AetheriaUI_SavedBoxBorder
+local AetheriaUI_SavedBox,AetheriaUI_SavedBoxBorder,AetheriaUI_OrigWidth
 local AetheriaUI_MAXH=420 -- capped visible height of a detached box before it scrolls
+
+-- Keep the floating window's outer size in sync with am.Size whenever it changes while
+-- detached -- Open()/Close() tween am.Size directly and know nothing about our wrapper,
+-- so without this, opening a section that was detached while closed grew am past the
+-- wrapper's old (closed-height) bounds and got clipped by the ScrollingFrame.
+am:GetPropertyChangedSignal("Size"):Connect(function()
+if not ai.Detached then return end
+local h=am.Size.Y.Offset
+local visH=math.min(h,AetheriaUI_MAXH)
+if AetheriaUI_ScrollFrame then
+AetheriaUI_ScrollFrame.CanvasSize=UDim2.new(0,0,0,h)
+end
+if AetheriaUI_DetachOuter then
+AetheriaUI_DetachOuter.Size=UDim2.new(0,AetheriaUI_OrigWidth or 300,0,visH)
+end
+end)
 
 local AetheriaUI_DetachIcon=aa.Icon"external-link"
 local AetheriaUI_DetachHandle=ac("ImageLabel",{
@@ -8058,27 +8074,70 @@ ai.Detached=true
 -- Elements position their label/control split as fixed pixel math computed for THIS
 -- width; forcing a different fixed width (e.g. 300) after reparenting made every row
 -- text overflow off the left edge instead of lining up under its control.
-local AetheriaUI_OrigWidth=math.max(am.AbsoluteSize.X,220)
+AetheriaUI_OrigWidth=math.max(am.AbsoluteSize.X,220)
 
+-- Placeholder left behind in the GUI: styled like the section's own closed header (same
+-- icon + title), so it still reads as "this box lives here" -- but it has no Content of
+-- its own, so there is nothing for a click to expand. Clicking it docks the box back.
 local origParent=am.Parent
-AetheriaUI_Placeholder=ac("Frame",{
+local AetheriaUI_PlaceholderIconData=aa.Icon(ai.Icon or"box")
+AetheriaUI_Placeholder=aa.NewRoundFrame(16,"Squircle",{
 Size=UDim2.new(1,0,0,ai.HeaderSize),
-BackgroundTransparency=1,
+ThemeTag={ImageColor3="Dialog"},
+ImageTransparency=.5,
 LayoutOrder=am.LayoutOrder,
 Parent=origParent,
 },{
-ac("TextLabel",{
-Size=UDim2.new(1,-10,1,0),
-Position=UDim2.new(0,5,0,0),
+ac("ImageLabel",{
+Size=UDim2.new(0,ai.IconSize,0,ai.IconSize),
+Position=UDim2.new(0,14,0.5,0),
+AnchorPoint=Vector2.new(0,0.5),
 BackgroundTransparency=1,
-Text=ai.Title.." (detached -- drag its window, or click the dock icon to bring it back)",
+Image=AetheriaUI_PlaceholderIconData[1],
+ImageRectSize=AetheriaUI_PlaceholderIconData[2].ImageRectSize,
+ImageRectOffset=AetheriaUI_PlaceholderIconData[2].ImageRectPosition,
+ImageTransparency=.4,
+ThemeTag={ImageColor3="Icon"},
+}),
+ac("TextLabel",{
+Size=UDim2.new(1,-100,1,0),
+Position=UDim2.new(0,14+ai.IconSize+8,0,0),
+BackgroundTransparency=1,
+Text=ai.Title,
 TextXAlignment="Left",
-TextSize=12,
+TextSize=ai.TextSize,
 FontFace=Font.new(aa.Font,Enum.FontWeight.Medium),
 TextTransparency=.4,
 ThemeTag={TextColor3="Text"},
 }),
+ac("TextLabel",{
+Size=UDim2.new(0,74,1,0),
+Position=UDim2.new(1,-84,0,0),
+BackgroundTransparency=1,
+Text="detached",
+TextXAlignment="Right",
+TextSize=11,
+FontFace=Font.new(aa.Font,Enum.FontWeight.Medium),
+TextTransparency=.55,
+ThemeTag={TextColor3="Text"},
+}),
+aa.NewRoundFrame(16,"SquircleOutline",{
+Size=UDim2.new(1,0,1,0),
+ThemeTag={ImageColor3="Outline"},
+ImageTransparency=.6,
+}),
+ac("TextButton",{
+Size=UDim2.new(1,0,1,0),
+BackgroundTransparency=1,
+Text="",
+ZIndex=5,
+}),
 })
+for _,c in ipairs(AetheriaUI_Placeholder:GetChildren())do
+if c:IsA("TextButton")then
+c.MouseButton1Click:Connect(function() AetheriaUI_Reattach() end)
+end
+end
 
 AetheriaUI_DetachGui=ac("ScreenGui",{
 Name="AetheriaUI_Detached_"..tostring(ai.Title),
@@ -8089,7 +8148,7 @@ Parent=game:GetService("CoreGui"),
 })
 
 AetheriaUI_DetachOuter=aa.NewRoundFrame(16,"Squircle",{
-Size=UDim2.new(0,AetheriaUI_OrigWidth,0,ai.HeaderSize),
+Size=UDim2.new(0,AetheriaUI_OrigWidth,0,ai.HeaderSize*2),
 Position=UDim2.new(0,(AetheriaUI_AtX or 400)-AetheriaUI_OrigWidth/2,0,(AetheriaUI_AtY or 300)-ai.HeaderSize/2),
 ThemeTag={ImageColor3="Background"},
 ImageTransparency=0,
@@ -8104,8 +8163,8 @@ ImageTransparency=.55,
 })
 
 AetheriaUI_ScrollFrame=ac("ScrollingFrame",{
-Size=UDim2.new(1,0,1,-ai.HeaderSize),
-Position=UDim2.new(0,0,0,ai.HeaderSize),
+Size=UDim2.new(1,0,1,0),
+Position=UDim2.new(0,0,0,0),
 BackgroundTransparency=1,
 BorderSizePixel=0,
 ScrollBarThickness=4,
@@ -8157,7 +8216,7 @@ AetheriaUI_NudgeAll()
 local AetheriaUI_FullH=am.Size.Y.Offset
 local AetheriaUI_VisibleH=math.min(AetheriaUI_FullH,AetheriaUI_MAXH)
 AetheriaUI_ScrollFrame.CanvasSize=UDim2.new(0,0,0,AetheriaUI_FullH)
-AetheriaUI_DetachOuter.Size=UDim2.new(0,AetheriaUI_OrigWidth,0,ai.HeaderSize+AetheriaUI_VisibleH)
+AetheriaUI_DetachOuter.Size=UDim2.new(0,AetheriaUI_OrigWidth,0,AetheriaUI_VisibleH)
 AetheriaUI_DetachOuter.Visible=true
 
 local AetheriaUI_MainFrame=ah.Window and ah.Window.UIElements and ah.Window.UIElements.Main
