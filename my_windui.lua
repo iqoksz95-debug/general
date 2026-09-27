@@ -8122,16 +8122,37 @@ AetheriaUI_SavedBox=ai.Box
 AetheriaUI_SavedBoxBorder=ai.BoxBorder
 ai.Box=true
 
--- Give Roblox a few frames to actually re-run layout under the new parent (new width,
--- new ancestry) before reading any Absolute*/UIListLayout sizes off of it. A single
--- task.wait() was not always enough for sections with more rows, which is what made the
--- window (and the row positions inside it) settle to the wrong size/place initially.
 local AetheriaUI_RS=game:GetService("RunService")
+
+-- Nudge every child element to recompute its own internal layout under the new parent —
+-- not just the Section's own box sizing. Some rows (e.g. Colorpicker swatches) only
+-- resize/redraw themselves when their own SetBoxMode runs, and relying on a single pass
+-- right after reparenting was not reliable for sections with many rows.
+local function AetheriaUI_NudgeAll()
+for _,elem in ipairs(ai.Elements or{})do
+if type(elem)=="table" and elem.SetBoxMode then
+pcall(elem.SetBoxMode,elem,false)
+end
+end
+end
+
 for AetheriaUI_i=1,3 do
 AetheriaUI_RS.Heartbeat:Wait()
 end
-
 ai:SetBoxMode(false)
+AetheriaUI_NudgeAll()
+
+-- Toggling Content off/on forces Roblox to actually re-run the UIListLayout pass instead
+-- of trusting whatever it last computed for the OLD parent/width.
+am.Content.Visible=false
+AetheriaUI_RS.Heartbeat:Wait()
+am.Content.Visible=true
+
+for AetheriaUI_i=1,5 do
+AetheriaUI_RS.Heartbeat:Wait()
+end
+ai:SetBoxMode(false)
+AetheriaUI_NudgeAll()
 
 local AetheriaUI_FullH=am.Size.Y.Offset
 local AetheriaUI_VisibleH=math.min(AetheriaUI_FullH,AetheriaUI_MAXH)
