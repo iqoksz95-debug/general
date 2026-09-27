@@ -7988,6 +7988,7 @@ end
 -- ===== Detachable Section: pop this Section out into its own floating, draggable window =====
 ai.Detached=false
 local AetheriaUI_DetachGui,AetheriaUI_DetachOuter,AetheriaUI_Placeholder
+local AetheriaUI_SavedBox,AetheriaUI_SavedBoxBorder
 
 local AetheriaUI_DetachIcon=aa.Icon"external-link"
 local AetheriaUI_DetachHandle=ac("ImageLabel",{
@@ -8035,7 +8036,8 @@ if AetheriaUI_DetachGui then
 AetheriaUI_DetachGui:Destroy()
 AetheriaUI_DetachGui=nil
 end
-am.Size=UDim2.new(1,0,0,0)
+ai.Box=AetheriaUI_SavedBox
+ai.BoxBorder=AetheriaUI_SavedBoxBorder
 ai:SetBoxMode(isBoxesMode)
 AetheriaUI_SetDetachIcon"external-link"
 end
@@ -8088,9 +8090,19 @@ ImageTransparency=.55,
 })
 
 am.Parent=AetheriaUI_DetachOuter
-am.Size=UDim2.new(1,0,0,0)
-BoxBackground.Visible=false
-BoxOutline.Visible=false
+am.Position=UDim2.new(0,0,0,0)
+
+-- Force the box background on while floating (readability over arbitrary game content),
+-- and recompute the REAL content height via the existing SetBoxMode math instead of
+-- zeroing it out — am has ClipsDescendants=true, so a stale/zero height was hiding
+-- everything inside it, including am.Top (our drag handle). isBoxes=false keeps the
+-- full-width layout branch (not the 2-column masonry one reserved for global Boxes mode).
+AetheriaUI_SavedBox=ai.Box
+AetheriaUI_SavedBoxBorder=ai.BoxBorder
+ai.Box=true
+ai:SetBoxMode(false)
+
+AetheriaUI_DetachOuter.Size=UDim2.new(0,300,0,ai.HeaderSize+am.Size.Y.Offset)
 
 local AetheriaUI_MainFrame=ah.Window and ah.Window.UIElements and ah.Window.UIElements.Main
 AetheriaUI_DetachOuter:SetAttribute("AetheriaUI_SmoothDragging",AetheriaUI_MainFrame and AetheriaUI_MainFrame:GetAttribute("AetheriaUI_SmoothDragging")or false)
