@@ -7989,6 +7989,9 @@ end
 ai.Detached=false
 local AetheriaUI_DetachGui,AetheriaUI_DetachOuter,AetheriaUI_Placeholder,AetheriaUI_ScrollFrame
 local AetheriaUI_SavedBox,AetheriaUI_SavedBoxBorder,AetheriaUI_OrigWidth
+local AetheriaUI_ProxyBox,AetheriaUI_DestroyConn
+local AetheriaUI_DragConns={}
+local AetheriaUI_SuppressClickUntil=0
 local AetheriaUI_MAXH=420 -- capped visible height of a detached box before it scrolls
 
 -- Keep the floating window's outer size in sync with am.Size whenever it changes while
@@ -8040,12 +8043,66 @@ AetheriaUI_DetachHandle.ImageRectSize=ic[2].ImageRectSize
 AetheriaUI_DetachHandle.ImageRectOffset=ic[2].ImageRectPosition
 end
 
+local function AetheriaUI_UnbindDrag()
+for _,AetheriaUI_c in ipairs(AetheriaUI_DragConns)do AetheriaUI_c:Disconnect()end
+AetheriaUI_DragConns={}
+end
+
+-- Own drag for the floating window (header = handle). Replaces the generic aa.Drag call:
+-- that one never disconnects its global listeners, and a drag that ends on the header
+-- also fires MouseButton1Click, which used to toggle open/close on every release.
+local function AetheriaUI_BindDrag()
+AetheriaUI_UnbindDrag()
+local UIS=game:GetService("UserInputService")
+local dragging,moved,startPos,startFramePos=false,false,nil,nil
+table.insert(AetheriaUI_DragConns,am.Top.InputBegan:Connect(function(input)
+if not ai.Detached or not AetheriaUI_DetachOuter then return end
+if input.UserInputType~=Enum.UserInputType.MouseButton1 and input.UserInputType~=Enum.UserInputType.Touch then return end
+dragging=true
+moved=false
+startPos=input.Position
+startFramePos=AetheriaUI_DetachOuter.Position
+if AetheriaUI_DetachGui and ah.Window then
+local uie=ah.Window.UIElements
+uie.AetheriaUI_TopOrder=(uie.AetheriaUI_TopOrder or 2147483000)+1
+AetheriaUI_DetachGui.DisplayOrder=math.min(uie.AetheriaUI_TopOrder,2147483646)
+end
+end))
+table.insert(AetheriaUI_DragConns,UIS.InputChanged:Connect(function(input)
+if not dragging or not AetheriaUI_DetachOuter then return end
+if input.UserInputType~=Enum.UserInputType.MouseMovement and input.UserInputType~=Enum.UserInputType.Touch then return end
+local d=input.Position-startPos
+if math.abs(d.X)>3 or math.abs(d.Y)>3 then moved=true end
+local target=UDim2.new(startFramePos.X.Scale,startFramePos.X.Offset+d.X,startFramePos.Y.Scale,startFramePos.Y.Offset+d.Y)
+local mf=ah.Window and ah.Window.UIElements and ah.Window.UIElements.Main
+if mf and mf:GetAttribute("AetheriaUI_SmoothDragging")then
+aa.Tween(AetheriaUI_DetachOuter,0.18,{Position=target},Enum.EasingStyle.Quad,Enum.EasingDirection.Out):Play()
+else
+AetheriaUI_DetachOuter.Position=target
+end
+end))
+table.insert(AetheriaUI_DragConns,UIS.InputEnded:Connect(function(input)
+if input.UserInputType~=Enum.UserInputType.MouseButton1 and input.UserInputType~=Enum.UserInputType.Touch then return end
+if dragging and moved then AetheriaUI_SuppressClickUntil=os.clock()+0.25 end
+dragging=false
+end))
+end
+
 local function AetheriaUI_Reattach()
 if not ai.Detached then return end
 ai.Detached=false
+AetheriaUI_UnbindDrag()
+local AetheriaUI_TabBoxes=ah.Tab and ah.Tab.Boxes
 if AetheriaUI_Placeholder then
 am.Parent=AetheriaUI_Placeholder.Parent
 am.LayoutOrder=AetheriaUI_Placeholder.LayoutOrder
+am.Position=AetheriaUI_Placeholder.Position
+-- put the real box back into the tab's column layout in place of the proxy
+if AetheriaUI_TabBoxes and AetheriaUI_ProxyBox then
+local AetheriaUI_pi=table.find(AetheriaUI_TabBoxes,AetheriaUI_ProxyBox)
+if AetheriaUI_pi then AetheriaUI_TabBoxes[AetheriaUI_pi]=ai else table.insert(AetheriaUI_TabBoxes,ai)end
+end
+AetheriaUI_ProxyBox=nil
 AetheriaUI_Placeholder:Destroy()
 AetheriaUI_Placeholder=nil
 end
@@ -8053,6 +8110,7 @@ if AetheriaUI_DetachGui then
 AetheriaUI_DetachGui:Destroy()
 AetheriaUI_DetachGui=nil
 AetheriaUI_ScrollFrame=nil
+AetheriaUI_DetachOuter=nil
 end
 ai.Box=AetheriaUI_SavedBox
 ai.BoxBorder=AetheriaUI_SavedBoxBorder
@@ -8062,6 +8120,9 @@ ai.BoxBorder=AetheriaUI_SavedBoxBorder
 -- background switched off even though it should still be on (or vice versa).
 local AetheriaUI_LiveBoxesMode=(ah.Window and ah.Window.TabLayoutType=="Boxes")
 ai:SetBoxMode(AetheriaUI_LiveBoxesMode)
+if AetheriaUI_LiveBoxesMode and ah.Tab and ah.Tab.UpdateBoxLayout then
+ah.Tab:UpdateBoxLayout(false)
+end
 AetheriaUI_SetDetachIcon"external-link"
 end
 
@@ -8081,13 +8142,17 @@ AetheriaUI_OrigWidth=math.max(am.AbsoluteSize.X,220)
 -- its own, so there is nothing for a click to expand. Clicking it docks the box back.
 local origParent=am.Parent
 local AetheriaUI_PlaceholderIconData=aa.Icon(ai.Icon or"box")
-AetheriaUI_Placeholder=aa.NewRoundFrame(16,"Squircle",{
-Size=UDim2.new(1,0,0,ai.HeaderSize),
+AetheriaUI_Placeholder=aa.NewRoundFrame(12,"Squircle",{
+Size=UDim2.new(am.Size.X.Scale,am.Size.X.Offset,0,ai.HeaderSize),
+Position=am.Position,
 ThemeTag={ImageColor3="Dialog"},
-ImageTransparency=.5,
+ImageTransparency=.65,
 LayoutOrder=am.LayoutOrder,
 Parent=origParent,
 },{
+-- the tab layout code reads box.Frame.Content.UIListLayout on every box, so the
+-- stand-in needs an (empty) Content child to look like a real box to it
+ac("Frame",{Name="Content",Size=UDim2.new(1,0,0,0),BackgroundTransparency=1,Visible=false},{ac("UIListLayout",{})}),
 ac("ImageLabel",{
 Size=UDim2.new(0,ai.IconSize,0,ai.IconSize),
 Position=UDim2.new(0,14,0.5,0),
@@ -8121,10 +8186,10 @@ FontFace=Font.new(aa.Font,Enum.FontWeight.Medium),
 TextTransparency=.55,
 ThemeTag={TextColor3="Text"},
 }),
-aa.NewRoundFrame(16,"SquircleOutline",{
+aa.NewRoundFrame(12,"SquircleOutline",{
 Size=UDim2.new(1,0,1,0),
-ThemeTag={ImageColor3="Outline"},
-ImageTransparency=.6,
+ThemeTag={ImageColor3="Accent"},
+ImageTransparency=.75,
 }),
 ac("TextButton",{
 Size=UDim2.new(1,0,1,0),
@@ -8139,10 +8204,21 @@ c.MouseButton1Click:Connect(function() AetheriaUI_Reattach() end)
 end
 end
 
+-- Swap this box out of the tab's Boxes list for a stand-in that owns the placeholder.
+-- Otherwise UpdateBoxLayout keeps forcing am into its old column slot (Position on the
+-- right, Size=(0.5,-8)) even while it lives in the floating window -- that was the
+-- "content shoved to the right / narrow" bug -- and the GUI slot would not match a tile.
+local AetheriaUI_TabBoxes=ah.Tab and ah.Tab.Boxes
+local AetheriaUI_BoxIdx=AetheriaUI_TabBoxes and table.find(AetheriaUI_TabBoxes,ai)
+if AetheriaUI_BoxIdx then
+AetheriaUI_ProxyBox={Frame=AetheriaUI_Placeholder,Opened=false,IsLooseBox=false,HeaderSize=ai.HeaderSize,SetBoxMode=function()end,IsDetachProxy=true}
+AetheriaUI_TabBoxes[AetheriaUI_BoxIdx]=AetheriaUI_ProxyBox
+end
+
 AetheriaUI_DetachGui=ac("ScreenGui",{
 Name="AetheriaUI_Detached_"..tostring(ai.Title),
 ResetOnSpawn=false,
-IgnoreGuiInset=true,
+IgnoreGuiInset=false,
 DisplayOrder=2147483646, -- render above the main hub window; one below the cursor overlay's max
 Parent=game:GetService("CoreGui"),
 })
@@ -8157,8 +8233,8 @@ Parent=AetheriaUI_DetachGui,
 },{
 aa.NewRoundFrame(16,"SquircleOutline",{
 Size=UDim2.new(1,0,1,0),
-ThemeTag={ImageColor3="Outline"},
-ImageTransparency=.55,
+ThemeTag={ImageColor3="Accent"},
+ImageTransparency=.45,
 }),
 })
 
@@ -8175,6 +8251,18 @@ Parent=AetheriaUI_DetachOuter,
 
 am.Parent=AetheriaUI_ScrollFrame
 am.Position=UDim2.new(0,0,0,0)
+if ah.Tab and ah.Tab.UpdateBoxLayout then
+ah.Tab:UpdateBoxLayout(false)
+end
+
+-- if the hub window itself is destroyed, do not leave orphan floating windows behind
+local AetheriaUI_MainF=ah.Window and ah.Window.UIElements and ah.Window.UIElements.Main
+if AetheriaUI_MainF and not AetheriaUI_DestroyConn then
+AetheriaUI_DestroyConn=AetheriaUI_MainF.Destroying:Connect(function()
+AetheriaUI_UnbindDrag()
+if AetheriaUI_DetachGui then AetheriaUI_DetachGui:Destroy()AetheriaUI_DetachGui=nil end
+end)
+end
 
 -- Force the box background on while floating (readability over arbitrary game content).
 AetheriaUI_SavedBox=ai.Box
@@ -8221,7 +8309,7 @@ AetheriaUI_DetachOuter.Visible=true
 
 local AetheriaUI_MainFrame=ah.Window and ah.Window.UIElements and ah.Window.UIElements.Main
 AetheriaUI_DetachOuter:SetAttribute("AetheriaUI_SmoothDragging",AetheriaUI_MainFrame and AetheriaUI_MainFrame:GetAttribute("AetheriaUI_SmoothDragging")or false)
-aa.Drag(AetheriaUI_DetachOuter,{am.Top})
+AetheriaUI_BindDrag()
 
 AetheriaUI_SetDetachIcon"corner-down-left"
 end
@@ -8288,7 +8376,7 @@ end
 function ai.Open(ao)
 if ai.Expandable then
 ai.Opened=true
-local isBoxes=(ah.Window and ah.Window.TabLayoutType=="Boxes")
+local isBoxes=(ah.Window and ah.Window.TabLayoutType=="Boxes")and not ai.Detached
 local cH=am.Content.UIListLayout.AbsoluteContentSize.Y
 local hSize=ai.IsLooseBox and 0 or ai.HeaderSize
 local pad=ai.IsLooseBox and 14 or 10
@@ -8309,7 +8397,7 @@ end
 function ai.Close(ao)
 if ai.Expandable then
 ai.Opened=false
-local isBoxes=(ah.Window and ah.Window.TabLayoutType=="Boxes")
+local isBoxes=(ah.Window and ah.Window.TabLayoutType=="Boxes")and not ai.Detached
 local hSize=ai.IsLooseBox and 0 or ai.HeaderSize
 local targetSize=isBoxes and UDim2.new(0.5,-8,0,hSize) or UDim2.new(1,0,0,hSize)
 ae(am,0.26,{Size=targetSize},Enum.EasingStyle.Quint,Enum.EasingDirection.Out):Play()
@@ -8321,6 +8409,7 @@ end
 end
 
 aa.AddSignal(am.Top.MouseButton1Click,function()
+if os.clock()<AetheriaUI_SuppressClickUntil then return end
 if ai.Expandable then
 if ai.Opened then
 ai:Close()
@@ -8332,7 +8421,7 @@ end)
 
 am.Content.UIListLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
 if ai.Opened then
-local isBoxes=(ah.Window and ah.Window.TabLayoutType=="Boxes")
+local isBoxes=(ah.Window and ah.Window.TabLayoutType=="Boxes")and not ai.Detached
 local cH=am.Content.UIListLayout.AbsoluteContentSize.Y
 local hSize=ai.IsLooseBox and 0 or ai.HeaderSize
 local pad=ai.IsLooseBox and 14 or 10
