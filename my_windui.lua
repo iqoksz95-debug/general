@@ -8006,7 +8006,7 @@ if AetheriaUI_ScrollFrame then
 AetheriaUI_ScrollFrame.CanvasSize=UDim2.new(0,0,0,h)
 end
 if AetheriaUI_DetachOuter then
-AetheriaUI_DetachOuter.Size=UDim2.new(0,AetheriaUI_OrigWidth or 300,0,visH)
+ae(AetheriaUI_DetachOuter,0.28,{Size=UDim2.new(0,AetheriaUI_OrigWidth or 300,0,visH)},Enum.EasingStyle.Quad,Enum.EasingDirection.Out):Play()
 end
 end)
 
@@ -8107,7 +8107,19 @@ AetheriaUI_Placeholder:Destroy()
 AetheriaUI_Placeholder=nil
 end
 if AetheriaUI_DetachGui then
-AetheriaUI_DetachGui:Destroy()
+local AetheriaUI_ClosingGui,AetheriaUI_ClosingOuter=AetheriaUI_DetachGui,AetheriaUI_DetachOuter
+if AetheriaUI_ClosingOuter then
+local AetheriaUI_CloseTween=ae(AetheriaUI_ClosingOuter,0.2,{
+Size=UDim2.new(0,AetheriaUI_ClosingOuter.Size.X.Offset,0,0),
+ImageTransparency=1,
+},Enum.EasingStyle.Quad,Enum.EasingDirection.In)
+AetheriaUI_CloseTween.Completed:Connect(function()
+if AetheriaUI_ClosingGui then AetheriaUI_ClosingGui:Destroy()end
+end)
+AetheriaUI_CloseTween:Play()
+else
+AetheriaUI_ClosingGui:Destroy()
+end
 AetheriaUI_DetachGui=nil
 AetheriaUI_ScrollFrame=nil
 AetheriaUI_DetachOuter=nil
@@ -8142,7 +8154,7 @@ AetheriaUI_OrigWidth=math.max(am.AbsoluteSize.X,220)
 -- its own, so there is nothing for a click to expand. Clicking it docks the box back.
 local origParent=am.Parent
 local AetheriaUI_PlaceholderIconData=aa.Icon(ai.Icon or"box")
-AetheriaUI_Placeholder=aa.NewRoundFrame(12,"Squircle",{
+AetheriaUI_Placeholder=aa.NewRoundFrame(16,"Squircle",{
 Size=UDim2.new(am.Size.X.Scale,am.Size.X.Offset,0,ai.HeaderSize),
 Position=am.Position,
 ThemeTag={ImageColor3="Dialog"},
@@ -8175,21 +8187,21 @@ FontFace=Font.new(aa.Font,Enum.FontWeight.Medium),
 TextTransparency=.4,
 ThemeTag={TextColor3="Text"},
 }),
-ac("TextLabel",{
-Size=UDim2.new(0,74,1,0),
-Position=UDim2.new(1,-84,0,0),
+ac("ImageLabel",{
+Size=UDim2.new(0,ai.IconSize,0,ai.IconSize),
+AnchorPoint=Vector2.new(1,0.5),
+Position=UDim2.new(1,-14,0.5,0),
 BackgroundTransparency=1,
-Text="detached",
-TextXAlignment="Right",
-TextSize=11,
-FontFace=Font.new(aa.Font,Enum.FontWeight.Medium),
-TextTransparency=.55,
-ThemeTag={TextColor3="Text"},
+Image=aa.Icon"corner-down-left"[1],
+ImageRectSize=aa.Icon"corner-down-left"[2].ImageRectSize,
+ImageRectOffset=aa.Icon"corner-down-left"[2].ImageRectPosition,
+ImageTransparency=.35,
+ThemeTag={ImageColor3="Icon"},
 }),
-aa.NewRoundFrame(12,"SquircleOutline",{
+aa.NewRoundFrame(16,"SquircleOutline",{
 Size=UDim2.new(1,0,1,0),
-ThemeTag={ImageColor3="Accent"},
-ImageTransparency=.75,
+ThemeTag={ImageColor3="Outline"},
+ImageTransparency=.55,
 }),
 ac("TextButton",{
 Size=UDim2.new(1,0,1,0),
@@ -8268,6 +8280,10 @@ end
 AetheriaUI_SavedBox=ai.Box
 AetheriaUI_SavedBoxBorder=ai.BoxBorder
 ai.Box=true
+-- am's own rounded BoxBackground/BoxOutline only look right at the very top/bottom of
+-- the content -- once scrolled to the middle you see a flat-cut edge instead of a rounded
+-- one. The outer window frame already draws the rounded card; am only needs the padding
+-- that Box=true gives it, not its own redundant fill/outline underneath the scroll.
 
 local AetheriaUI_RS=game:GetService("RunService")
 
@@ -8287,6 +8303,8 @@ for AetheriaUI_i=1,3 do
 AetheriaUI_RS.Heartbeat:Wait()
 end
 ai:SetBoxMode(false)
+BoxBackground.Visible=false
+BoxOutline.Visible=false
 AetheriaUI_NudgeAll()
 
 -- Toggling Content off/on forces Roblox to actually re-run the UIListLayout pass instead
@@ -8299,13 +8317,20 @@ for AetheriaUI_i=1,5 do
 AetheriaUI_RS.Heartbeat:Wait()
 end
 ai:SetBoxMode(false)
+BoxBackground.Visible=false
+BoxOutline.Visible=false
 AetheriaUI_NudgeAll()
 
 local AetheriaUI_FullH=am.Size.Y.Offset
 local AetheriaUI_VisibleH=math.min(AetheriaUI_FullH,AetheriaUI_MAXH)
 AetheriaUI_ScrollFrame.CanvasSize=UDim2.new(0,0,0,AetheriaUI_FullH)
-AetheriaUI_DetachOuter.Size=UDim2.new(0,AetheriaUI_OrigWidth,0,AetheriaUI_VisibleH)
+AetheriaUI_DetachOuter.Size=UDim2.new(0,AetheriaUI_OrigWidth,0,ai.HeaderSize)
+AetheriaUI_DetachOuter.ImageTransparency=1
 AetheriaUI_DetachOuter.Visible=true
+ae(AetheriaUI_DetachOuter,0.22,{
+Size=UDim2.new(0,AetheriaUI_OrigWidth,0,AetheriaUI_VisibleH),
+ImageTransparency=0,
+},Enum.EasingStyle.Quad,Enum.EasingDirection.Out):Play()
 
 local AetheriaUI_MainFrame=ah.Window and ah.Window.UIElements and ah.Window.UIElements.Main
 AetheriaUI_DetachOuter:SetAttribute("AetheriaUI_SmoothDragging",AetheriaUI_MainFrame and AetheriaUI_MainFrame:GetAttribute("AetheriaUI_SmoothDragging")or false)
