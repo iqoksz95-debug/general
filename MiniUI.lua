@@ -5,7 +5,7 @@ return function(AetheriaUI, Window, SafeToggleWindow)
         MainWindowVisible = not (Window and Window.Closed),
         UIS = game:GetService("UserInputService"),
         TS = game:GetService("TweenService"),
-        Gui = Instance.new("ScreenGui", game:GetService("CoreGui")),
+        Gui = Instance.new("ScreenGui"),
         Bg = Instance.new("Frame"),
         Corner = Instance.new("UICorner"),
         Stroke = Instance.new("UIStroke"),
@@ -21,6 +21,10 @@ return function(AetheriaUI, Window, SafeToggleWindow)
     }
 
     MiniUI.Gui.Name = "AetheriaUIMini"
+    MiniUI.Gui.ResetOnSpawn = false
+    -- Выше главного окна и плавающих секций (2147483000..2147483500), ниже дропдаунов/курсора
+    MiniUI.Gui.DisplayOrder = 2147483550
+    MiniUI.Gui.Parent = (gethui and gethui()) or game:GetService("CoreGui")
 
     MiniUI.Bg.Parent = MiniUI.Gui
     MiniUI.Bg.AnchorPoint = Vector2.new(0.5, 0)
@@ -47,6 +51,24 @@ return function(AetheriaUI, Window, SafeToggleWindow)
     MiniUI.Icon.ImageColor3 = Color3.fromRGB(220, 220, 220)
 
     task.spawn(function()
+        -- В библиотеке нет GetIcon, поэтому раньше всегда использовался захардкоженный ассет.
+        -- Creator.Icon отдаёт {image, {ImageRectPosition, ImageRectSize}} — как для остальных иконок UI.
+        local creatorIcon
+        pcall(function()
+            if AetheriaUI and AetheriaUI.Creator and type(AetheriaUI.Creator.Icon) == "function" then
+                creatorIcon = AetheriaUI.Creator.Icon("door-open")
+            end
+        end)
+        if type(creatorIcon) == "table" and type(creatorIcon[1]) == "string" then
+            MiniUI.Icon.Image = creatorIcon[1]
+            local rect = creatorIcon[2]
+            if type(rect) == "table" then
+                MiniUI.Icon.ImageRectSize = rect.ImageRectSize or Vector2.new()
+                MiniUI.Icon.ImageRectOffset = rect.ImageRectPosition or Vector2.new()
+            end
+            return
+        end
+
         if AetheriaUI and type(AetheriaUI.GetIcon) == "function" then
             local iconData = AetheriaUI:GetIcon("door-open")
             if type(iconData) == "table" then
@@ -111,11 +133,10 @@ return function(AetheriaUI, Window, SafeToggleWindow)
     end)
 
     MiniUI.UISInputConn = MiniUI.UIS.InputChanged:Connect(function(input)
-        if MiniUI.Dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+        if MiniUI.Dragging and MiniUI.DragStart and MiniUI.StartPos and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
             local delta = input.Position - MiniUI.DragStart
-            MiniUI.TS:Create(MiniUI.Bg, TweenInfo.new(0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-                Position = UDim2.new(MiniUI.StartPos.X.Scale, MiniUI.StartPos.X.Offset + delta.X, MiniUI.StartPos.Y.Scale, MiniUI.StartPos.Y.Offset + delta.Y)
-            }):Play()
+            -- Прямая запись позиции: раньше на КАЖДОЕ движение мыши создавался и запускался новый твин
+            MiniUI.Bg.Position = UDim2.new(MiniUI.StartPos.X.Scale, MiniUI.StartPos.X.Offset + delta.X, MiniUI.StartPos.Y.Scale, MiniUI.StartPos.Y.Offset + delta.Y)
         end
     end)
 
