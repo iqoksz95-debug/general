@@ -7890,6 +7890,9 @@ al.Text=ap
 end
 
 function ai.Destroy(ao)
+-- AetheriaUI_: сначала убираем плавающее окно/заглушку/регистрацию отделённой секции
+-- (функция определена ниже, в блоке Detachable Section)
+if ai.AetheriaUI_Cleanup then pcall(ai.AetheriaUI_Cleanup)end
 if ah.Tab and ah.Tab.Boxes then
 for idx,bx in ipairs(ah.Tab.Boxes) do
 if bx==ai then
@@ -7901,9 +7904,21 @@ if ah.Tab.UpdateBoxLayout then
 ah.Tab:UpdateBoxLayout(true)
 end
 end
-for ap,aq in next,ai.Elements do
-aq:Destroy()
+-- Обход КОПИИ: Destroy элемента сам удаляет его из ai.Elements (table.remove), а обход живой
+-- таблицы через next пропускал каждый второй элемент. Кроме того, не у всех элементов есть
+-- Destroy (Textinfo, Textbox, TextDivider), раньше это давало ошибку на всём Section:Destroy().
+local AetheriaUI_copy=table.clone(ai.Elements)
+local AetheriaUI_allEls=ah.Window and ah.Window.AllElements
+for _,aq in ipairs(AetheriaUI_copy)do
+if AetheriaUI_allEls then
+local AetheriaUI_gi=table.find(AetheriaUI_allEls,aq)
+if AetheriaUI_gi then table.remove(AetheriaUI_allEls,AetheriaUI_gi)end
 end
+if type(aq)=="table"and type(aq.Destroy)=="function"then
+pcall(aq.Destroy,aq)
+end
+end
+ai.Elements={}
 am:Destroy()
 end
 
@@ -7994,6 +8009,26 @@ local AetheriaUI_DragConns={}
 local AetheriaUI_SuppressClickUntil=0
 local AetheriaUI_MAXH=420 -- capped visible height of a detached box before it scrolls
 
+-- Токен отмены: Detach() ждёт несколько кадров Heartbeat. Если за это время секцию вернули
+-- (Reattach), токен меняется, и Detach молча прекращает работу вместо обращения к уже nil-ам.
+local AetheriaUI_DetachToken=0
+
+-- Единая схема DisplayOrder: плавающие окна секций живут в 2147483000..2147483500
+-- (выше главного окна, ниже MiniUI/дропдаунов/уведомлений/курсора).
+local AetheriaUI_ORDER_BASE=2147483000
+local AetheriaUI_ORDER_CAP=2147483500
+local function AetheriaUI_NextOrder(AetheriaUI_gui)
+local uie=ah.Window and ah.Window.UIElements
+if not uie then return AetheriaUI_ORDER_BASE end
+-- окно уже сверху — счётчик не трогаем, чтобы не расходовать диапазон впустую
+if AetheriaUI_gui and uie.AetheriaUI_TopGui==AetheriaUI_gui then
+return AetheriaUI_gui.DisplayOrder
+end
+uie.AetheriaUI_TopOrder=math.min((uie.AetheriaUI_TopOrder or AetheriaUI_ORDER_BASE)+1,AetheriaUI_ORDER_CAP)
+uie.AetheriaUI_TopGui=AetheriaUI_gui
+return uie.AetheriaUI_TopOrder
+end
+
 -- Keep the floating window's outer size in sync with am.Size whenever it changes while
 -- detached -- Open()/Close() tween am.Size directly and know nothing about our wrapper,
 -- so without this, opening a section that was detached while closed grew am past the
@@ -8063,9 +8098,7 @@ moved=false
 startPos=input.Position
 startFramePos=AetheriaUI_DetachOuter.Position
 if AetheriaUI_DetachGui and ah.Window then
-local uie=ah.Window.UIElements
-uie.AetheriaUI_TopOrder=(uie.AetheriaUI_TopOrder or 2147483000)+1
-AetheriaUI_DetachGui.DisplayOrder=math.min(uie.AetheriaUI_TopOrder,2147483646)
+AetheriaUI_DetachGui.DisplayOrder=AetheriaUI_NextOrder(AetheriaUI_DetachGui)
 end
 end))
 table.insert(AetheriaUI_DragConns,UIS.InputChanged:Connect(function(input)
@@ -8091,6 +8124,12 @@ end
 local function AetheriaUI_Reattach()
 if not ai.Detached then return end
 ai.Detached=false
+-- отменяет возможный незавершённый Detach() (он ждёт кадры Heartbeat)
+AetheriaUI_DetachToken=AetheriaUI_DetachToken+1
+do
+local uie=ah.Window and ah.Window.UIElements
+if uie and uie.AetheriaUI_TopGui==AetheriaUI_DetachGui then uie.AetheriaUI_TopGui=nil end
+end
 AetheriaUI_UnbindDrag()
 local AetheriaUI_TabBoxes=ah.Tab and ah.Tab.Boxes
 if AetheriaUI_Placeholder then
@@ -8142,6 +8181,8 @@ local function AetheriaUI_Detach(AetheriaUI_AtX,AetheriaUI_AtY)
 if ai.Detached then return end
 if not(ah.Window and ah.Window.SectionDetachEnabled)then return end
 ai.Detached=true
+AetheriaUI_DetachToken=AetheriaUI_DetachToken+1
+local AetheriaUI_myToken=AetheriaUI_DetachToken
 
 -- Capture the width the row layouts were actually built for BEFORE moving anything.
 -- Elements position their label/control split as fixed pixel math computed for THIS
@@ -8231,9 +8272,10 @@ AetheriaUI_DetachGui=ac("ScreenGui",{
 Name="AetheriaUI_Detached_"..tostring(ai.Title),
 ResetOnSpawn=false,
 IgnoreGuiInset=false,
-DisplayOrder=2147483646, -- render above the main hub window; one below the cursor overlay's max
-Parent=game:GetService("CoreGui"),
+DisplayOrder=AetheriaUI_ORDER_BASE, -- уточняется ниже через NextOrder (выше главного окна)
+Parent=(gethui and gethui())or game:GetService("CoreGui"),
 })
+AetheriaUI_DetachGui.DisplayOrder=AetheriaUI_NextOrder(AetheriaUI_DetachGui)
 
 AetheriaUI_DetachOuter=aa.NewRoundFrame(16,"Squircle",{
 Size=UDim2.new(0,AetheriaUI_OrigWidth,0,ai.HeaderSize*2),
@@ -8302,6 +8344,8 @@ end
 for AetheriaUI_i=1,3 do
 AetheriaUI_RS.Heartbeat:Wait()
 end
+-- секцию могли вернуть (Reattach) пока мы ждали — тогда всё уже восстановлено, выходим
+if AetheriaUI_myToken~=AetheriaUI_DetachToken or not ai.Detached then return end
 ai:SetBoxMode(false)
 BoxBackground.Visible=false
 BoxOutline.Visible=false
@@ -8311,11 +8355,14 @@ AetheriaUI_NudgeAll()
 -- of trusting whatever it last computed for the OLD parent/width.
 am.Content.Visible=false
 AetheriaUI_RS.Heartbeat:Wait()
+-- Content включаем ВСЕГДА (даже если секцию вернули за этот кадр), иначе он остался бы скрытым
 am.Content.Visible=true
+if AetheriaUI_myToken~=AetheriaUI_DetachToken or not ai.Detached then return end
 
 for AetheriaUI_i=1,5 do
 AetheriaUI_RS.Heartbeat:Wait()
 end
+if AetheriaUI_myToken~=AetheriaUI_DetachToken or not ai.Detached or not AetheriaUI_DetachOuter or not AetheriaUI_ScrollFrame then return end
 ai:SetBoxMode(false)
 BoxBackground.Visible=false
 BoxOutline.Visible=false
@@ -8385,15 +8432,42 @@ if ah.Window then
 ah.Window.UIElements=ah.Window.UIElements or{}
 ah.Window.UIElements.AetheriaUI_AllSections=ah.Window.UIElements.AetheriaUI_AllSections or{}
 table.insert(ah.Window.UIElements.AetheriaUI_AllSections,ai)
-if not ah.Window.SetSectionDetachEnabled then
-function ah.Window.SetSectionDetachEnabled(self,state)
-ah.Window.SectionDetachEnabled=state and true or false
-for _,AetheriaUI_sec in ipairs(ah.Window.UIElements.AetheriaUI_AllSections)do
-if AetheriaUI_sec.SetDetachable then
-AetheriaUI_sec:SetDetachable(ah.Window.SectionDetachEnabled)
+-- Window:SetSectionDetachEnabled теперь определён в модуле окна (a.U), а не лениво здесь:
+-- раньше метод появлялся только после создания первой секции.
 end
+
+-- Вызывается из ai.Destroy: убирает плавающее окно, заглушку, слушатели и регистрацию секции.
+function ai.AetheriaUI_Cleanup()
+AetheriaUI_DetachToken=AetheriaUI_DetachToken+1 -- отменяет незавершённый Detach()
+ai.Detached=false
+AetheriaUI_UnbindDrag()
+if AetheriaUI_DestroyConn then
+AetheriaUI_DestroyConn:Disconnect()
+AetheriaUI_DestroyConn=nil
 end
+-- убрать заглушку из списка Boxes таба, иначе раскладка будет обращаться к уничтоженному Frame
+local AetheriaUI_TabBoxes=ah.Tab and ah.Tab.Boxes
+if AetheriaUI_TabBoxes and AetheriaUI_ProxyBox then
+local AetheriaUI_pi=table.find(AetheriaUI_TabBoxes,AetheriaUI_ProxyBox)
+if AetheriaUI_pi then table.remove(AetheriaUI_TabBoxes,AetheriaUI_pi)end
 end
+AetheriaUI_ProxyBox=nil
+if AetheriaUI_Placeholder then
+AetheriaUI_Placeholder:Destroy()
+AetheriaUI_Placeholder=nil
+end
+local uie=ah.Window and ah.Window.UIElements
+if uie and uie.AetheriaUI_TopGui==AetheriaUI_DetachGui then uie.AetheriaUI_TopGui=nil end
+if AetheriaUI_DetachGui then
+AetheriaUI_DetachGui:Destroy()
+AetheriaUI_DetachGui=nil
+end
+AetheriaUI_ScrollFrame=nil
+AetheriaUI_DetachOuter=nil
+local AetheriaUI_list=uie and uie.AetheriaUI_AllSections
+if AetheriaUI_list then
+local AetheriaUI_si=table.find(AetheriaUI_list,ai)
+if AetheriaUI_si then table.remove(AetheriaUI_list,AetheriaUI_si)end
 end
 end
 -- ===== End Detachable Section =====
@@ -12285,6 +12359,12 @@ ap.Tab=an.Tab
 ap.Window=af
 ap.Index=an.Index
 ap.GlobalIndex=an.GlobalIndex
+-- AetheriaUI_: compound-элементы (ToggleDropdown, ButtonInput и т.п.) вызывают колбэки из
+-- исходной таблицы настроек (cfg.InputCallback и т.д.), а не из возвращаемого объекта.
+-- Ссылка нужна внешним скриптам (автосохранение), чтобы подписаться на такие колбэки.
+if ap.AetheriaUI_Config==nil then
+ap.AetheriaUI_Config=an
+end
 if an.Title and not ap.Title then
 ap.Title=an.Title
 end
@@ -12308,15 +12388,39 @@ aq:SetDesc(av)
 end
 function ap.Destroy(au)
 
-table.remove(af.AllElements,an.GlobalIndex)
-table.remove(aa.Elements,an.Index)
+-- AetheriaUI_: раньше удаление шло по GlobalIndex/Index, сохранённым при создании; после
+-- любого удаления индексы сдвигались, и удалялся НЕ ТОТ элемент. Ищем по идентичности.
+local AetheriaUI_gi=table.find(af.AllElements,ap)
+if AetheriaUI_gi then table.remove(af.AllElements,AetheriaUI_gi)end
+local AetheriaUI_ei=table.find(aa.Elements,ap)
+if AetheriaUI_ei then table.remove(aa.Elements,AetheriaUI_ei)end
 aa:UpdateAllElementShapes(aa)
 
 aq:Destroy()
 end
+elseif type(ap)=="table" and not ap.Destroy then
+-- Запасной Destroy для элементов без *Frame-объекта (Textinfo, Textbox, TextDivider и т.п.):
+-- раньше у них Destroy не было вовсе, и Section:Destroy() падал на таком элементе.
+function ap.Destroy(au)
+local AetheriaUI_gi=table.find(af.AllElements,ap)
+if AetheriaUI_gi then table.remove(af.AllElements,AetheriaUI_gi)end
+local AetheriaUI_ei=table.find(aa.Elements,ap)
+if AetheriaUI_ei then table.remove(aa.Elements,AetheriaUI_ei)end
+local AetheriaUI_main=ap.UIElements and ap.UIElements.Main
+if typeof(AetheriaUI_main)=="Instance"then AetheriaUI_main:Destroy()end
+aa:UpdateAllElementShapes(aa)
+end
 end
 
-
+-- AetheriaUI_: LockedTitle для ВСЕХ элементов (в т.ч. кастомных compound-модулей ToggleInput,
+-- ButtonDropdown и др.), которые сами не пробрасывают его в общий модуль строки.
+if type(ap)=="table" and an.LockedTitle then
+for AetheriaUI_k,AetheriaUI_v in pairs(ap)do
+if type(AetheriaUI_k)=="string" and AetheriaUI_k:match"Frame$" and type(AetheriaUI_v)=="table" and type(AetheriaUI_v.SetLockedTitle)=="function" then
+pcall(AetheriaUI_v.SetLockedTitle,AetheriaUI_v,an.LockedTitle)
+end
+end
+end
 
 table.insert(af.AllElements,ap)
 table.insert(aa.Elements,ap)
@@ -12953,7 +13057,25 @@ function ai.OnChange(aj,ak)
 ai.OnChangeFunc=ak
 end
 
+-- AetheriaUI_: отдельный список слушателей выбора вкладки (OnChangeFunc занят самим окном:
+-- оно ставит туда обновление CurrentTab). Раньше внешний скрипт (звук вкладок) подменял
+-- весь SelectTab своей копией; теперь достаточно подписаться. Возвращает объект с :Disconnect().
+ai.TabSelectedListeners=ai.TabSelectedListeners or{}
+ai.TabAnimationEnabled=true
+function ai.OnTabSelected(aj,ak)
+if type(ak)~="function"then return end
+table.insert(ai.TabSelectedListeners,ak)
+return{
+Disconnect=function()
+local AetheriaUI_i=table.find(ai.TabSelectedListeners,ak)
+if AetheriaUI_i then table.remove(ai.TabSelectedListeners,AetheriaUI_i)end
+end
+}
+end
+
 function ai.SelectTab(aj,ak)
+-- неверный индекс раньше давал ошибку "attempt to index nil"
+if not ai.Tabs[ak]then return end
 if not ai.Tabs[ak].Locked then
 local prevTab=ai.SelectedTab
 ai.SelectedTab=ak
@@ -12994,7 +13116,7 @@ ao.Visible=false
 end
 ai.Containers[ak].Visible=true
 ai.Containers[ak].AnchorPoint=Vector2.new(0,0)
-if dir~=0 then
+if dir~=0 and ai.TabAnimationEnabled~=false then
 ai.Containers[ak].Position=UDim2.new(0,dir*20,0,0)
 ai._activeTabTween=af(ai.Containers[ak],0.24,{Position=UDim2.new(0,0,0,0)},Enum.EasingStyle.Quad,Enum.EasingDirection.Out)
 ai._activeTabTween:Play()
@@ -13008,7 +13130,10 @@ end)
 end
 end)
 
-ai.OnChangeFunc(ak)
+if ai.OnChangeFunc then ai.OnChangeFunc(ak)end
+for _,AetheriaUI_fn in ipairs(table.clone(ai.TabSelectedListeners))do
+pcall(AetheriaUI_fn,ak)
+end
 end
 end
 
@@ -13202,6 +13327,27 @@ Input="text-cursor-input",
 Dropdown="chevrons-up-down",
 Code="terminal",
 Colorpicker="palette",
+-- AetheriaUI_: типы кастомных элементов (иначе поиск показывал бы запасную иконку)
+ToggleSlider="sliders-horizontal",
+ToggleColorpicker="palette",
+ProgressBar="percent",
+StatCard="bar-chart-2",
+ButtonGroup="layers",
+ToggleGroup="toggle-right",
+SocialCard="users",
+DualSlider="sliders-horizontal",
+ToggleInput="text-cursor-input",
+ToggleKeybind="command",
+ToggleDropdown="chevrons-up-down",
+ToggleMultiDropdown="chevrons-up-down",
+ButtonDropdown="chevrons-up-down",
+ButtonMultiDropdown="chevrons-up-down",
+ButtonColorPicker="palette",
+ButtonSlider="sliders-horizontal",
+ButtonKeybind="command",
+ButtonInput="text-cursor-input",
+Textinfo="info",
+Textbox="text-cursor-input",
 }end function a.T()
 game:GetService"UserInputService"
 
@@ -13216,7 +13362,7 @@ local ae=ac.New
 local af=ac.Tween
 
 
-function aa.new(ag,ah,ai)
+function aa.new(ag,ah,ai,AetheriaUI_win)
 local aj={
 IconSize=14,
 Padding=14,
@@ -13407,6 +13553,22 @@ NumberSequenceKeypoint.new(1,0.6)
 })
 
 local function CreateSearchTab(ap,aq,ar,at,au,av)
+-- AetheriaUI_: иконки приходят из внешнего набора; неизвестное имя не должно ломать весь список
+local AetheriaUI_icon
+do
+local AetheriaUI_ok,AetheriaUI_res=pcall(function()
+local AetheriaUI_d=ac.Icon(ar)
+return AetheriaUI_d and AetheriaUI_d[1]and AetheriaUI_d[2]and AetheriaUI_d or nil
+end)
+AetheriaUI_icon=AetheriaUI_ok and AetheriaUI_res or nil
+if not AetheriaUI_icon then
+local AetheriaUI_ok2,AetheriaUI_res2=pcall(ac.Icon,"search")
+AetheriaUI_icon=AetheriaUI_ok2 and AetheriaUI_res2 or nil
+end
+if not AetheriaUI_icon then
+AetheriaUI_icon={"",{ImageRectSize=Vector2.new(0,0),ImageRectPosition=Vector2.new(0,0)}}
+end
+end
 local aw=ae("TextButton",{
 Size=UDim2.new(1,0,0,0),
 AutomaticSize="Y",
@@ -13449,9 +13611,9 @@ PaddingRight=UDim.new(0,aj.Padding),
 PaddingBottom=UDim.new(0,aj.Padding-2),
 }),
 ae("ImageLabel",{
-Image=ac.Icon(ar)[1],
-ImageRectSize=ac.Icon(ar)[2].ImageRectSize,
-ImageRectOffset=ac.Icon(ar)[2].ImageRectPosition,
+Image=AetheriaUI_icon[1],
+ImageRectSize=AetheriaUI_icon[2].ImageRectSize,
+ImageRectOffset=AetheriaUI_icon[2].ImageRectPosition,
 BackgroundTransparency=1,
 ThemeTag={
 ImageColor3="Text",
@@ -13586,25 +13748,57 @@ return{}
 end
 
 local aq={}
-for ar,at in next,ag.Tabs do
-local au=ContainsText(at.Title or"",ap)
-local av={}
 
-for aw,ax in next,at.Elements do
-if ax.__type~="Section"then
-local ay=ContainsText(ax.Title or"",ap)
-local az=ContainsText(ax.Desc or"",ap)
+-- AetheriaUI_: Load() кладёт любой элемент таба в автосекцию (LooseBox), поэтому в Tab.Elements
+-- лежат ТОЛЬКО секции, а раньше поиск обходил именно его и пропускал секции => элементов не находил.
+-- Теперь берём плоский список Window.AllElements и определяем вкладку, поднимаясь по цепочке .Tab.
+local AetheriaUI_byTab={}
+local AetheriaUI_all=AetheriaUI_win and AetheriaUI_win.AllElements
+if AetheriaUI_all then
+for _,ax in next,AetheriaUI_all do
+if type(ax)=="table"and ax.__type~="Section"then
+local ay=ContainsText(tostring(ax.Title or""),ap)
+local az=ContainsText(tostring(ax.Desc or""),ap)
 
 if ay or az then
-av[aw]={
+local AetheriaUI_cur=ax
+local AetheriaUI_tab=nil
+local AetheriaUI_guard=0
+while AetheriaUI_cur and AetheriaUI_guard<12 do
+AetheriaUI_guard=AetheriaUI_guard+1
+if AetheriaUI_cur.__type=="Tab"and AetheriaUI_cur.Index and ag.Tabs[AetheriaUI_cur.Index]==AetheriaUI_cur then
+AetheriaUI_tab=AetheriaUI_cur
+break
+end
+local AetheriaUI_next=AetheriaUI_cur.Tab
+if AetheriaUI_next and AetheriaUI_next~=AetheriaUI_cur then
+AetheriaUI_cur=AetheriaUI_next
+else
+break
+end
+end
+
+if AetheriaUI_tab then
+local AetheriaUI_list=AetheriaUI_byTab[AetheriaUI_tab.Index]
+if not AetheriaUI_list then
+AetheriaUI_list={}
+AetheriaUI_byTab[AetheriaUI_tab.Index]=AetheriaUI_list
+end
+table.insert(AetheriaUI_list,{
 Title=ax.Title,
 Desc=ax.Desc,
 Original=ax,
 __type=ax.__type
-}
+})
 end
 end
 end
+end
+end
+
+for ar,at in next,ag.Tabs do
+local au=ContainsText(tostring(at.Title or""),ap)
+local av=AetheriaUI_byTab[ar]or{}
 
 if au or next(av)~=nil then
 aq[ar]={
@@ -13618,6 +13812,81 @@ end
 return aq
 end
 
+-- AetheriaUI_: переход к найденному элементу: выбрать вкладку, раскрыть секции по цепочке,
+-- прокрутить к элементу и коротко подсветить его (та же логика, что у компактного поиска).
+local function AetheriaUI_GetMainFrame(AetheriaUI_el)
+if AetheriaUI_el.Frame and typeof(AetheriaUI_el.Frame)=="Instance"then
+return AetheriaUI_el.Frame
+end
+for AetheriaUI_k,AetheriaUI_v in pairs(AetheriaUI_el)do
+if type(AetheriaUI_v)=="table"and type(AetheriaUI_k)=="string"and AetheriaUI_k:match"Frame$"then
+if AetheriaUI_v.UIElements and AetheriaUI_v.UIElements.Main then
+return AetheriaUI_v.UIElements.Main
+end
+if AetheriaUI_v.Frame and typeof(AetheriaUI_v.Frame)=="Instance"then
+return AetheriaUI_v.Frame
+end
+end
+end
+return nil
+end
+
+local function AetheriaUI_JumpTo(AetheriaUI_el,AetheriaUI_tabIndex)
+ag:SelectTab(AetheriaUI_tabIndex)
+if not AetheriaUI_el then return end
+
+local AetheriaUI_sections={}
+local AetheriaUI_cur=AetheriaUI_el
+local AetheriaUI_guard=0
+while AetheriaUI_cur and AetheriaUI_guard<12 do
+AetheriaUI_guard=AetheriaUI_guard+1
+if AetheriaUI_cur.__type=="Section"then
+table.insert(AetheriaUI_sections,AetheriaUI_cur)
+end
+if AetheriaUI_cur.__type=="Tab"then break end
+local AetheriaUI_next=AetheriaUI_cur.Tab
+if AetheriaUI_next and AetheriaUI_next~=AetheriaUI_cur then
+AetheriaUI_cur=AetheriaUI_next
+else
+break
+end
+end
+
+for _,AetheriaUI_sec in ipairs(AetheriaUI_sections)do
+if AetheriaUI_sec.Open and AetheriaUI_sec.Opened==false then
+pcall(function()AetheriaUI_sec:Open()end)
+end
+end
+
+task.wait(0.15)
+
+pcall(function()
+local AetheriaUI_frame=AetheriaUI_GetMainFrame(AetheriaUI_el)
+if not AetheriaUI_frame then return end
+
+local AetheriaUI_tab=ag.Tabs[AetheriaUI_tabIndex]
+local AetheriaUI_canvas=AetheriaUI_tab and AetheriaUI_tab.UIElements and AetheriaUI_tab.UIElements.ContainerFrame
+if AetheriaUI_canvas and AetheriaUI_canvas:IsA"ScrollingFrame"then
+local AetheriaUI_y=(AetheriaUI_frame.AbsolutePosition.Y-AetheriaUI_canvas.AbsolutePosition.Y)+AetheriaUI_canvas.CanvasPosition.Y-20
+AetheriaUI_canvas.CanvasPosition=Vector2.new(0,math.max(0,AetheriaUI_y))
+end
+
+local AetheriaUI_hl=AetheriaUI_frame:FindFirstChild"AetheriaUI_SearchHighlight"
+if not AetheriaUI_hl then
+AetheriaUI_hl=Instance.new"UIStroke"
+AetheriaUI_hl.Name="AetheriaUI_SearchHighlight"
+AetheriaUI_hl.Thickness=2
+AetheriaUI_hl.ApplyStrokeMode=Enum.ApplyStrokeMode.Border
+AetheriaUI_hl.Parent=AetheriaUI_frame
+end
+AetheriaUI_hl.Color=Color3.fromHex((ac.Theme and ac.Theme.Accent)or"#733dd1")
+AetheriaUI_hl.Transparency=0
+task.delay(2,function()
+if AetheriaUI_hl then AetheriaUI_hl.Transparency=1 end
+end)
+end)
+end
+
 function aj.Search(ap,aq)
 aq=aq or""
 
@@ -13627,6 +13896,13 @@ am.Visible=true
 an.Frame.Results.Frame.Visible=true
 for at,au in next,am:GetChildren()do
 if au.ClassName~="UIListLayout"and au.ClassName~="UIPadding"then
+-- AetheriaUI_: не копим themed-объекты уничтоженных результатов в Creator.Objects
+if ac.Objects then
+for _,AetheriaUI_d in ipairs(au:GetDescendants())do
+ac.Objects[AetheriaUI_d]=nil
+end
+ac.Objects[au]=nil
+end
 au:Destroy()
 end
 end
@@ -13640,11 +13916,12 @@ ag:SelectTab(av)
 end)
 if aw.Elements and next(aw.Elements)~=nil then
 for az,aA in next,aw.Elements do
-local aB=aj.Icons[aA.__type]
+-- AetheriaUI_: у кастомных типов (ToggleSlider, ButtonInput и т.д.) нет записи в таблице иконок,
+-- а ac.Icon(nil) падает — поэтому запасная иконка.
+local aB=aj.Icons[aA.__type]or"search"
 CreateSearchTab(aA.Title,aA.Desc,aB,ay:FindFirstChild"ParentContainer"and ay.ParentContainer.Frame or nil,false,function()
 aj:Close()
-ag:SelectTab(av)
-
+task.spawn(AetheriaUI_JumpTo,aA.Original,av)
 end)
 
 end
@@ -14928,6 +15205,48 @@ if state==nil and type(j)=="boolean"then
 state=j
 end
 ao.UIElements.Main:SetAttribute("AetheriaUI_SmoothDragging",state==true)
+end
+
+-- AetheriaUI_: анимация смены вкладки (сдвиг контейнера). Раньше флаг жил в main_script,
+-- который подменял весь TabManager.SelectTab своей копией.
+function ao.SetTabAnimationEnabled(j,l)
+local state=l
+if state==nil and type(j)=="boolean"then
+state=j
+end
+if ao.TabManager then
+ao.TabManager.TabAnimationEnabled=state~=false
+end
+end
+
+-- Подписка на выбор вкладки (аргумент колбэка — индекс вкладки). Возвращает :Disconnect().
+function ao.OnTabSelected(j,l)
+local fn=l
+if fn==nil and type(j)=="function"then
+fn=j
+end
+if ao.TabManager and ao.TabManager.OnTabSelected then
+return ao.TabManager:OnTabSelected(fn)
+end
+end
+
+-- AetheriaUI_: включает/выключает отделяемые секции. Раньше метод создавался лениво внутри
+-- первой созданной секции (и не существовал до неё). Секции регистрируются в
+-- UIElements.AetheriaUI_AllSections (см. блок Detachable Section в модуле секции).
+function ao.SetSectionDetachEnabled(j,l)
+local state=l
+if state==nil and type(j)=="boolean"then
+state=j
+end
+ao.SectionDetachEnabled=state==true
+local AetheriaUI_list=ao.UIElements and ao.UIElements.AetheriaUI_AllSections
+if AetheriaUI_list then
+for _,AetheriaUI_sec in ipairs(table.clone(AetheriaUI_list))do
+if AetheriaUI_sec.SetDetachable then
+pcall(AetheriaUI_sec.SetDetachable,AetheriaUI_sec,ao.SectionDetachEnabled)
+end
+end
+end
 end
 
 if not aB and ao.Background and typeof(ao.Background)=="table"then
@@ -16240,7 +16559,7 @@ end
 
 ah(aw,0.1,{ImageTransparency=1}):Play()
 aw.Active=false
-end)
+end,ao)
 ah(aw,0.1,{ImageTransparency=.65}):Play()
 aw.Active=true
 
@@ -16348,15 +16667,21 @@ Name="ToolTips"
 })
 })
 
+-- AetheriaUI_: единая схема DisplayOrder (плавающие окна секций: 2147483000..2147483500,
+-- MiniUI 2147483550, уведомления 2147483644, дропдауны 2147483646, курсор 2147483647).
+-- Раньше у дропдаунов/уведомлений был порядок по умолчанию (0), и список дропдауна из
+-- отделённой секции рисовался ПОД её плавающим окном.
 aa.NotificationGui=aj("ScreenGui",{
 Name="AetheriaUI/Notifications",
 Parent=ao,
 IgnoreGuiInset=true,
+DisplayOrder=2147483644,
 })
 aa.DropdownGui=aj("ScreenGui",{
 Name="AetheriaUI/Dropdowns",
 Parent=ao,
 IgnoreGuiInset=true,
+DisplayOrder=2147483646,
 })
 an(aa.ScreenGui)
 an(aa.NotificationGui)
@@ -16383,8 +16708,19 @@ function aa.SetFont(aq,ar)
 ai.UpdateFont(ar)
 end
 
+-- AetheriaUI_: раньше хранился ОДИН callback, и второй вызов OnThemeChange затирал первый.
+-- Теперь это список слушателей; возвращается объект с :Disconnect().
 function aa.OnThemeChange(aq,ar)
-aa.OnThemeChangeFunction=ar
+if type(ar)~="function"then return end
+aa.OnThemeChangeListeners=aa.OnThemeChangeListeners or{}
+local AetheriaUI_list=aa.OnThemeChangeListeners
+table.insert(AetheriaUI_list,ar)
+return{
+Disconnect=function()
+local AetheriaUI_i=table.find(AetheriaUI_list,ar)
+if AetheriaUI_i then table.remove(AetheriaUI_list,AetheriaUI_i)end
+end
+}
 end
 
 function aa.AddTheme(aq,ar)
@@ -16397,8 +16733,16 @@ if ah[ar]then
 aa.Theme=ah[ar]
 ai.SetTheme(ah[ar])
 
+-- Легаси: поле OnThemeChangeFunction, если кто-то присвоил его напрямую.
 if aa.OnThemeChangeFunction then
-aa.OnThemeChangeFunction(ar)
+local AetheriaUI_ok,AetheriaUI_err=pcall(aa.OnThemeChangeFunction,ar)
+if not AetheriaUI_ok then warn("[AetheriaUI] OnThemeChange error: "..tostring(AetheriaUI_err))end
+end
+if aa.OnThemeChangeListeners then
+for _,AetheriaUI_fn in ipairs(table.clone(aa.OnThemeChangeListeners))do
+local AetheriaUI_ok,AetheriaUI_err=pcall(AetheriaUI_fn,ar)
+if not AetheriaUI_ok then warn("[AetheriaUI] OnThemeChange listener error: "..tostring(AetheriaUI_err))end
+end
 end
 
 
@@ -16417,7 +16761,8 @@ function aa.GetTransparency(aq)
 return aa.Transparent or false
 end
 function aa.GetWindowSize(aq)
-return Window.UIElements.Main.Size
+local AetheriaUI_win=aa.Window
+return AetheriaUI_win and AetheriaUI_win.UIElements and AetheriaUI_win.UIElements.Main and AetheriaUI_win.UIElements.Main.Size or nil
 end
 function aa.Localization(aq,ar)
 return aa.LocalizationModule:New(ar,ai)
