@@ -4270,7 +4270,8 @@ end
 
 
 return function(ae)
-local isBoxesMode=(ae.Window and ae.Window.TabLayoutType=="Boxes")
+-- AetheriaUI_: в Boxes у строки НЕТ своих размеров — те же, что в Default (WindUI).
+local isBoxesMode=false
 local defaultPad=(ae.Window and ae.Window.NewElements) and 10 or 13
 local currentPad=isBoxesMode and 6 or defaultPad
 
@@ -4441,8 +4442,7 @@ textHolder,
 function af.SetTextOffset(self,offset)
 af.TextOffset=offset
 if textHolder then
-local isBox=(ae.Window and ae.Window.TabLayoutType=="Boxes")
-textHolder.Size=UDim2.new(1,-offset,isBox and (hasDesc and 0 or 1) or 0,0)
+textHolder.Size=UDim2.new(1,-offset,0,0)
 end
 end
 
@@ -4545,6 +4545,7 @@ mainUIPadding,
 local function SetRowBoxMode(self,boxMode)
 pcall(function()
 hasDesc=(af.Desc~=nil and af.Desc~="")
+boxMode=false -- AetheriaUI_: в Boxes те же размеры, что и в Default
 if boxMode then
 local rowH=hasDesc and 48 or 38
 local autoSz=hasDesc and "Y" or "None"
@@ -4661,9 +4662,6 @@ hasDesc=false
 else
 an.Visible=true
 hasDesc=true
-end
-if (ae.Window and ae.Window.TabLayoutType=="Boxes") then
-SetRowBoxMode(af,true)
 end
 end
 
@@ -5164,7 +5162,7 @@ Type=ah.Type or"Toggle",
 Callback=ah.Callback or function()end,
 UIElements={}
 }
-local isBoxToggle=(ah.Window and ah.Window.TabLayoutType=="Boxes")
+local isBoxToggle=false -- AetheriaUI_: размеры Boxes = Default
 ai.ToggleFrame=a.load'y'{
 Title=ai.Title,
 Desc=ai.Desc,
@@ -5294,10 +5292,10 @@ Callback=ah.Callback or function()end,
 UIElements={},
 IsFocusing=false,
 
-Width=(ah.Window and ah.Window.TabLayoutType=="Boxes") and 85 or 130,
-TextBoxWidth=(ah.Window and ah.Window.TabLayoutType=="Boxes") and 34 or 30,
+Width=130,
+TextBoxWidth=30,
 }
-local isBoxSliderInit=(ah.Window and ah.Window.TabLayoutType=="Boxes")
+local isBoxSliderInit=false
 local sliderGap=isBoxSliderInit and 12 or 15
 local aj
 local ak
@@ -5539,7 +5537,7 @@ Window=ai.Window,
 ElementTable=aj,
 }
 
-local isBoxKey=(ai.Window and ai.Window.TabLayoutType=="Boxes")
+local isBoxKey=false -- AetheriaUI_: размеры Boxes = Default
 
 aj.UIElements.Keybind=ag(aj.Value,nil,aj.KeybindFrame.UIElements.Main)
 aj.UIElements.Keybind.AnchorPoint=Vector2.new(1,0.5)
@@ -5713,7 +5711,7 @@ nil,
 ai.Window.NewElements and 12 or 10
 )
 
-local isBoxInput=(ai.Window and ai.Window.TabLayoutType=="Boxes")
+local isBoxInput=false -- AetheriaUI_: размеры Boxes = Default
 aj.Width=isBoxInput and 95 or 150
 local inputH=isBoxInput and 24 or 36
 
@@ -5841,7 +5839,7 @@ ElementTable=an,
 }
 
 
-local isBoxDrop=(am.Window and am.Window.TabLayoutType=="Boxes")
+local isBoxDrop=false -- AetheriaUI_: размеры Boxes = Default
 an.Width=isBoxDrop and 95 or 150
 local dropH=isBoxDrop and 24 or 36
 
@@ -7552,7 +7550,7 @@ local ar=true
 
 if ap.Window.NewElements then an.UICorner=14 end
 
-local isBoxCol=(ap.Window and ap.Window.TabLayoutType=="Boxes")
+local isBoxCol=false -- AetheriaUI_: размеры Boxes = Default
 
 aq.ColorpickerFrame=a.load'y'{
 Title=aq.Title,
@@ -7981,14 +7979,15 @@ end
 for _,elem in ipairs(ai.Elements or{}) do
 if type(elem)=="table" then
 pcall(function()
+-- AetheriaUI_: элементы всегда получают false: у боксов нет своих размеров, они те же, что в Default
 if elem.SetBoxMode then
-elem:SetBoxMode(isBoxes)
+elem:SetBoxMode(false)
 elseif elem.SetRowBoxMode then
-elem:SetRowBoxMode(isBoxes)
+elem:SetRowBoxMode(false)
 end
 for k,v in pairs(elem) do
 if typeof(v)=="table" and k:match("Frame$") and v.SetBoxMode then
-v:SetBoxMode(isBoxes)
+v:SetBoxMode(false)
 end
 end
 end)
@@ -8619,6 +8618,235 @@ return ae end function a.P()
 local AetheriaUI_New=a.load'a'.New
 local AetheriaUI_NewRoundFrame=a.load'a'.NewRoundFrame
 local AetheriaUI_AddSignal=a.load'a'.AddSignal
+-- ============================================================================
+-- Aetheria compound kit — общий набор для составных модулей (ToggleDropdown, ButtonInput, ...)
+--
+-- Размеры взяты из WindUI (Default): контролы 150x36, радиус 10, отступ строки 13.
+-- В Boxes размеры НЕ меняются: ни один модуль ниже не имеет своих «боксовых» размеров.
+--
+-- Адаптивная раскладка (AetheriaUI_Stack): если справа не хватает места и заголовок стал бы
+-- уже MIN_TITLE, «широкий» контрол (дропдаун / поле ввода / ползунок) переезжает на вторую
+-- строку на всю ширину, а переключатель или кнопка остаются справа от заголовка.
+-- ============================================================================
+local AetheriaUI_T={
+    GAP=8,          -- расстояние между контролами справа
+    CTRL_H=36,      -- высота Input / Dropdown / Button / Keybind (WindUI: 36)
+    CTRL_W=150,     -- ширина Input / Dropdown (WindUI: 150)
+    CTRL_R=10,      -- скругление контролов (WindUI: 10)
+    SWITCH_W=42,    -- ширина области переключателя (сам переключатель рисует базовый билдер)
+    BTN_MINW=64,
+    BTN_MAXW=130,
+    BTN_PADX=16,
+    BTN_TEXT=14,
+    KEY_MINW=36,    -- минимальная ширина чипа клавиши
+    VAL_W=34,       -- ширина поля значения у ползунков
+    SLIDER_W=130,   -- ширина ползунка вместе с полем значения (WindUI: 130)
+    MIN_TITLE=100,  -- минимальная ширина заголовка, ниже которой контрол уходит на 2-ю строку
+    TEXT_GAP=14,    -- зазор между заголовком и правой частью
+}
+
+local AetheriaUI_TextService=game:GetService("TextService")
+
+local function AetheriaUI_TextWidth(text,size)
+    local ok,res=pcall(function()
+        return AetheriaUI_TextService:GetTextSize(tostring(text),size,Enum.Font.GothamMedium,Vector2.new(1000,100)).X
+    end)
+    if ok and type(res)=="number" then return res end
+    return #tostring(text)*size*0.55
+end
+
+-- Контейнер справа от заголовка: [широкий контрол][основной контрол].
+-- LayoutOrder: широкий = 1, основной (переключатель/кнопка) = 2 — основной всегда у правого края.
+local function AetheriaUI_MakeHolder(row,width)
+    -- Заголовок не ниже контрола (36): все составные строки получают одинаковую высоту,
+    -- а текст и контрол стоят на одной центральной линии.
+    pcall(function()
+        local textHolder=row.UIElements.Container:FindFirstChild("TextHolder")
+        if textHolder and not textHolder:FindFirstChild("AetheriaUI_MinH") then
+            local c=Instance.new("UISizeConstraint")
+            c.Name="AetheriaUI_MinH"
+            c.MinSize=Vector2.new(0,AetheriaUI_T.CTRL_H)
+            c.Parent=textHolder
+        end
+    end)
+    return AetheriaUI_New("Frame",{
+        Name="AetheriaUI_Right",
+        Size=UDim2.new(0,width,1,0),
+        Position=UDim2.new(1,0,0.5,0),
+        AnchorPoint=Vector2.new(1,0.5),
+        BackgroundTransparency=1,
+        Parent=row.UIElements.Main,
+    },{
+        AetheriaUI_New("UIListLayout",{
+            FillDirection=Enum.FillDirection.Horizontal,
+            VerticalAlignment=Enum.VerticalAlignment.Center,
+            HorizontalAlignment=Enum.HorizontalAlignment.Right,
+            SortOrder=Enum.SortOrder.LayoutOrder,
+            Padding=UDim.new(0,AetheriaUI_T.GAP),
+        }),
+    })
+end
+
+-- Адаптивная раскладка.
+--   row    — ai.Frame (объект строки a.y)
+--   holder — контейнер из AetheriaUI_MakeHolder
+--   wide   — «широкий» контрол, который может уйти на вторую строку
+--   o      — { inlineW = общая ширина правой части в инлайне,
+--              primaryW = ширина основного контрола,
+--              wideInline = UDim2 широкого контрола в инлайне,
+--              wideH = высота широкого контрола на второй строке (по умолчанию CTRL_H),
+--              onMode = function(stacked) — для внутренней перестройки (например, ползунок) }
+local function AetheriaUI_Stack(row,holder,wide,o)
+    local T=AetheriaUI_T
+    local ok,err=pcall(function()
+        local main=row.UIElements.Main
+        local container=row.UIElements.Container
+        local textHolder=container:FindFirstChild("TextHolder")
+        local layout=container:FindFirstChildOfClass("UIListLayout")
+        local pad=row.UIPadding or 13
+        local basePad=layout and layout.Padding or UDim.new(0,pad)
+
+        local inlineW=o.inlineW
+        local primaryW=o.primaryW
+        local wideInline=o.wideInline
+        local wideH=o.wideH or T.CTRL_H
+
+        if layout then layout.SortOrder=Enum.SortOrder.LayoutOrder end
+
+        -- Заголовок не ниже контрола: текст и контрол стоят на одной центральной линии
+        if textHolder and not textHolder:FindFirstChild("AetheriaUI_MinH") then
+            local c=Instance.new("UISizeConstraint")
+            c.Name="AetheriaUI_MinH"
+            c.MinSize=Vector2.new(0,T.CTRL_H)
+            c.Parent=textHolder
+        end
+
+        local second=Instance.new("Frame")
+        second.Name="AetheriaUI_Second"
+        second.BackgroundTransparency=1
+        second.BorderSizePixel=0
+        second.Size=UDim2.new(1,0,0,wideH)
+        second.LayoutOrder=5
+        second.Visible=false
+        second.Parent=container
+
+        local stacked=false
+
+        local function scaleOf()
+            local ofs=holder.Size.X.Offset
+            local abs=holder.AbsoluteSize.X
+            if ofs>0 and abs>0 then return abs/ofs end
+            return 1
+        end
+
+        local function header()
+            if not stacked then return end
+            local h=T.CTRL_H
+            if textHolder then
+                h=math.max(h,textHolder.AbsoluteSize.Y/scaleOf())
+            end
+            holder.Size=UDim2.new(0,primaryW,0,h)
+        end
+
+        local function setStacked(on)
+            stacked=on
+            if on then
+                wide.Parent=second
+                wide.AnchorPoint=Vector2.new(0,0)
+                wide.Position=UDim2.new(0,0,0,0)
+                wide.Size=UDim2.new(1,0,0,wideH)
+                second.Visible=true
+                holder.AnchorPoint=Vector2.new(1,0)
+                holder.Position=UDim2.new(1,0,0,0)
+                if layout then layout.Padding=UDim.new(0,T.GAP+2) end
+                row:SetTextOffset(primaryW+T.TEXT_GAP)
+                header()
+            else
+                wide.Parent=holder
+                wide.Size=wideInline
+                second.Visible=false
+                holder.AnchorPoint=Vector2.new(1,0.5)
+                holder.Position=UDim2.new(1,0,0.5,0)
+                holder.Size=UDim2.new(0,inlineW,1,0)
+                if layout then layout.Padding=basePad end
+                row:SetTextOffset(inlineW+T.TEXT_GAP)
+            end
+            if o.onMode then pcall(o.onMode,on) end
+        end
+
+        local function evaluate()
+            local sc=scaleOf()
+            local inner=main.AbsoluteSize.X/sc-2*pad
+            if inner<=0 then return end
+            local free=inner-(inlineW+T.TEXT_GAP)
+            -- небольшой гистерезис, чтобы раскладка не «дрожала» на границе
+            local want
+            if stacked then
+                want=free<(T.MIN_TITLE+16)
+            else
+                want=free<T.MIN_TITLE
+            end
+            if want~=stacked then setStacked(want) end
+        end
+
+        main:GetPropertyChangedSignal("AbsoluteSize"):Connect(evaluate)
+        if textHolder then
+            textHolder:GetPropertyChangedSignal("AbsoluteSize"):Connect(header)
+        end
+        task.defer(evaluate)
+    end)
+    if not ok then
+        warn("[AetheriaUI] adaptive layout failed: "..tostring(err))
+    end
+end
+
+-- Кнопка действия справа от заголовка (Save / Warp / Test ...): высота 36, радиус 10,
+-- ширина по тексту (64..130). Возвращает (кнопка, надпись). Параметр isBox оставлен только
+-- для совместимости вызовов: размеры от режима Boxes не зависят.
+local function AetheriaUI_CreateActionButton(aa,ac,ad,parent,isBox,btnText,onClick)
+    local T=AetheriaUI_T
+    local text=tostring(btnText or"Action")
+    local w=math.clamp(math.ceil(AetheriaUI_TextWidth(text,T.BTN_TEXT))+T.BTN_PADX*2,T.BTN_MINW,T.BTN_MAXW)
+    local btn=aa.NewRoundFrame(T.CTRL_R,"Squircle",{
+        Size=UDim2.new(0,w,0,T.CTRL_H),
+        ImageTransparency=0.15,
+        ThemeTag={ImageColor3="Accent"},
+        Active=true,
+        LayoutOrder=2,
+        Parent=parent,
+    },nil,true) -- true: NewRoundFrame создаёт ImageButton
+
+    local btnLabel=ac("TextLabel",{
+        Size=UDim2.new(1,-8,1,0),
+        Position=UDim2.new(0.5,0,0.5,0),
+        AnchorPoint=Vector2.new(0.5,0.5),
+        Text=text,
+        TextSize=T.BTN_TEXT,
+        FontFace=Font.new(aa.Font,Enum.FontWeight.SemiBold),
+        TextColor3=Color3.fromRGB(255,255,255),
+        BackgroundTransparency=1,
+        TextXAlignment=Enum.TextXAlignment.Center,
+        TextYAlignment=Enum.TextYAlignment.Center,
+        TextTruncate=Enum.TextTruncate.AtEnd,
+        Active=false, -- не перехватывает ввод
+        Parent=btn,
+    })
+    aa.AddSignal(btn.MouseEnter,function() ad(btn,0.08,{ImageTransparency=0}):Play() end)
+    aa.AddSignal(btn.MouseLeave,function() ad(btn,0.08,{ImageTransparency=0.15}):Play() end)
+    aa.AddSignal(btn.MouseButton1Down,function() ad(btn,0.05,{ImageTransparency=0.35}):Play() end)
+    aa.AddSignal(btn.MouseButton1Up,function() ad(btn,0.08,{ImageTransparency=0.15}):Play() end)
+    if onClick then
+        local lastClick=0
+        aa.AddSignal(btn.MouseButton1Click,function()
+            local now=os.clock()
+            if now-lastClick<0.2 then return end
+            lastClick=now
+            onClick()
+        end)
+    end
+    return btn,btnLabel
+end
+
 
 -- Every one of the 5 modules below is wrapped in pcall with a safe fallback. A single
 -- uncaught error anywhere in one of these — as actually happened before — doesn't just
@@ -8683,20 +8911,42 @@ Size=UDim2.new(1,0,0,0),
 AutomaticSize="Y",
 FontFace=Font.new(a.load'a'.Font,Enum.FontWeight.Medium),
 })
-local AetheriaUI_aj=AetheriaUI_NewRoundFrame(10,"Squircle",{
+-- «Выноска»: фон радиус 12 (как у строк), тонкая обводка и акцентная полоса слева.
+-- Содержимое лежит во вложенном Frame, чтобы отступы не сдвигали обводку и полосу.
+local AetheriaUI_aj=AetheriaUI_NewRoundFrame(12,"Squircle",{
 Size=UDim2.new(1,0,0,0),
 AutomaticSize="Y",
 ImageTransparency=.93,
 ThemeTag={ImageColor3="Text"},
 Parent=AetheriaUI_ag.Parent,
 },{
+AetheriaUI_NewRoundFrame(12,"SquircleOutline",{
+Size=UDim2.new(1,0,1,0),
+ThemeTag={ImageColor3="Outline"},
+ImageTransparency=.94,
+}),
+AetheriaUI_New("Frame",{
+Size=UDim2.new(0,3,1,-24),
+Position=UDim2.new(0,10,0.5,0),
+AnchorPoint=Vector2.new(0,0.5),
+BackgroundTransparency=.1,
+ThemeTag={BackgroundColor3="Accent"},
+},{
+AetheriaUI_New("UICorner",{CornerRadius=UDim.new(1,0)}),
+}),
+AetheriaUI_New("Frame",{
+Size=UDim2.new(1,0,0,0),
+AutomaticSize="Y",
+BackgroundTransparency=1,
+},{
 AetheriaUI_New("UIPadding",{
-PaddingLeft=UDim.new(0,14),
+PaddingLeft=UDim.new(0,24),
 PaddingRight=UDim.new(0,14),
 PaddingTop=UDim.new(0,12),
 PaddingBottom=UDim.new(0,12),
 }),
 AetheriaUI_ai,
+}),
 })
 AetheriaUI_ah.UIElements.Main=AetheriaUI_aj
 AetheriaUI_ah.UIElements.TextLabel=AetheriaUI_ai
@@ -8704,16 +8954,8 @@ function AetheriaUI_ah.SetText(AetheriaUI_ak,AetheriaUI_al)
 AetheriaUI_ah.Text=AetheriaUI_al
 AetheriaUI_ai.Text=AetheriaUI_al
 end
-function AetheriaUI_ah.SetBoxMode(AetheriaUI_self,isBoxes)
-AetheriaUI_ai.TextSize=isBoxes and 12 or 14
-local pad=AetheriaUI_aj:FindFirstChildWhichIsA("UIPadding")
-if pad then
-pad.PaddingLeft=UDim.new(0,isBoxes and 8 or 14)
-pad.PaddingRight=UDim.new(0,isBoxes and 8 or 14)
-pad.PaddingTop=UDim.new(0,isBoxes and 6 or 12)
-pad.PaddingBottom=UDim.new(0,isBoxes and 6 or 12)
-end
-end
+-- Размеры в Boxes те же, что в Default: метод оставлен только для совместимости вызовов.
+function AetheriaUI_ah.SetBoxMode(AetheriaUI_self,isBoxes) end
 return AetheriaUI_ah.__type,AetheriaUI_ah
 end)
 if AetheriaUI_ok then return AetheriaUI_a,AetheriaUI_b end
@@ -8744,12 +8986,25 @@ Size=UDim2.new(1,0,0,0),
 AutomaticSize="Y",
 FontFace=Font.new(a.load'a'.Font,Enum.FontWeight.Medium),
 })
-local AetheriaUI_aj=AetheriaUI_NewRoundFrame(8,"Squircle",{
+-- Та же «семья», что у поля ввода: радиус 10, тот же цвет и обводка, высота не меньше 36.
+AetheriaUI_ai.TextYAlignment=Enum.TextYAlignment.Center
+local AetheriaUI_aj=AetheriaUI_NewRoundFrame(10,"Squircle",{
 Size=UDim2.new(1,0,0,0),
 AutomaticSize="Y",
-ImageTransparency=.93,
-ThemeTag={ImageColor3="Text"},
+ImageTransparency=.85,
+ThemeTag={ImageColor3="Accent"},
 Parent=AetheriaUI_ag.Parent,
+},{
+AetheriaUI_New("UISizeConstraint",{MinSize=Vector2.new(0,36)}),
+AetheriaUI_NewRoundFrame(10,"SquircleOutline",{
+Size=UDim2.new(1,0,1,0),
+ThemeTag={ImageColor3="Outline"},
+ImageTransparency=.95,
+}),
+AetheriaUI_New("Frame",{
+Size=UDim2.new(1,0,0,0),
+AutomaticSize="Y",
+BackgroundTransparency=1,
 },{
 AetheriaUI_New("UIPadding",{
 PaddingLeft=UDim.new(0,12),
@@ -8758,6 +9013,7 @@ PaddingTop=UDim.new(0,9),
 PaddingBottom=UDim.new(0,9),
 }),
 AetheriaUI_ai,
+}),
 })
 AetheriaUI_ah.UIElements.Main=AetheriaUI_aj
 AetheriaUI_ah.UIElements.TextLabel=AetheriaUI_ai
@@ -8765,16 +9021,8 @@ function AetheriaUI_ah.SetText(AetheriaUI_ak,AetheriaUI_al)
 AetheriaUI_ah.Text=AetheriaUI_al
 AetheriaUI_ai.Text=AetheriaUI_al
 end
-function AetheriaUI_ah.SetBoxMode(AetheriaUI_self,isBoxes)
-AetheriaUI_ai.TextSize=isBoxes and 12 or 14
-local pad=AetheriaUI_aj:FindFirstChildWhichIsA("UIPadding")
-if pad then
-pad.PaddingLeft=UDim.new(0,isBoxes and 8 or 12)
-pad.PaddingRight=UDim.new(0,isBoxes and 8 or 12)
-pad.PaddingTop=UDim.new(0,isBoxes and 4 or 9)
-pad.PaddingBottom=UDim.new(0,isBoxes and 4 or 9)
-end
-end
+-- Размеры в Boxes те же, что в Default: метод оставлен только для совместимости вызовов.
+function AetheriaUI_ah.SetBoxMode(AetheriaUI_self,isBoxes) end
 return AetheriaUI_ah.__type,AetheriaUI_ah
 end)
 if AetheriaUI_ok then return AetheriaUI_a,AetheriaUI_b end
@@ -8851,7 +9099,189 @@ warn("[AetheriaUI] TextDivider failed: "..tostring(AetheriaUI_a))
 return"TextDivider",{__type="TextDivider",Title=AetheriaUI_ag.Title or"Divider"}
 end
 
--- ToggleSlider: Combines a boolean switch and a numeric slider in a single row
+-- =========================================================================
+-- Ползунки: общая основа и виджеты
+--   root (Size 130x36 / на 2-й строке на всю ширину)
+--     ├─ track   — дорожка 4px, тянется по ширине (минус поле значения)
+--     ├─ hit     — невидимая зона захвата 28px (раньше нажимать надо было в 4px дорожку)
+--     └─ valueBox — редактируемое поле значения справа (как в WindUI)
+-- =========================================================================
+local AetheriaUI_UIS=game:GetService("UserInputService")
+local AetheriaUI_RunService=game:GetService("RunService")
+
+local function AetheriaUI_SliderBase(aa,ac,parent,valW,rootW)
+    local T=AetheriaUI_T
+    local root=ac("Frame",{
+        Size=UDim2.new(0,rootW or T.SLIDER_W,0,T.CTRL_H),
+        BackgroundTransparency=1,
+        LayoutOrder=1,
+        Parent=parent,
+    })
+    local valueBox=ac("TextBox",{
+        Size=UDim2.new(0,valW,0,26),
+        AnchorPoint=Vector2.new(1,0.5),
+        Position=UDim2.new(1,0,0.5,0),
+        Text="",
+        TextSize=14,
+        TextXAlignment=Enum.TextXAlignment.Right,
+        BackgroundTransparency=1,
+        ThemeTag={TextColor3="Text"},
+        TextTransparency=0.25,
+        ClearTextOnFocus=false,
+        FontFace=Font.new(aa.Font,Enum.FontWeight.Medium),
+        Parent=root,
+    })
+    local track=ac("Frame",{
+        Size=UDim2.new(1,-(valW+T.GAP+14),0,4),
+        AnchorPoint=Vector2.new(0,0.5),
+        Position=UDim2.new(0,7,0.5,0),
+        BackgroundTransparency=0.88,
+        ThemeTag={BackgroundColor3="Text"},
+        Parent=root,
+    },{
+        ac("UICorner",{CornerRadius=UDim.new(1,0)}),
+    })
+    local hit=ac("Frame",{
+        Size=UDim2.new(1,-(valW+T.GAP),0,28),
+        AnchorPoint=Vector2.new(0,0.5),
+        Position=UDim2.new(0,0,0.5,0),
+        BackgroundTransparency=1,
+        Parent=root,
+    })
+    return root,valueBox,track,hit
+end
+
+local function AetheriaUI_MakeThumb(ac,parent,pct,zindex)
+    return ac("Frame",{
+        Size=UDim2.new(0,14,0,14),
+        AnchorPoint=Vector2.new(0.5,0.5),
+        Position=UDim2.new(pct,0,0.5,0),
+        ThemeTag={BackgroundColor3="Text"},
+        ZIndex=zindex or 2,
+        Parent=parent,
+    },{
+        ac("UICorner",{CornerRadius=UDim.new(1,0)}),
+    })
+end
+
+-- Одиночный ползунок. o = { Min, Max, Step, Value, Live, CanUse(), OnUpdate(v), OnChange(v) }
+--   OnUpdate — на каждое изменение значения (в т.ч. во время перетаскивания)
+--   OnChange — Live=true: на каждое изменение; Live=false: один раз в конце перетаскивания
+-- Возвращает { Root, Value, Set(v)->changed, SetEnabled(bool) }
+local function AetheriaUI_CreateSlider(aa,ac,ad,parent,o)
+    local T=AetheriaUI_T
+    local min,max,step=o.Min,o.Max,o.Step or 1
+    if max<=min then max=min+1 end
+    local range=max-min
+    local isFloat=step%1~=0
+    local function fmt(v)
+        if isFloat then return string.format("%.2f",v) end
+        return tostring(math.floor(v+0.5))
+    end
+    local function snap(v)
+        return math.clamp(math.floor(v/step+0.5)*step,min,max)
+    end
+
+    local root,valueBox,track,hit=AetheriaUI_SliderBase(aa,ac,parent,T.VAL_W)
+    local obj={Root=root,Track=track,Value=snap(tonumber(o.Value) or min)}
+    local pct0=(obj.Value-min)/range
+
+    local fill=ac("Frame",{
+        Size=UDim2.new(pct0,0,1,0),
+        ThemeTag={BackgroundColor3="Accent"},
+        Parent=track,
+    },{
+        ac("UICorner",{CornerRadius=UDim.new(1,0)}),
+    })
+    local thumb=AetheriaUI_MakeThumb(ac,track,pct0,2)
+    valueBox.Text=fmt(obj.Value)
+
+    local function render(v,animate)
+        local pct=(v-min)/range
+        valueBox.Text=fmt(v)
+        if animate then
+            ad(fill,0.06,{Size=UDim2.new(pct,0,1,0)}):Play()
+            ad(thumb,0.06,{Position=UDim2.new(pct,0,0.5,0)}):Play()
+        else
+            fill.Size=UDim2.new(pct,0,1,0)
+            thumb.Position=UDim2.new(pct,0,0.5,0)
+        end
+    end
+
+    function obj.Set(v)
+        v=snap(tonumber(v) or min)
+        local changed=v~=obj.Value
+        obj.Value=v
+        render(v,true)
+        return changed
+    end
+
+    function obj.SetEnabled(on)
+        valueBox.TextEditable=on
+    end
+
+    local dragging=false
+    local function startDrag(input)
+        if dragging then return end
+        if o.CanUse and not o.CanUse() then return end
+        dragging=true
+        local scrollParent=root:FindFirstAncestorWhichIsA("ScrollingFrame")
+        if scrollParent then scrollParent.ScrollingEnabled=false end
+        local isTouch=input.UserInputType==Enum.UserInputType.Touch
+        local changedAny=false
+
+        local function update()
+            local x=isTouch and input.Position.X or AetheriaUI_UIS:GetMouseLocation().X
+            local p=math.clamp((x-track.AbsolutePosition.X)/math.max(track.AbsoluteSize.X,1),0,1)
+            local v=snap(min+p*range)
+            if v~=obj.Value then
+                obj.Value=v
+                render(v,true)
+                changedAny=true
+                if o.OnUpdate then o.OnUpdate(v) end
+                if o.Live and o.OnChange then o.OnChange(v) end
+            end
+        end
+        update()
+
+        local moveConn,endConn
+        moveConn=AetheriaUI_RunService.RenderStepped:Connect(update)
+        endConn=AetheriaUI_UIS.InputEnded:Connect(function(ended)
+            if ended==input then
+                moveConn:Disconnect()
+                endConn:Disconnect()
+                dragging=false
+                if scrollParent then scrollParent.ScrollingEnabled=true end
+                if changedAny and not o.Live and o.OnChange then o.OnChange(obj.Value) end
+            end
+        end)
+    end
+
+    aa.AddSignal(hit.InputBegan,function(inp)
+        if inp.UserInputType==Enum.UserInputType.MouseButton1 or inp.UserInputType==Enum.UserInputType.Touch then
+            startDrag(inp)
+        end
+    end)
+
+    aa.AddSignal(valueBox.FocusLost,function()
+        local num=tonumber(valueBox.Text)
+        if num and (not o.CanUse or o.CanUse()) then
+            local changed=obj.Set(num)
+            if changed then
+                if o.OnUpdate then o.OnUpdate(obj.Value) end
+                if o.OnChange then o.OnChange(obj.Value) end
+            end
+        else
+            render(obj.Value,false)
+        end
+    end)
+
+    return obj
+end
+
+-- =========================================================================
+-- ToggleSlider:  [заголовок ........ [ползунок 130x36] [переключатель]]
+-- =========================================================================
 local AetheriaUI_ToggleSlider={}
 function AetheriaUI_ToggleSlider.New(AetheriaUI_af,AetheriaUI_ag)
     local AetheriaUI_ok,AetheriaUI_resA,AetheriaUI_resB=pcall(function()
@@ -8859,6 +9289,7 @@ function AetheriaUI_ToggleSlider.New(AetheriaUI_af,AetheriaUI_ag)
         local ac=aa.New
         local ad=aa.Tween
         local createSwitch=a.load'B'.New
+        local T=AetheriaUI_T
 
         local ai={
             __type="ToggleSlider",
@@ -8881,127 +9312,43 @@ function AetheriaUI_ToggleSlider.New(AetheriaUI_af,AetheriaUI_ag)
             initToggle=AetheriaUI_ag.Value
             initSlider=AetheriaUI_ag.Slider or AetheriaUI_ag.slider or ai.Min
         end
-        ai.Value={Toggle=initToggle,Slider=initSlider}
 
         local isLocked=not ai.Locked
-        local isDragging=false
-        local currentVal=initSlider
         local currentToggle=initToggle
 
-        local isFloat=ai.Step%1~=0
-        local function FormatVal(v)
-            if isFloat then return string.format("%.2f",v) else return tostring(math.floor(v+0.5)) end
-        end
-        local function CalcVal(v)
-            return math.floor(v/ai.Step+0.5)*ai.Step
-        end
-
-        local isBoxTogSl=(AetheriaUI_ag.Window and AetheriaUI_ag.Window.TabLayoutType=="Boxes")
-        local trackWidth=isBoxTogSl and 38 or 90
-        local valWidth=isBoxTogSl and 22 or 34
-        local switchWidth=isBoxTogSl and 36 or 42
-        local sH=isBoxTogSl and 22 or 34
-        local rightWidth=isBoxTogSl and (trackWidth+valWidth+switchWidth+10) or (trackWidth+valWidth+switchWidth+10)
+        local primaryW=T.SWITCH_W
+        local inlineW=T.SLIDER_W+T.GAP+primaryW
 
         ai.Frame=a.load'y'{
             Title=ai.Title,
             Desc=ai.Desc,
             Window=AetheriaUI_ag.Window,
             Parent=AetheriaUI_ag.Parent,
-            TextOffset=rightWidth+15,
+            TextOffset=inlineW+T.TEXT_GAP,
             Hover=false,
             Tab=AetheriaUI_ag.Tab,
             Index=AetheriaUI_ag.Index,
             ElementTable=ai,
         }
 
-        local rightHolder=ac("Frame",{
-            Size=UDim2.new(0,rightWidth,1,0),
-            Position=UDim2.new(1,0,0.5,0),
-            AnchorPoint=Vector2.new(1,0.5),
-            BackgroundTransparency=1,
-            Parent=ai.Frame.UIElements.Main,
-        },{
-            ac("UIListLayout",{
-                FillDirection=Enum.FillDirection.Horizontal,
-                VerticalAlignment=Enum.VerticalAlignment.Center,
-                HorizontalAlignment=Enum.HorizontalAlignment.Right,
-                Padding=UDim.new(0,10),
-            }),
-        })
+        local rightHolder=AetheriaUI_MakeHolder(ai.Frame,inlineW)
 
-        local sliderFr=ac("Frame",{
-            Size=UDim2.new(0,trackWidth,0,4),
-            BackgroundColor3=Color3.new(1,1,1),
-            BackgroundTransparency=0.88,
-            ThemeTag={BackgroundColor3="Text"},
-            AnchorPoint=Vector2.new(0,0.5),
-            Position=UDim2.new(0,0,0.5,0),
-        },{
-            ac("UICorner",{CornerRadius=UDim.new(1,0)}),
+        local slider=AetheriaUI_CreateSlider(aa,ac,ad,rightHolder,{
+            Min=ai.Min,Max=ai.Max,Step=ai.Step,Value=initSlider,
+            Live=false,
+            CanUse=function() return isLocked end,
+            OnUpdate=function(v) ai.Value.Slider=v end,
+            OnChange=function() aa.SafeCallback(ai.Callback,ai.Value) end,
         })
-
-        local fillAlpha=math.clamp((currentVal-ai.Min)/(ai.Max-ai.Min),0,1)
-        local fillFr=ac("Frame",{
-            Size=UDim2.new(fillAlpha,0,1,0),
-            BackgroundColor3=Color3.new(1,1,1),
-            BackgroundTransparency=0,
-            ThemeTag={BackgroundColor3="Accent"},
-            Parent=sliderFr,
-        },{
-            ac("UICorner",{CornerRadius=UDim.new(1,0)}),
-            ac("Frame",{
-                Size=UDim2.new(0,12,0,12),
-                AnchorPoint=Vector2.new(0.5,0.5),
-                Position=UDim2.new(1,0,0.5,0),
-                BackgroundColor3=Color3.new(1,1,1),
-                BackgroundTransparency=0,
-                ThemeTag={BackgroundColor3="Text"},
-            },{
-                ac("UICorner",{CornerRadius=UDim.new(1,0)}),
-            }),
-        })
-
-        local valueLabel=ac("TextBox",{
-            Size=UDim2.new(0,valWidth,0,isBoxTogSl and 18 or 24),
-            Text=FormatVal(currentVal),
-            TextSize=isBoxTogSl and 11 or 13,
-            TextXAlignment=Enum.TextXAlignment.Right,
-            BackgroundTransparency=1,
-            ThemeTag={TextColor3="Text"},
-            TextTransparency=0.3,
-            ClearTextOnFocus=false,
-            FontFace=Font.new(aa.Font,Enum.FontWeight.Medium),
-        })
-
-        aa.AddSignal(valueLabel.FocusLost,function(enterPressed)
-            local num=tonumber(valueLabel.Text)
-            if num then
-                ai:SetSlider(num)
-            else
-                valueLabel.Text=FormatVal(currentVal)
-            end
-        end)
-
-        local sliderRow=ac("Frame",{
-            Size=UDim2.new(0,trackWidth+valWidth+6,0,sH),
-            BackgroundTransparency=1,
-            Parent=rightHolder,
-        },{
-            ac("UIListLayout",{
-                FillDirection=Enum.FillDirection.Horizontal,
-                VerticalAlignment=Enum.VerticalAlignment.Center,
-                Padding=UDim.new(0,4),
-            }),
-            sliderFr,
-            valueLabel,
-        })
+        ai.Value={Toggle=initToggle,Slider=slider.Value}
+        ai.UIElements.Slider=slider
 
         local switchBtn=ac("TextButton",{
-            Size=UDim2.new(0,switchWidth,0,sH),
+            Size=UDim2.new(0,primaryW,0,T.CTRL_H),
             BackgroundTransparency=1,
             Text="",
             AutoButtonColor=false,
+            LayoutOrder=2,
             Parent=rightHolder,
         })
 
@@ -9011,7 +9358,7 @@ function AetheriaUI_ToggleSlider.New(AetheriaUI_af,AetheriaUI_ag)
                 ai.Value.Toggle=st
                 aa.SafeCallback(ai.Callback,ai.Value)
             end
-        end,isBoxTogSl)
+        end,false)
         switchFr.Position=UDim2.new(0.5,0,0.5,0)
         switchFr.AnchorPoint=Vector2.new(0.5,0.5)
 
@@ -9021,52 +9368,12 @@ function AetheriaUI_ToggleSlider.New(AetheriaUI_af,AetheriaUI_ag)
             end
         end)
 
-        function ai.SetSlider(self,val,inputObj)
+        function ai.SetSlider(self,val)
             if not isLocked then return end
-            val=math.clamp(tonumber(val) or ai.Min,ai.Min,ai.Max)
-            local pct=math.clamp((val-ai.Min)/(ai.Max-ai.Min),0,1)
-            val=CalcVal(ai.Min+pct*(ai.Max-ai.Min))
-            if val~=currentVal then
-                currentVal=val
-                ai.Value.Slider=val
-                valueLabel.Text=FormatVal(val)
-                ad(fillFr,0.06,{Size=UDim2.new(pct,0,1,0)}):Play()
-                if not inputObj then
-                    aa.SafeCallback(ai.Callback,ai.Value)
-                end
-            end
-            if inputObj then
-                local scrollParent=ai.Frame.Parent:IsA("ScrollingFrame") and ai.Frame.Parent or (ai.Frame.Parent.Parent:IsA("ScrollingFrame") and ai.Frame.Parent.Parent or nil)
-                if scrollParent then scrollParent.ScrollingEnabled=false end
-                isDragging=true
-                local anyChanged=false
-                local moveConn,endConn
-                local isTouch=(inputObj.UserInputType==Enum.UserInputType.Touch)
-                moveConn=game:GetService("RunService").RenderStepped:Connect(function()
-                    local mouseX=isTouch and inputObj.Position.X or game:GetService("UserInputService"):GetMouseLocation().X
-                    local tPos=sliderFr.AbsolutePosition.X
-                    local tSize=sliderFr.AbsoluteSize.X
-                    local p=math.clamp((mouseX-tPos)/tSize,0,1)
-                    local v=CalcVal(ai.Min+p*(ai.Max-ai.Min))
-                    if v~=currentVal then
-                        currentVal=v
-                        ai.Value.Slider=v
-                        valueLabel.Text=FormatVal(v)
-                        ad(fillFr,0.06,{Size=UDim2.new(p,0,1,0)}):Play()
-                        anyChanged=true
-                    end
-                end)
-                endConn=game:GetService("UserInputService").InputEnded:Connect(function(endedInput)
-                    if (endedInput.UserInputType==Enum.UserInputType.MouseButton1 or endedInput.UserInputType==Enum.UserInputType.Touch) and endedInput==inputObj then
-                        moveConn:Disconnect()
-                        endConn:Disconnect()
-                        isDragging=false
-                        if scrollParent then scrollParent.ScrollingEnabled=true end
-                        if anyChanged then
-                            aa.SafeCallback(ai.Callback,ai.Value)
-                        end
-                    end
-                end)
+            local changed=slider.Set(val)
+            ai.Value.Slider=slider.Value
+            if changed then
+                aa.SafeCallback(ai.Callback,ai.Value)
             end
         end
 
@@ -9077,35 +9384,8 @@ function AetheriaUI_ToggleSlider.New(AetheriaUI_af,AetheriaUI_ag)
             switchObj:Set(st,triggerCb~=false)
         end
 
-        function ai.SetBoxMode(self,isBoxes)
-            isBoxTogSl=isBoxes
-            local trW=isBoxes and 38 or 90
-            local vW=isBoxes and 22 or 34
-            local sw=isBoxes and 36 or 42
-            local sh=isBoxes and 22 or 34
-            local rW=isBoxes and (trW+vW+sw+10) or (trW+vW+sw+10)
-            rightHolder.Size=UDim2.new(0,rW,1,0)
-            sliderFr.Size=UDim2.new(0,trW,0,4)
-            if valueLabel then
-                valueLabel.Size=UDim2.new(0,vW,0,isBoxes and 18 or 24)
-                valueLabel.TextSize=isBoxes and 11 or 13
-            end
-            if sliderRow then
-                sliderRow.Size=UDim2.new(0,trW+vW+6,0,sh)
-            end
-            if switchBtn then
-                switchBtn.Size=UDim2.new(0,sw,0,sh)
-            end
-            if switchObj and switchObj.SetBoxMode then
-                switchObj:SetBoxMode(isBoxes)
-            end
-            if ai.Frame and ai.Frame.SetTextOffset then
-                ai.Frame:SetTextOffset(rW+(isBoxes and 6 or 15))
-            end
-            if ai.SetRowBoxMode then
-                ai:SetRowBoxMode(isBoxes)
-            end
-        end
+        -- Размеры в Boxes те же, что в Default: метод оставлен только для совместимости вызовов.
+        function ai.SetBoxMode(self,isBoxes) end
 
         function ai.Set(self,valTable,triggerCb)
             if type(valTable)=="table" then
@@ -9120,23 +9400,25 @@ function AetheriaUI_ToggleSlider.New(AetheriaUI_af,AetheriaUI_ag)
             end
         end
 
-        aa.AddSignal(sliderFr.InputBegan,function(inp)
-            if (inp.UserInputType==Enum.UserInputType.MouseButton1 or inp.UserInputType==Enum.UserInputType.Touch) and isLocked then
-                ai:SetSlider(currentVal,inp)
-            end
-        end)
-
         function ai.Lock(self)
             ai.Locked=true
             isLocked=false
+            slider.SetEnabled(false)
             return ai.Frame:Lock()
         end
         function ai.Unlock(self)
             ai.Locked=false
             isLocked=true
+            slider.SetEnabled(true)
             return ai.Frame:Unlock()
         end
         if ai.Locked then ai:Lock() end
+
+        AetheriaUI_Stack(ai.Frame,rightHolder,slider.Root,{
+            inlineW=inlineW,
+            primaryW=primaryW,
+            wideInline=UDim2.new(0,T.SLIDER_W,0,T.CTRL_H),
+        })
 
         return ai.__type,ai
     end)
@@ -9145,14 +9427,420 @@ function AetheriaUI_ToggleSlider.New(AetheriaUI_af,AetheriaUI_ag)
     return"ToggleSlider",{__type="ToggleSlider",Title=AetheriaUI_ag.Title or"ToggleSlider"}
 end
 
--- ToggleColorpicker: Combines a boolean switch and a colorpicker swatch
+-- =========================================================================
+-- ButtonSlider:  [заголовок ........ [ползунок 130x36] [кнопка]]
+-- =========================================================================
+local AetheriaUI_ButtonSlider={}
+function AetheriaUI_ButtonSlider.New(AetheriaUI_af,AetheriaUI_ag)
+    local ok,resA,resB=pcall(function()
+        local cfg = (type(AetheriaUI_ag)=="table" and AetheriaUI_ag) or (type(AetheriaUI_af)=="table" and AetheriaUI_af) or {}
+        local aa=a.load'a'
+        local ac=aa.New
+        local ad=aa.Tween
+        local T=AetheriaUI_T
+
+        local ai={
+            __type="ButtonSlider",
+            Title=cfg.Title or"ButtonSlider",
+            Desc=cfg.Desc or nil,
+            Locked=cfg.Locked or false,
+            Step=cfg.Step or 1,
+            Min=cfg.Min or(cfg.Value and cfg.Value.Min)or 0,
+            Max=cfg.Max or(cfg.Value and cfg.Value.Max)or 100,
+            Callback=cfg.Callback or function()end,
+            UIElements={},
+        }
+
+        local initSlider=ai.Min
+        if type(cfg.Value)=="table" then
+            initSlider=cfg.Value.Slider or cfg.Value.slider or cfg.Value[1] or ai.Min
+        elseif type(cfg.Value)=="number" then
+            initSlider=cfg.Value
+        end
+
+        local isLocked=not ai.Locked
+
+        local btnText=tostring(cfg.ButtonText or"Action")
+        local primaryW=math.clamp(math.ceil(AetheriaUI_TextWidth(btnText,T.BTN_TEXT))+T.BTN_PADX*2,T.BTN_MINW,T.BTN_MAXW)
+        local inlineW=T.SLIDER_W+T.GAP+primaryW
+
+        ai.Frame=a.load'y'{
+            Title=ai.Title,
+            Desc=ai.Desc,
+            Window=cfg.Window,
+            Parent=cfg.Parent,
+            TextOffset=inlineW+T.TEXT_GAP,
+            Hover=false,
+            Tab=cfg.Tab,
+            Index=cfg.Index,
+            ElementTable=ai,
+        }
+
+        local rightHolder=AetheriaUI_MakeHolder(ai.Frame,inlineW)
+
+        local slider=AetheriaUI_CreateSlider(aa,ac,ad,rightHolder,{
+            Min=ai.Min,Max=ai.Max,Step=ai.Step,Value=initSlider,
+            Live=true,
+            CanUse=function() return isLocked end,
+            OnUpdate=function(v) ai.Value.Slider=v end,
+            OnChange=function()
+                local cb=cfg.SliderCallback or cfg.Callback
+                aa.SafeCallback(cb,ai.Value)
+            end,
+        })
+        ai.Value={Slider=slider.Value}
+        ai.UIElements.Slider=slider
+
+        local actionBtn,actionBtnLabel=AetheriaUI_CreateActionButton(aa,ac,ad,rightHolder,false,btnText,function()
+            if isLocked then
+                local cb=cfg.ButtonCallback or cfg.ButtonClick or cfg.Callback
+                aa.SafeCallback(cb,ai.Value)
+            end
+        end)
+
+        local function setPos(val,fireCb)
+            slider.Set(val)
+            ai.Value.Slider=slider.Value
+            if fireCb~=false then
+                local cb=cfg.SliderCallback or cfg.Callback
+                aa.SafeCallback(cb,ai.Value)
+            end
+        end
+        function ai.SetSlider(self,val,fireCb)
+            setPos(val,fireCb)
+        end
+        function ai.Set(self,v,fireCb)
+            if type(v)=="table" then
+                local sv=v.Slider ~= nil and v.Slider or v.slider or v[1]
+                if sv~=nil then setPos(sv,fireCb) end
+            elseif type(v)=="number" then
+                setPos(v,fireCb)
+            end
+        end
+        function ai.SetButtonText(self,txt) actionBtnLabel.Text=tostring(txt or "Action") end
+
+        -- Размеры в Boxes те же, что в Default: метод оставлен только для совместимости вызовов.
+        function ai.SetBoxMode(self,isBoxes) end
+
+        function ai.Lock(self)
+            ai.Locked=true
+            isLocked=false
+            slider.SetEnabled(false)
+            return ai.Frame:Lock()
+        end
+        function ai.Unlock(self)
+            ai.Locked=false
+            isLocked=true
+            slider.SetEnabled(true)
+            return ai.Frame:Unlock()
+        end
+        if ai.Locked then ai:Lock() end
+
+        AetheriaUI_Stack(ai.Frame,rightHolder,slider.Root,{
+            inlineW=inlineW,
+            primaryW=primaryW,
+            wideInline=UDim2.new(0,T.SLIDER_W,0,T.CTRL_H),
+        })
+
+        return ai.__type,ai
+    end)
+    if ok then return resA,resB end
+    warn("[AetheriaUI] ButtonSlider failed: "..tostring(resA))
+    return"ButtonSlider",{__type="ButtonSlider",Title=(AetheriaUI_ag and AetheriaUI_ag.Title) or (AetheriaUI_af and AetheriaUI_af.Title) or"ButtonSlider"}
+end
+
+-- =========================================================================
+-- DualSlider: диапазон с двумя ползунками, [трек][ "50 - 350" ] (190x36, на 2-й строке — на всю ширину)
+-- =========================================================================
+local AetheriaUI_DualSlider={}
+function AetheriaUI_DualSlider.New(AetheriaUI_af,AetheriaUI_ag)
+    local AetheriaUI_ok,AetheriaUI_resA,AetheriaUI_resB=pcall(function()
+        local aa=a.load'a'
+        local ac=aa.New
+        local ad=aa.Tween
+        local isLocked=not AetheriaUI_ag.Locked
+        local T=AetheriaUI_T
+
+        local ai={
+            __type="DualSlider",
+            Title=AetheriaUI_ag.Title or"DualSlider",
+            Desc=AetheriaUI_ag.Desc or nil,
+            Locked=AetheriaUI_ag.Locked or false,
+            Step=AetheriaUI_ag.Step or 1,
+            Min=AetheriaUI_ag.Min or 0,
+            Max=AetheriaUI_ag.Max or 100,
+            Callback=AetheriaUI_ag.Callback or function()end,
+            UIElements={},
+        }
+        if ai.Max<=ai.Min then ai.Max=ai.Min+1 end
+        local range=ai.Max-ai.Min
+
+        local initLower=ai.Min
+        local initUpper=ai.Max
+        if type(AetheriaUI_ag.Value)=="table" then
+            initLower=AetheriaUI_ag.Value.Min or AetheriaUI_ag.Value.min or AetheriaUI_ag.Value[1] or ai.Min
+            initUpper=AetheriaUI_ag.Value.Max or AetheriaUI_ag.Value.max or AetheriaUI_ag.Value[2] or ai.Max
+        end
+        initLower=math.clamp(initLower,ai.Min,ai.Max)
+        initUpper=math.clamp(initUpper,initLower,ai.Max)
+
+        local currentLower=initLower
+        local currentUpper=initUpper
+        ai.Value={Min=currentLower,Max=currentUpper}
+
+        local isFloat=ai.Step%1~=0
+        local function FormatVal(v)
+            if isFloat then return string.format("%.2f",v) else return tostring(math.floor(v+0.5)) end
+        end
+        local function CalcVal(v)
+            return math.floor(v/ai.Step+0.5)*ai.Step
+        end
+
+        local valW=84
+        local inlineW=190
+
+        ai.Frame=a.load'y'{
+            Title=ai.Title,
+            Desc=ai.Desc,
+            Window=AetheriaUI_ag.Window,
+            Parent=AetheriaUI_ag.Parent,
+            TextOffset=inlineW+T.TEXT_GAP,
+            Hover=false,
+            Tab=AetheriaUI_ag.Tab,
+            Index=AetheriaUI_ag.Index,
+            ElementTable=ai,
+        }
+
+        local rightHolder=AetheriaUI_MakeHolder(ai.Frame,inlineW)
+        local root,valueLabel,sliderFr,hit=AetheriaUI_SliderBase(aa,ac,rightHolder,valW,inlineW)
+
+        local lowerPct=(currentLower-ai.Min)/range
+        local upperPct=(currentUpper-ai.Min)/range
+
+        local fillFr=ac("Frame",{
+            Position=UDim2.new(lowerPct,0,0,0),
+            Size=UDim2.new(math.max(0.001,upperPct-lowerPct),0,1,0),
+            ThemeTag={BackgroundColor3="Accent"},
+            Parent=sliderFr,
+        },{
+            ac("UICorner",{CornerRadius=UDim.new(1,0)}),
+        })
+        local lowerKnob=AetheriaUI_MakeThumb(ac,sliderFr,lowerPct,3)
+        local upperKnob=AetheriaUI_MakeThumb(ac,sliderFr,upperPct,4)
+
+        local function label()
+            return FormatVal(currentLower).." - "..FormatVal(currentUpper)
+        end
+        valueLabel.Text=label()
+
+        local function UpdateVisuals()
+            local lPct=math.clamp((currentLower-ai.Min)/range,0,1)
+            local uPct=math.clamp((currentUpper-ai.Min)/range,0,1)
+            ad(lowerKnob,0.06,{Position=UDim2.new(lPct,0,0.5,0)}):Play()
+            ad(upperKnob,0.06,{Position=UDim2.new(uPct,0,0.5,0)}):Play()
+            ad(fillFr,0.06,{Position=UDim2.new(lPct,0,0,0),Size=UDim2.new(math.max(0.001,uPct-lPct),0,1,0)}):Play()
+            valueLabel.Text=label()
+        end
+
+        aa.AddSignal(valueLabel.FocusLost,function()
+            local nums={}
+            for n in string.gmatch(valueLabel.Text,"[-+]?%d*%.?%d+") do
+                local num=tonumber(n)
+                if num then table.insert(nums,num) end
+            end
+            if #nums>=2 then
+                local l,u=nums[1],nums[2]
+                if l>u then l,u=u,l end
+                ai:Set({Min=l,Max=u})
+            elseif #nums==1 then
+                ai:Set({Min=nums[1],Max=currentUpper})
+            else
+                valueLabel.Text=label()
+            end
+        end)
+
+        function ai.Set(self,valTable,triggerCb)
+            if not isLocked then return end
+            if type(valTable)=="table" then
+                local l=valTable.Min or valTable.min or valTable[1] or currentLower
+                local u=valTable.Max or valTable.max or valTable[2] or currentUpper
+                l=math.clamp(CalcVal(tonumber(l) or ai.Min),ai.Min,ai.Max)
+                u=math.clamp(CalcVal(tonumber(u) or ai.Max),l,ai.Max)
+                currentLower=l
+                currentUpper=u
+                ai.Value.Min=l
+                ai.Value.Max=u
+                UpdateVisuals()
+                if triggerCb~=false then
+                    aa.SafeCallback(ai.Callback,ai.Value)
+                end
+            end
+        end
+
+        local isDragging=false
+        local function StartDrag(inputObj)
+            if not isLocked or isDragging then return end
+            local scrollParent=root:FindFirstAncestorWhichIsA("ScrollingFrame")
+            if scrollParent then scrollParent.ScrollingEnabled=false end
+            isDragging=true
+
+            local isTouch=(inputObj.UserInputType==Enum.UserInputType.Touch)
+            local function currentVal()
+                local x=isTouch and inputObj.Position.X or AetheriaUI_UIS:GetMouseLocation().X
+                local p=math.clamp((x-sliderFr.AbsolutePosition.X)/math.max(sliderFr.AbsoluteSize.X,1),0,1)
+                return CalcVal(ai.Min+p*range)
+            end
+
+            -- какой ползунок тянем — тот, что ближе к точке нажатия
+            local startVal=currentVal()
+            local dragTarget=math.abs(startVal-currentLower)<=math.abs(startVal-currentUpper) and"lower" or"upper"
+            local anyChanged=false
+
+            local function apply()
+                local v=currentVal()
+                local changed=false
+                if dragTarget=="lower" then
+                    v=math.clamp(v,ai.Min,currentUpper)
+                    if v~=currentLower then currentLower=v ai.Value.Min=v changed=true end
+                else
+                    v=math.clamp(v,currentLower,ai.Max)
+                    if v~=currentUpper then currentUpper=v ai.Value.Max=v changed=true end
+                end
+                if changed then
+                    anyChanged=true
+                    UpdateVisuals()
+                end
+            end
+            apply()
+
+            local moveConn,endConn
+            moveConn=AetheriaUI_RunService.RenderStepped:Connect(apply)
+            endConn=AetheriaUI_UIS.InputEnded:Connect(function(endedInput)
+                if endedInput==inputObj then
+                    moveConn:Disconnect()
+                    endConn:Disconnect()
+                    isDragging=false
+                    if scrollParent then scrollParent.ScrollingEnabled=true end
+                    if anyChanged then
+                        aa.SafeCallback(ai.Callback,ai.Value)
+                    end
+                end
+            end)
+        end
+
+        aa.AddSignal(hit.InputBegan,function(inp)
+            if (inp.UserInputType==Enum.UserInputType.MouseButton1 or inp.UserInputType==Enum.UserInputType.Touch) and isLocked then
+                StartDrag(inp)
+            end
+        end)
+
+        -- Размеры в Boxes те же, что в Default: метод оставлен только для совместимости вызовов.
+        function ai.SetBoxMode(self,isBoxes) end
+
+        function ai.Lock(self)
+            ai.Locked=true
+            isLocked=false
+            valueLabel.TextEditable=false
+            return ai.Frame:Lock()
+        end
+        function ai.Unlock(self)
+            ai.Locked=false
+            isLocked=true
+            valueLabel.TextEditable=true
+            return ai.Frame:Unlock()
+        end
+        if ai.Locked then ai:Lock() end
+
+        AetheriaUI_Stack(ai.Frame,rightHolder,root,{
+            inlineW=inlineW,
+            primaryW=0,
+            wideInline=UDim2.new(0,inlineW,0,T.CTRL_H),
+        })
+
+        return ai.__type,ai
+    end)
+    if AetheriaUI_ok then return AetheriaUI_resA,AetheriaUI_resB end
+    warn("[AetheriaUI] DualSlider failed: "..tostring(AetheriaUI_resA))
+    return"DualSlider",{__type="DualSlider",Title=AetheriaUI_ag.Title or"DualSlider"}
+end
+
+-- Образец цвета 30x30 (радиус 9) с тонкой обводкой: на тёмном фоне тёмные цвета не пропадают.
+local function AetheriaUI_CreateSwatch(aa,parent,color,transparency)
+    local btn=aa.NewRoundFrame(9,"Squircle",{
+        ImageTransparency=transparency,
+        Active=true,
+        ImageColor3=color,
+        Size=UDim2.new(0,30,0,30),
+        LayoutOrder=1,
+        Parent=parent,
+        ZIndex=2,
+    },nil,true)
+    aa.NewRoundFrame(9,"SquircleOutline",{
+        Size=UDim2.new(1,0,1,0),
+        ThemeTag={ImageColor3="Text"},
+        ImageTransparency=.82,
+        Parent=btn,
+        ZIndex=3,
+    })
+    return btn
+end
+
+-- Открытие/закрытие окна выбора цвета по клику на образец (общая логика обоих модулей).
+local function AetheriaUI_BindColorPicker(aa,ai,colorBtn,getWindow,canUse)
+    local colorpickerModule=a.load'L'
+    local lastColorToggle=0
+    local function toggle()
+        if not canUse() then return end
+        local now=os.clock()
+        if now-lastColorToggle<0.25 then return end
+        lastColorToggle=now
+
+        if ai.ActiveColorpicker and ai.ActiveColorpicker.Opened then
+            pcall(function() ai.ActiveColorpicker.ColorpickerFrame:Close() end)
+            ai.ActiveColorpicker=nil
+            return
+        end
+
+        local cp=colorpickerModule:Colorpicker(ai,getWindow(),function(newCol,newTrans)
+            ai:UpdateColor(newCol,newTrans)
+        end)
+        ai.ActiveColorpicker=cp
+        if cp and cp.ColorpickerFrame then
+            cp.ColorpickerFrame:Open()
+        end
+    end
+    aa.AddSignal(colorBtn.MouseButton1Click,toggle)
+
+    aa.AddSignal(game:GetService("UserInputService").InputBegan,function(inp)
+        if not canUse() then return end
+        if inp.UserInputType==Enum.UserInputType.MouseButton1 or inp.UserInputType==Enum.UserInputType.Touch then
+            if ai.ActiveColorpicker and ai.ActiveColorpicker.Opened then
+                local m=game.Players.LocalPlayer:GetMouse()
+                local p=colorBtn.AbsolutePosition
+                local s=colorBtn.AbsoluteSize
+                if m.X>=p.X and m.X<=p.X+s.X and m.Y>=p.Y and m.Y<=p.Y+s.Y then
+                    local now=os.clock()
+                    if now-lastColorToggle>=0.2 then
+                        lastColorToggle=now
+                        pcall(function() ai.ActiveColorpicker.ColorpickerFrame:Close() end)
+                        ai.ActiveColorpicker=nil
+                    end
+                end
+            end
+        end
+    end)
+end
+
+-- =========================================================================
+-- ToggleColorpicker:  [заголовок ........ [цвет] [переключатель]]
+-- =========================================================================
 local AetheriaUI_ToggleColorpicker={}
 function AetheriaUI_ToggleColorpicker.New(AetheriaUI_af,AetheriaUI_ag)
     local AetheriaUI_ok,AetheriaUI_resA,AetheriaUI_resB=pcall(function()
         local aa=a.load'a'
         local ac=aa.New
         local createSwitch=a.load'B'.New
-        local colorpickerModule=a.load'L'
+        local T=AetheriaUI_T
 
         local initToggle=false
         local initColor=Color3.fromRGB(255,255,255)
@@ -9191,53 +9879,30 @@ function AetheriaUI_ToggleColorpicker.New(AetheriaUI_af,AetheriaUI_ag)
         local currentColor=initColor
         local currentTransparency=initTransparency
 
-        local isBoxTogCol=(AetheriaUI_ag.Window and AetheriaUI_ag.Window.TabLayoutType=="Boxes")
-        local colW=isBoxTogCol and 22 or 34
-        local swW=isBoxTogCol and 36 or 42
-        local sH=isBoxTogCol and 22 or 34
-        local rightWidth=colW+swW+(isBoxTogCol and 6 or 10)
+        local primaryW=T.SWITCH_W
+        local inlineW=30+T.GAP+primaryW
 
         ai.Frame=a.load'y'{
             Title=ai.Title,
             Desc=ai.Desc,
             Window=AetheriaUI_ag.Window,
             Parent=AetheriaUI_ag.Parent,
-            TextOffset=rightWidth+(isBoxTogCol and 6 or 15),
+            TextOffset=inlineW+T.TEXT_GAP,
             Hover=false,
             Tab=AetheriaUI_ag.Tab,
             Index=AetheriaUI_ag.Index,
             ElementTable=ai,
         }
 
-        local rightHolder=ac("Frame",{
-            Size=UDim2.new(0,rightWidth,1,0),
-            Position=UDim2.new(1,0,0.5,0),
-            AnchorPoint=Vector2.new(1,0.5),
-            BackgroundTransparency=1,
-            Parent=ai.Frame.UIElements.Main,
-        },{
-            ac("UIListLayout",{
-                FillDirection=Enum.FillDirection.Horizontal,
-                VerticalAlignment=Enum.VerticalAlignment.Center,
-                HorizontalAlignment=Enum.HorizontalAlignment.Right,
-                Padding=UDim.new(0,10),
-            }),
-        })
-
-        local colorBtn=aa.NewRoundFrame(isBoxTogCol and 6 or 8,"Squircle",{
-            ImageTransparency=currentTransparency,
-            Active=true,
-            ImageColor3=currentColor,
-            Size=UDim2.new(0,colW,0,colW),
-            Parent=rightHolder,
-            ZIndex=2,
-        },nil,true)
+        local rightHolder=AetheriaUI_MakeHolder(ai.Frame,inlineW)
+        local colorBtn=AetheriaUI_CreateSwatch(aa,rightHolder,currentColor,currentTransparency)
 
         local switchBtn=ac("TextButton",{
-            Size=UDim2.new(0,swW,0,sH),
+            Size=UDim2.new(0,primaryW,0,T.CTRL_H),
             BackgroundTransparency=1,
             Text="",
             AutoButtonColor=false,
+            LayoutOrder=2,
             Parent=rightHolder,
         })
 
@@ -9247,7 +9912,7 @@ function AetheriaUI_ToggleColorpicker.New(AetheriaUI_af,AetheriaUI_ag)
                 ai.Value.Toggle=st
                 aa.SafeCallback(ai.Callback,ai.Value)
             end
-        end,isBoxTogCol)
+        end,false)
         switchFr.Position=UDim2.new(0.5,0,0.5,0)
         switchFr.AnchorPoint=Vector2.new(0.5,0.5)
 
@@ -9290,70 +9955,10 @@ function AetheriaUI_ToggleColorpicker.New(AetheriaUI_af,AetheriaUI_ag)
             end
         end
 
-        function ai.SetBoxMode(self,isBoxes)
-            isBoxTogCol=isBoxes
-            local cW=isBoxes and 22 or 34
-            local sw=isBoxes and 36 or 42
-            local sh=isBoxes and 22 or 34
-            local rW=cW+sw+(isBoxes and 6 or 10)
-            rightHolder.Size=UDim2.new(0,rW,1,0)
-            colorBtn.Size=UDim2.new(0,cW,0,cW)
-            if switchBtn then
-                switchBtn.Size=UDim2.new(0,sw,0,sh)
-            end
-            if switchObj and switchObj.SetBoxMode then
-                switchObj:SetBoxMode(isBoxes)
-            end
-            if ai.Frame and ai.Frame.SetTextOffset then
-                ai.Frame:SetTextOffset(rW+(isBoxes and 6 or 15))
-            end
-            if ai.SetRowBoxMode then
-                ai:SetRowBoxMode(isBoxes)
-            end
-        end
+        -- Размеры в Boxes те же, что в Default: метод оставлен только для совместимости вызовов.
+        function ai.SetBoxMode(self,isBoxes) end
 
-        local lastColorToggle=0
-        local function ToggleColorPickerWindow()
-            if not isLocked then return end
-            local now=os.clock()
-            if now-lastColorToggle<0.25 then return end
-            lastColorToggle=now
-
-            if ai.ActiveColorpicker and ai.ActiveColorpicker.Opened then
-                pcall(function() ai.ActiveColorpicker.ColorpickerFrame:Close() end)
-                ai.ActiveColorpicker=nil
-                return
-            end
-
-            local cp=colorpickerModule:Colorpicker(ai,AetheriaUI_ag.Window,function(newCol,newTrans)
-                ai:UpdateColor(newCol,newTrans)
-            end)
-            ai.ActiveColorpicker=cp
-            if cp and cp.ColorpickerFrame then
-                cp.ColorpickerFrame:Open()
-            end
-        end
-
-        aa.AddSignal(colorBtn.MouseButton1Click,ToggleColorPickerWindow)
-
-        aa.AddSignal(game:GetService("UserInputService").InputBegan,function(inp)
-            if not isLocked then return end
-            if inp.UserInputType==Enum.UserInputType.MouseButton1 or inp.UserInputType==Enum.UserInputType.Touch then
-                if ai.ActiveColorpicker and ai.ActiveColorpicker.Opened then
-                    local m=game.Players.LocalPlayer:GetMouse()
-                    local p=colorBtn.AbsolutePosition
-                    local s=colorBtn.AbsoluteSize
-                    if m.X>=p.X and m.X<=p.X+s.X and m.Y>=p.Y and m.Y<=p.Y+s.Y then
-                        local now=os.clock()
-                        if now-lastColorToggle>=0.2 then
-                            lastColorToggle=now
-                            pcall(function() ai.ActiveColorpicker.ColorpickerFrame:Close() end)
-                            ai.ActiveColorpicker=nil
-                        end
-                    end
-                end
-            end
-        end)
+        AetheriaUI_BindColorPicker(aa,ai,colorBtn,function() return AetheriaUI_ag.Window end,function() return isLocked end)
 
         function ai.Lock(self)
             ai.Locked=true
@@ -9374,7 +9979,134 @@ function AetheriaUI_ToggleColorpicker.New(AetheriaUI_af,AetheriaUI_ag)
     return"ToggleColorpicker",{__type="ToggleColorpicker",Title=AetheriaUI_ag.Title or"ToggleColorpicker"}
 end
 
--- ProgressBar: Smooth animated progress track with status label
+-- =========================================================================
+-- ButtonColorPicker:  [заголовок ........ [цвет] [кнопка]]
+-- =========================================================================
+local AetheriaUI_ButtonColorPicker={}
+function AetheriaUI_ButtonColorPicker.New(AetheriaUI_af,AetheriaUI_ag)
+    local ok,resA,resB=pcall(function()
+        local cfg = (type(AetheriaUI_ag)=="table" and AetheriaUI_ag) or (type(AetheriaUI_af)=="table" and AetheriaUI_af) or {}
+        local aa=a.load'a'
+        local ac=aa.New
+        local ad=aa.Tween
+        local T=AetheriaUI_T
+
+        local initColor=Color3.fromRGB(255,255,255)
+        local initTransparency=0
+        if type(cfg.Value)=="table" then
+            if cfg.Value.Color or cfg.Value.color then
+                local c=cfg.Value.Color or cfg.Value.color
+                if typeof(c)=="string" then c=Color3.fromHex(c) end
+                initColor=c
+            end
+            if cfg.Value.Transparency or cfg.Value.transparency then
+                initTransparency=cfg.Value.Transparency or cfg.Value.transparency
+            end
+        elseif typeof(cfg.Value)=="Color3" then
+            initColor=cfg.Value
+        elseif type(cfg.Value)=="string" then
+            initColor=Color3.fromHex(cfg.Value)
+        end
+        if cfg.Default then initColor=cfg.Default end
+        if cfg.Transparency then initTransparency=cfg.Transparency end
+
+        local ai={
+            __type="ButtonColorPicker",
+            Title=cfg.Title or"ButtonColorPicker",
+            Desc=cfg.Desc or nil,
+            Locked=cfg.Locked or false,
+            Default=initColor,
+            Transparency=initTransparency,
+            Callback=cfg.Callback or function()end,
+            UIElements={},
+        }
+        ai.Value={Color=initColor,Transparency=initTransparency}
+
+        local isLocked=not ai.Locked
+        local currentColor=initColor
+        local currentTransparency=initTransparency
+
+        local btnText=tostring(cfg.ButtonText or"Action")
+        local primaryW=math.clamp(math.ceil(AetheriaUI_TextWidth(btnText,T.BTN_TEXT))+T.BTN_PADX*2,T.BTN_MINW,T.BTN_MAXW)
+        local inlineW=30+T.GAP+primaryW
+
+        ai.Frame=a.load'y'{
+            Title=ai.Title,
+            Desc=ai.Desc,
+            Window=cfg.Window,
+            Parent=cfg.Parent,
+            TextOffset=inlineW+T.TEXT_GAP,
+            Hover=false,
+            Tab=cfg.Tab,
+            Index=cfg.Index,
+            ElementTable=ai,
+        }
+
+        local rightHolder=AetheriaUI_MakeHolder(ai.Frame,inlineW)
+        local colorBtn=AetheriaUI_CreateSwatch(aa,rightHolder,currentColor,currentTransparency)
+
+        local actionBtn,actionBtnLabel=AetheriaUI_CreateActionButton(aa,ac,ad,rightHolder,false,btnText,function()
+            if isLocked then
+                local cb=cfg.ButtonCallback or cfg.ButtonClick or cfg.Callback
+                aa.SafeCallback(cb,ai.Value)
+            end
+        end)
+
+        function ai.UpdateColor(self,col,trans)
+            if col then currentColor=col end
+            if trans~=nil then currentTransparency=trans end
+            colorBtn.ImageColor3=currentColor
+            colorBtn.ImageTransparency=currentTransparency
+            ai.Default=currentColor
+            ai.Transparency=currentTransparency
+            ai.Value.Color=currentColor
+            ai.Value.Transparency=currentTransparency
+            local cb=cfg.ColorCallback or cfg.Callback
+            aa.SafeCallback(cb,ai.Value)
+        end
+
+        ai.Update=ai.UpdateColor
+        ai.SetColor=ai.UpdateColor
+        ai.UIElements.Colorpicker=colorBtn
+        function ai.SetButtonText(self,txt) actionBtnLabel.Text=tostring(txt or "Action") end
+
+        function ai.Set(self,valTable)
+            if type(valTable)=="table" then
+                local c=valTable.Color or valTable.color or valTable[1]
+                if typeof(c)=="string" then c=Color3.fromHex(c) end
+                ai:UpdateColor(c,valTable.Transparency or valTable.transparency)
+            elseif typeof(valTable)=="Color3" then
+                ai:UpdateColor(valTable)
+            end
+        end
+
+        AetheriaUI_BindColorPicker(aa,ai,colorBtn,function()
+            return cfg.Window or (cfg.Tab and cfg.Tab.Window) or (ai.Frame and ai.Frame.Window)
+        end,function() return isLocked end)
+
+        -- Размеры в Boxes те же, что в Default: метод оставлен только для совместимости вызовов.
+        function ai.SetBoxMode(self,isBoxes) end
+
+        function ai.Lock(self)
+            ai.Locked=true
+            isLocked=false
+            return ai.Frame:Lock()
+        end
+        function ai.Unlock(self)
+            ai.Locked=false
+            isLocked=true
+            return ai.Frame:Unlock()
+        end
+        if ai.Locked then ai:Lock() end
+
+        return ai.__type,ai
+    end)
+    if ok then return resA,resB end
+    warn("[AetheriaUI] ButtonColorPicker failed: "..tostring(resA))
+    return"ButtonColorPicker",{__type="ButtonColorPicker",Title=(AetheriaUI_ag and AetheriaUI_ag.Title) or (AetheriaUI_af and AetheriaUI_af.Title) or"ButtonColorPicker"}
+end
+
+-- ProgressBar: полоса прогресса 6px; статус стоит справа на одной линии с заголовком
 local AetheriaUI_ProgressBar={}
 function AetheriaUI_ProgressBar.New(AetheriaUI_af,AetheriaUI_ag)
     local AetheriaUI_ok,AetheriaUI_resA,AetheriaUI_resB=pcall(function()
@@ -9383,7 +10115,7 @@ function AetheriaUI_ProgressBar.New(AetheriaUI_af,AetheriaUI_ag)
         local ad=aa.Tween
 
         local curProg=math.clamp(tonumber(AetheriaUI_ag.Progress or AetheriaUI_ag.Value or 0) or 0,0,1)
-        local curStatus=AetheriaUI_ag.Status or (tostring(math.floor(curProg*100)).."%")
+        local curStatus=AetheriaUI_ag.Status or (tostring(math.floor(curProg*100))..'%')
 
         local ai={
             __type="ProgressBar",
@@ -9399,7 +10131,7 @@ function AetheriaUI_ProgressBar.New(AetheriaUI_af,AetheriaUI_ag)
             Desc=ai.Desc,
             Window=AetheriaUI_ag.Window,
             Parent=AetheriaUI_ag.Parent,
-            TextOffset=80,
+            TextOffset=72,
             Hover=false,
             Tab=AetheriaUI_ag.Tab,
             Index=AetheriaUI_ag.Index,
@@ -9407,10 +10139,14 @@ function AetheriaUI_ProgressBar.New(AetheriaUI_af,AetheriaUI_ag)
         }
 
         local statusLabel=ac("TextLabel",{
-            Size=UDim2.new(1,0,1,0),
+            AutomaticSize=Enum.AutomaticSize.X,
+            Size=UDim2.new(0,0,0,22),
+            AnchorPoint=Vector2.new(1,0),
+            Position=UDim2.new(1,0,0,0),
             Text=curStatus,
-            TextSize=13,
+            TextSize=14,
             TextXAlignment=Enum.TextXAlignment.Right,
+            TextYAlignment=Enum.TextYAlignment.Center,
             BackgroundTransparency=1,
             ThemeTag={TextColor3="Placeholder"},
             FontFace=Font.new(aa.Font,Enum.FontWeight.Medium),
@@ -9418,10 +10154,10 @@ function AetheriaUI_ProgressBar.New(AetheriaUI_af,AetheriaUI_ag)
         })
 
         local track=ac("Frame",{
-            Size=UDim2.new(1,0,0,8),
-            BackgroundColor3=Color3.new(1,1,1),
+            Size=UDim2.new(1,0,0,6),
             BackgroundTransparency=0.88,
             ThemeTag={BackgroundColor3="Text"},
+            LayoutOrder=5,
             Parent=ai.Frame.UIElements.Container,
         },{
             ac("UICorner",{CornerRadius=UDim.new(1,0)}),
@@ -9429,7 +10165,6 @@ function AetheriaUI_ProgressBar.New(AetheriaUI_af,AetheriaUI_ag)
 
         local fill=ac("Frame",{
             Size=UDim2.new(curProg,0,1,0),
-            BackgroundColor3=Color3.new(1,1,1),
             BackgroundTransparency=0,
             ThemeTag={BackgroundColor3="Accent"},
             Parent=track,
@@ -9447,7 +10182,7 @@ function AetheriaUI_ProgressBar.New(AetheriaUI_af,AetheriaUI_ag)
             if stat~=nil then
                 ai.Status=tostring(stat)
             else
-                ai.Status=tostring(math.floor(prog*100)).."%"
+                ai.Status=tostring(math.floor(prog*100))..'%'
             end
             statusLabel.Text=ai.Status
             ad(fill,0.2,{Size=UDim2.new(prog,0,1,0)},Enum.EasingStyle.Quint,Enum.EasingDirection.Out):Play()
@@ -9460,20 +10195,8 @@ function AetheriaUI_ProgressBar.New(AetheriaUI_af,AetheriaUI_ag)
             ai:Set(ai.Progress,stat)
         end
 
-        function ai.SetBoxMode(self,isBoxes)
-            if statusLabel then
-                statusLabel.TextSize=isBoxes and 11 or 13
-            end
-            if track then
-                track.Size=UDim2.new(1,0,0,isBoxes and 4 or 8)
-            end
-            if ai.Frame and ai.Frame.SetTextOffset then
-                ai.Frame:SetTextOffset(isBoxes and 50 or 80)
-            end
-            if ai.SetRowBoxMode then
-                ai:SetRowBoxMode(isBoxes)
-            end
-        end
+        -- Размеры в Boxes те же, что в Default: метод оставлен только для совместимости вызовов.
+        function ai.SetBoxMode(self,isBoxes) end
 
         return ai.__type,ai
     end)
@@ -9482,7 +10205,7 @@ function AetheriaUI_ProgressBar.New(AetheriaUI_af,AetheriaUI_ag)
     return"ProgressBar",{__type="ProgressBar",Title=AetheriaUI_ag.Title or"ProgressBar"}
 end
 
--- StatCard: Metric cards with unlimited rows & dynamic wrapping
+-- StatCard: плитки метрик (радиус 10, тонкая обводка, высота 56)
 local AetheriaUI_StatCard={}
 function AetheriaUI_StatCard.New(AetheriaUI_af,AetheriaUI_ag)
     local AetheriaUI_ok,AetheriaUI_resA,AetheriaUI_resB=pcall(function()
@@ -9514,14 +10237,15 @@ function AetheriaUI_StatCard.New(AetheriaUI_af,AetheriaUI_ag)
             Size=UDim2.new(1,0,0,0),
             AutomaticSize=Enum.AutomaticSize.Y,
             BackgroundTransparency=1,
+            LayoutOrder=5,
             Parent=ai.Frame.UIElements.Container,
         })
 
-        local gridLayout=ac("UIGridLayout",{
+        ac("UIGridLayout",{
             FillDirection=Enum.FillDirection.Horizontal,
             SortOrder=Enum.SortOrder.LayoutOrder,
             CellPadding=UDim2.new(0,8,0,8),
-            CellSize=UDim2.new(1/cols,-math.ceil(((cols-1)*8)/cols+1.5),0,50),
+            CellSize=UDim2.new(1/cols,-math.ceil(((cols-1)*8)/cols+1.5),0,56),
             Parent=gridHolder,
         })
 
@@ -9530,20 +10254,32 @@ function AetheriaUI_StatCard.New(AetheriaUI_af,AetheriaUI_ag)
             local itemVal=tostring(itemData.Value or itemData.value or"0")
             local itemIcon=itemData.Icon or itemData.icon
 
-            local tile=aa.NewRoundFrame(8,"Squircle",{
+            local tile=aa.NewRoundFrame(10,"Squircle",{
                 Size=UDim2.new(1,0,1,0),
                 ImageTransparency=0.92,
                 ThemeTag={ImageColor3="Text"},
                 LayoutOrder=order or 1,
                 Parent=gridHolder,
             })
-
-            ac("UIPadding",{
-                PaddingLeft=UDim.new(0,10),
-                PaddingRight=UDim.new(0,10),
-                PaddingTop=UDim.new(0,6),
-                PaddingBottom=UDim.new(0,6),
+            aa.NewRoundFrame(10,"SquircleOutline",{
+                Size=UDim2.new(1,0,1,0),
+                ThemeTag={ImageColor3="Outline"},
+                ImageTransparency=0.94,
                 Parent=tile,
+            })
+
+            -- содержимое лежит во вложенном Frame, чтобы отступы не сдвигали обводку
+            local content=ac("Frame",{
+                Size=UDim2.new(1,0,1,0),
+                BackgroundTransparency=1,
+                Parent=tile,
+            },{
+                ac("UIPadding",{
+                    PaddingLeft=UDim.new(0,12),
+                    PaddingRight=UDim.new(0,12),
+                    PaddingTop=UDim.new(0,8),
+                    PaddingBottom=UDim.new(0,8),
+                }),
             })
 
             local iconImg=nil
@@ -9551,40 +10287,40 @@ function AetheriaUI_StatCard.New(AetheriaUI_af,AetheriaUI_ag)
                 pcall(function()
                     iconImg=aa.Image(itemIcon,itemIcon,0,AetheriaUI_ag.Window.Folder,"StatIcon",true)
                     if iconImg then
-                        iconImg.Size=UDim2.new(0,20,0,20)
+                        iconImg.Size=UDim2.new(0,22,0,22)
                         iconImg.AnchorPoint=Vector2.new(0,0.5)
                         iconImg.Position=UDim2.new(0,0,0.5,0)
-                        iconImg.Parent=tile
+                        iconImg.Parent=content
                     end
                 end)
             end
 
-            local textLeftOffset=iconImg and 28 or 0
+            local textLeftOffset=iconImg and 30 or 0
             local titleLbl=ac("TextLabel",{
-                Size=UDim2.new(1,-textLeftOffset,0,14),
+                Size=UDim2.new(1,-textLeftOffset,0,15),
                 Position=UDim2.new(0,textLeftOffset,0,0),
                 Text=itemTitle,
-                TextSize=11,
-                TextTransparency=0.4,
+                TextSize=12,
+                TextTransparency=0.35,
                 TextXAlignment=Enum.TextXAlignment.Left,
                 TextTruncate=Enum.TextTruncate.AtEnd,
                 BackgroundTransparency=1,
                 ThemeTag={TextColor3="Placeholder"},
                 FontFace=Font.new(aa.Font,Enum.FontWeight.Medium),
-                Parent=tile,
+                Parent=content,
             })
 
             local valLbl=ac("TextLabel",{
                 Size=UDim2.new(1,-textLeftOffset,0,22),
                 Position=UDim2.new(0,textLeftOffset,1,-22),
                 Text=itemVal,
-                TextSize=15,
+                TextSize=17,
                 TextXAlignment=Enum.TextXAlignment.Left,
                 TextTruncate=Enum.TextTruncate.AtEnd,
                 BackgroundTransparency=1,
                 ThemeTag={TextColor3="Text"},
                 FontFace=Font.new(aa.Font,Enum.FontWeight.SemiBold),
-                Parent=tile,
+                Parent=content,
             })
 
             return {Frame=tile,TitleLabel=titleLbl,ValueLabel=valLbl,Icon=iconImg}
@@ -9645,11 +10381,8 @@ function AetheriaUI_StatCard.New(AetheriaUI_af,AetheriaUI_ag)
             RefreshAll()
         end
 
-        function ai.SetBoxMode(self,isBoxes)
-            if ai.SetRowBoxMode then
-                ai:SetRowBoxMode(isBoxes)
-            end
-        end
+        -- Размеры в Boxes те же, что в Default: метод оставлен только для совместимости вызовов.
+        function ai.SetBoxMode(self,isBoxes) end
 
         return ai.__type,ai
     end)
@@ -9658,13 +10391,14 @@ function AetheriaUI_StatCard.New(AetheriaUI_af,AetheriaUI_ag)
     return"StatCard",{__type="StatCard",Title=AetheriaUI_ag.Title or"StatCard"}
 end
 
--- ButtonGroup: Row of compact action buttons in a single module
+-- ButtonGroup: ряд кнопок одинаковой ширины (высота 36, радиус 10)
 local AetheriaUI_ButtonGroup={}
 function AetheriaUI_ButtonGroup.New(AetheriaUI_af,AetheriaUI_ag)
     local AetheriaUI_ok,AetheriaUI_resA,AetheriaUI_resB=pcall(function()
         local aa=a.load'a'
         local ac=aa.New
         local ad=aa.Tween
+        local T=AetheriaUI_T
 
         local buttons=AetheriaUI_ag.Buttons or{}
         local ai={
@@ -9688,57 +10422,79 @@ function AetheriaUI_ButtonGroup.New(AetheriaUI_af,AetheriaUI_ag)
         }
 
         local btnRow=ac("Frame",{
-            Size=UDim2.new(1,0,0,32),
+            Size=UDim2.new(1,0,0,T.CTRL_H),
             BackgroundTransparency=1,
+            LayoutOrder=5,
             Parent=ai.Frame.UIElements.Container,
         },{
             ac("UIListLayout",{
                 FillDirection=Enum.FillDirection.Horizontal,
                 VerticalAlignment=Enum.VerticalAlignment.Center,
-                Padding=UDim.new(0,8),
+                SortOrder=Enum.SortOrder.LayoutOrder,
+                Padding=UDim.new(0,T.GAP),
             }),
         })
 
         local btnCount=math.max(1,#buttons)
         for i,btnData in ipairs(buttons) do
             local isPrimary=(btnData.Variant=="Primary" or btnData.Variant=="Accent")
-            local btn=aa.NewRoundFrame(8,"Squircle",{
-                Size=UDim2.new(1/btnCount,-((btnCount-1)*8)/btnCount,1,0),
+            local btn=aa.NewRoundFrame(T.CTRL_R,"Squircle",{
+                Size=UDim2.new(1/btnCount,-((btnCount-1)*T.GAP)/btnCount,1,0),
                 ImageTransparency=isPrimary and 0.2 or 0.9,
                 ThemeTag={ImageColor3=isPrimary and"Accent"or"Text"},
+                LayoutOrder=i,
                 Parent=btnRow,
                 Active=true,
             },nil,true)
+            if not isPrimary then
+                aa.NewRoundFrame(T.CTRL_R,"SquircleOutline",{
+                    Size=UDim2.new(1,0,1,0),
+                    ThemeTag={ImageColor3="Outline"},
+                    ImageTransparency=0.93,
+                    Parent=btn,
+                })
+            end
 
-            ac("UIListLayout",{
-                FillDirection=Enum.FillDirection.Horizontal,
-                VerticalAlignment=Enum.VerticalAlignment.Center,
-                HorizontalAlignment=Enum.HorizontalAlignment.Center,
-                Padding=UDim.new(0,6),
+            -- иконка и подпись в центре кнопки
+            local content=ac("Frame",{
+                Size=UDim2.new(1,-12,1,0),
+                Position=UDim2.new(0.5,0,0.5,0),
+                AnchorPoint=Vector2.new(0.5,0.5),
+                BackgroundTransparency=1,
+                Active=false,
                 Parent=btn,
+            },{
+                ac("UIListLayout",{
+                    FillDirection=Enum.FillDirection.Horizontal,
+                    VerticalAlignment=Enum.VerticalAlignment.Center,
+                    HorizontalAlignment=Enum.HorizontalAlignment.Center,
+                    Padding=UDim.new(0,6),
+                }),
             })
 
             if btnData.Icon and btnData.Icon~="" then
                 pcall(function()
                     local icon=aa.Image(btnData.Icon,btnData.Icon,0,AetheriaUI_ag.Window.Folder,"BtnIcon",true)
                     if icon then
-                        icon.Size=UDim2.new(0,16,0,16)
+                        icon.Size=UDim2.new(0,18,0,18)
                         icon.Active=false
-                        icon.Parent=btn
+                        icon.Parent=content
                     end
                 end)
             end
 
+            local titleText=btnData.Title or btnData.title
             local lbl=ac("TextLabel",{
-                Text=tostring(btnData.Title or btnData.title or"Action"),
-                TextSize=13,
+                Text=tostring(titleText or(btnData.Icon and""or"Action")),
+                TextSize=14,
                 AutomaticSize=Enum.AutomaticSize.X,
                 Size=UDim2.new(0,0,1,0),
                 BackgroundTransparency=1,
                 Active=false,
+                Visible=(titleText~=nil and tostring(titleText)~="") or not btnData.Icon,
                 ThemeTag={TextColor3=isPrimary and"Accent"or"Text"},
                 FontFace=Font.new(aa.Font,Enum.FontWeight.Medium),
-                Parent=btn,
+                Parent=content,
             })
 
             aa.AddSignal(btn.MouseEnter,function()
@@ -9760,20 +10516,12 @@ function AetheriaUI_ButtonGroup.New(AetheriaUI_af,AetheriaUI_ag)
             local b=ai.UIElements.Buttons[idx]
             if b and b.Label then
                 b.Label.Text=tostring(newTitle)
+                b.Label.Visible=true
             end
         end
 
-        function ai.SetBoxMode(self,isBoxes)
-            btnRow.Size=UDim2.new(1,0,0,isBoxes and 26 or 32)
-            for _,b in pairs(ai.UIElements.Buttons) do
-                if b.Label then
-                    b.Label.TextSize=isBoxes and 12 or 14
-                end
-            end
-            if ai.SetRowBoxMode then
-                ai:SetRowBoxMode(isBoxes)
-            end
-        end
+        -- Размеры в Boxes те же, что в Default: метод оставлен только для совместимости вызовов.
+        function ai.SetBoxMode(self,isBoxes) end
 
         return ai.__type,ai
     end)
@@ -9782,7 +10530,8 @@ function AetheriaUI_ButtonGroup.New(AetheriaUI_af,AetheriaUI_ag)
     return"ButtonGroup",{__type="ButtonGroup",Title=AetheriaUI_ag.Title or"ButtonGroup"}
 end
 
--- ToggleGroup: Segmented pill selector (single radio mode or multi-select)
+-- ToggleGroup: сегментированный переключатель (один вариант или несколько).
+--   [ [Низкий] [Средний] [Высокий] ]  — высота 40, активный сегмент закрашен акцентом
 local AetheriaUI_ToggleGroup={}
 function AetheriaUI_ToggleGroup.New(AetheriaUI_af,AetheriaUI_ag)
     local AetheriaUI_ok,AetheriaUI_resA,AetheriaUI_resB=pcall(function()
@@ -9820,11 +10569,29 @@ function AetheriaUI_ToggleGroup.New(AetheriaUI_af,AetheriaUI_ag)
             ElementTable=ai,
         }
 
-        local groupContainer=aa.NewRoundFrame(8,"Squircle",{
-            Size=UDim2.new(1,0,0,34),
+        -- обёртка: фон + обводка + ряд сегментов (отступы ряда не должны сдвигать обводку)
+        local groupWrap=ac("Frame",{
+            Size=UDim2.new(1,0,0,40),
+            BackgroundTransparency=1,
+            LayoutOrder=5,
+            Parent=ai.Frame.UIElements.Container,
+        })
+        aa.NewRoundFrame(12,"Squircle",{
+            Size=UDim2.new(1,0,1,0),
             ImageTransparency=0.94,
             ThemeTag={ImageColor3="Text"},
-            Parent=ai.Frame.UIElements.Container,
+            Parent=groupWrap,
+        })
+        aa.NewRoundFrame(12,"SquircleOutline",{
+            Size=UDim2.new(1,0,1,0),
+            ThemeTag={ImageColor3="Outline"},
+            ImageTransparency=0.94,
+            Parent=groupWrap,
+        })
+        local groupContainer=ac("Frame",{
+            Size=UDim2.new(1,0,1,0),
+            BackgroundTransparency=1,
+            Parent=groupWrap,
         },{
             ac("UIPadding",{
                 PaddingLeft=UDim.new(0,4),
@@ -9859,7 +10626,7 @@ function AetheriaUI_ToggleGroup.New(AetheriaUI_af,AetheriaUI_ag)
         local count=math.max(1,#options)
         for i,opt in ipairs(options) do
             local active=IsActive(opt)
-            local btn=aa.NewRoundFrame(6,"Squircle",{
+            local btn=aa.NewRoundFrame(9,"Squircle",{
                 Size=UDim2.new(1/count,-((count-1)*4)/count,1,0),
                 ImageTransparency=active and 0.2 or 1,
                 ThemeTag={ImageColor3=active and"Accent" or"Text"},
@@ -9870,11 +10637,14 @@ function AetheriaUI_ToggleGroup.New(AetheriaUI_af,AetheriaUI_ag)
 
             local lbl=ac("TextLabel",{
                 Text=tostring(opt),
-                TextSize=13,
-                Size=UDim2.new(1,0,1,0),
+                TextSize=14,
+                Size=UDim2.new(1,-8,1,0),
+                Position=UDim2.new(0.5,0,0.5,0),
+                AnchorPoint=Vector2.new(0.5,0.5),
                 BackgroundTransparency=1,
                 Active=false,
                 ZIndex=7,
+                TextTruncate=Enum.TextTruncate.AtEnd,
                 ThemeTag={TextColor3="Text"},
                 TextTransparency=active and 0 or 0.4,
                 FontFace=Font.new(aa.Font,active and Enum.FontWeight.SemiBold or Enum.FontWeight.Medium),
@@ -9954,17 +10724,8 @@ function AetheriaUI_ToggleGroup.New(AetheriaUI_af,AetheriaUI_ag)
             ai:Set(val)
         end
 
-        function ai.SetBoxMode(self,isBoxes)
-            groupContainer.Size=UDim2.new(1,0,0,isBoxes and 26 or 34)
-            for _,b in pairs(ai.UIElements.Buttons) do
-                if b.Label then
-                    b.Label.TextSize=isBoxes and 11 or 13
-                end
-            end
-            if ai.SetRowBoxMode then
-                ai:SetRowBoxMode(isBoxes)
-            end
-        end
+        -- Размеры в Boxes те же, что в Default: метод оставлен только для совместимости вызовов.
+        function ai.SetBoxMode(self,isBoxes) end
 
         function ai.Lock(self)
             ai.Locked=true
@@ -9986,7 +10747,7 @@ function AetheriaUI_ToggleGroup.New(AetheriaUI_af,AetheriaUI_ag)
 end
 
 
--- SocialCard: Community / social media card with action button
+-- SocialCard: карточка сообщества с кнопкой (высота кнопки 36, ширина по тексту)
 local AetheriaUI_SocialCard={}
 function AetheriaUI_SocialCard.New(AetheriaUI_af,AetheriaUI_ag)
     local AetheriaUI_ok,AetheriaUI_resA,AetheriaUI_resB=pcall(function()
@@ -9994,6 +10755,7 @@ function AetheriaUI_SocialCard.New(AetheriaUI_af,AetheriaUI_ag)
         local ac=aa.New
         local ad=aa.Tween
         local isLocked=not AetheriaUI_ag.Locked
+        local T=AetheriaUI_T
 
         local ai={
             __type="SocialCard",
@@ -10007,23 +10769,24 @@ function AetheriaUI_SocialCard.New(AetheriaUI_af,AetheriaUI_ag)
             UIElements={},
         }
 
-        local isBoxSoc=(AetheriaUI_ag.Window and AetheriaUI_ag.Window.TabLayoutType=="Boxes")
-        local btnWidth=isBoxSoc and 54 or 90
+        local hasIcon=ai.ButtonIcon and ai.ButtonIcon~=""
+        local btnWidth=math.clamp(math.ceil(AetheriaUI_TextWidth(ai.ButtonText,T.BTN_TEXT))+T.BTN_PADX*2+(hasIcon and 22 or 0),T.BTN_MINW+16,T.BTN_MAXW+30)
+
         ai.Frame=a.load'y'{
             Title=ai.Title,
             Desc=ai.Desc,
             Icon=ai.Icon,
             Window=AetheriaUI_ag.Window,
             Parent=AetheriaUI_ag.Parent,
-            TextOffset=btnWidth+(isBoxSoc and 8 or 15),
+            TextOffset=btnWidth+T.TEXT_GAP,
             Hover=false,
             Tab=AetheriaUI_ag.Tab,
             Index=AetheriaUI_ag.Index,
             ElementTable=ai,
         }
 
-        local actionBtn=aa.NewRoundFrame(8,"Squircle",{
-            Size=UDim2.new(0,btnWidth,0,30),
+        local actionBtn=aa.NewRoundFrame(T.CTRL_R,"Squircle",{
+            Size=UDim2.new(0,btnWidth,0,T.CTRL_H),
             Position=UDim2.new(1,0,0.5,0),
             AnchorPoint=Vector2.new(1,0.5),
             ImageTransparency=0.15,
@@ -10035,28 +10798,28 @@ function AetheriaUI_SocialCard.New(AetheriaUI_af,AetheriaUI_ag)
         local actionContent=ac("Frame",{
             Size=UDim2.new(1,0,1,0),
             BackgroundTransparency=1,
+            Active=false,
             Parent=actionBtn,
         },{
             ac("UIListLayout",{
                 FillDirection=Enum.FillDirection.Horizontal,
                 VerticalAlignment=Enum.VerticalAlignment.Center,
                 HorizontalAlignment=Enum.HorizontalAlignment.Center,
-                Padding=UDim.new(0,5),
+                Padding=UDim.new(0,6),
             }),
         })
 
-        local btnIcon=nil
-        if ai.ButtonIcon and ai.ButtonIcon~="" then
+        if hasIcon then
             pcall(function()
                 local iconData=aa.Icon(ai.ButtonIcon)
                 if iconData then
-                    btnIcon=ac("ImageLabel",{
-                        Size=UDim2.new(0,14,0,14),
+                    ac("ImageLabel",{
+                        Size=UDim2.new(0,16,0,16),
                         BackgroundTransparency=1,
                         Image=iconData[1],
                         ImageRectOffset=iconData[2].ImageRectPosition,
                         ImageRectSize=iconData[2].ImageRectSize,
-                        ThemeTag={ImageColor3="Text"},
+                        ImageColor3=Color3.fromRGB(255,255,255),
                         Parent=actionContent,
                     })
                 end
@@ -10068,8 +10831,8 @@ function AetheriaUI_SocialCard.New(AetheriaUI_af,AetheriaUI_ag)
             Size=UDim2.new(0,0,1,0),
             BackgroundTransparency=1,
             Text=ai.ButtonText,
-            TextSize=12,
-            ThemeTag={TextColor3="Text"},
+            TextSize=T.BTN_TEXT,
+            TextColor3=Color3.fromRGB(255,255,255),
             FontFace=Font.new(aa.Font,Enum.FontWeight.SemiBold),
             Parent=actionContent,
         })
@@ -10110,17 +10873,8 @@ function AetheriaUI_SocialCard.New(AetheriaUI_af,AetheriaUI_ag)
             ai.Desc=d
             ai.Frame:SetDesc(d)
         end
-        function ai.SetBoxMode(self,isBoxes)
-            local bw=isBoxes and 54 or 90
-            actionBtn.Size=UDim2.new(0,bw,0,isBoxes and 24 or 30)
-            if btnLbl then btnLbl.TextSize=isBoxes and 11 or 12 end
-            if ai.Frame and ai.Frame.SetTextOffset then
-                ai.Frame:SetTextOffset(bw+(isBoxes and 8 or 15))
-            end
-            if ai.SetRowBoxMode then
-                ai:SetRowBoxMode(isBoxes)
-            end
-        end
+        -- Размеры в Boxes те же, что в Default: метод оставлен только для совместимости вызовов.
+        function ai.SetBoxMode(self,isBoxes) end
         function ai.Lock(self)
             ai.Locked=true
             isLocked=false
@@ -10140,316 +10894,64 @@ function AetheriaUI_SocialCard.New(AetheriaUI_af,AetheriaUI_ag)
     return"SocialCard",{__type="SocialCard",Title=AetheriaUI_ag.Title or"SocialCard"}
 end
 
--- DualSlider: Range slider with two draggable knobs for Min and Max range
-local AetheriaUI_DualSlider={}
-function AetheriaUI_DualSlider.New(AetheriaUI_af,AetheriaUI_ag)
-    local AetheriaUI_ok,AetheriaUI_resA,AetheriaUI_resB=pcall(function()
-        local aa=a.load'a'
-        local ac=aa.New
-        local ad=aa.Tween
-        local isLocked=not AetheriaUI_ag.Locked
-
-        local ai={
-            __type="DualSlider",
-            Title=AetheriaUI_ag.Title or"DualSlider",
-            Desc=AetheriaUI_ag.Desc or nil,
-            Locked=AetheriaUI_ag.Locked or false,
-            Step=AetheriaUI_ag.Step or 1,
-            Min=AetheriaUI_ag.Min or 0,
-            Max=AetheriaUI_ag.Max or 100,
-            Callback=AetheriaUI_ag.Callback or function()end,
-            UIElements={},
-        }
-
-        local initLower=ai.Min
-        local initUpper=ai.Max
-        if type(AetheriaUI_ag.Value)=="table" then
-            initLower=AetheriaUI_ag.Value.Min or AetheriaUI_ag.Value.min or AetheriaUI_ag.Value[1] or ai.Min
-            initUpper=AetheriaUI_ag.Value.Max or AetheriaUI_ag.Value.max or AetheriaUI_ag.Value[2] or ai.Max
-        end
-        initLower=math.clamp(initLower,ai.Min,ai.Max)
-        initUpper=math.clamp(initUpper,initLower,ai.Max)
-
-        local currentLower=initLower
-        local currentUpper=initUpper
-        ai.Value={Min=currentLower,Max=currentUpper}
-
-        local isFloat=ai.Step%1~=0
-        local function FormatVal(v)
-            if isFloat then return string.format("%.2f",v) else return tostring(math.floor(v+0.5)) end
-        end
-        local function CalcVal(v)
-            return math.floor(v/ai.Step+0.5)*ai.Step
-        end
-
-        local isBoxDual=(AetheriaUI_ag.Window and AetheriaUI_ag.Window.TabLayoutType=="Boxes")
-        local trackWidth=isBoxDual and 45 or 105
-        local valWidth=isBoxDual and 40 or 68
-        local rightWidth=trackWidth+valWidth+(isBoxDual and 6 or 8)
-
-        ai.Frame=a.load'y'{
-            Title=ai.Title,
-            Desc=ai.Desc,
-            Window=AetheriaUI_ag.Window,
-            Parent=AetheriaUI_ag.Parent,
-            TextOffset=rightWidth+(isBoxDual and 12 or 15),
-            Hover=false,
-            Tab=AetheriaUI_ag.Tab,
-            Index=AetheriaUI_ag.Index,
-            ElementTable=ai,
-        }
-
-        local rightHolder=ac("Frame",{
-            Size=UDim2.new(0,rightWidth,1,0),
-            Position=UDim2.new(1,0,0.5,0),
-            AnchorPoint=Vector2.new(1,0.5),
-            BackgroundTransparency=1,
-            Parent=ai.Frame.UIElements.Main,
-        },{
-            ac("UIListLayout",{
-                FillDirection=Enum.FillDirection.Horizontal,
-                VerticalAlignment=Enum.VerticalAlignment.Center,
-                HorizontalAlignment=Enum.HorizontalAlignment.Right,
-                Padding=UDim.new(0,8),
-            }),
-        })
-
-        local sliderFr=ac("Frame",{
-            Size=UDim2.new(0,trackWidth,0,4),
-            BackgroundColor3=Color3.new(1,1,1),
-            BackgroundTransparency=0.88,
-            ThemeTag={BackgroundColor3="Text"},
-            AnchorPoint=Vector2.new(0,0.5),
-            Position=UDim2.new(0,0,0.5,0),
-            Parent=rightHolder,
-        },{
-            ac("UICorner",{CornerRadius=UDim.new(1,0)}),
-        })
-
-        local lowerPct=math.clamp((currentLower-ai.Min)/(ai.Max-ai.Min),0,1)
-        local upperPct=math.clamp((currentUpper-ai.Min)/(ai.Max-ai.Min),0,1)
-
-        local fillFr=ac("Frame",{
-            Position=UDim2.new(lowerPct,0,0,0),
-            Size=UDim2.new(math.max(0.001,upperPct-lowerPct),0,1,0),
-            BackgroundColor3=Color3.new(1,1,1),
-            BackgroundTransparency=0,
-            ThemeTag={BackgroundColor3="Accent"},
-            Parent=sliderFr,
-        },{
-            ac("UICorner",{CornerRadius=UDim.new(1,0)}),
-        })
-
-        local lowerKnob=ac("Frame",{
-            Size=UDim2.new(0,12,0,12),
-            AnchorPoint=Vector2.new(0.5,0.5),
-            Position=UDim2.new(lowerPct,0,0.5,0),
-            BackgroundColor3=Color3.new(1,1,1),
-            BackgroundTransparency=0,
-            ThemeTag={BackgroundColor3="Text"},
-            Parent=sliderFr,
-            ZIndex=3,
-        },{
-            ac("UICorner",{CornerRadius=UDim.new(1,0)}),
-        })
-
-        local upperKnob=ac("Frame",{
-            Size=UDim2.new(0,12,0,12),
-            AnchorPoint=Vector2.new(0.5,0.5),
-            Position=UDim2.new(upperPct,0,0.5,0),
-            BackgroundColor3=Color3.new(1,1,1),
-            BackgroundTransparency=0,
-            ThemeTag={BackgroundColor3="Text"},
-            Parent=sliderFr,
-            ZIndex=4,
-        },{
-            ac("UICorner",{CornerRadius=UDim.new(1,0)}),
-        })
-
-        local valueLabel=ac("TextBox",{
-            Size=UDim2.new(0,68,0,18),
-            Text=FormatVal(currentLower).." - "..FormatVal(currentUpper),
-            TextSize=11,
-            TextXAlignment=Enum.TextXAlignment.Right,
-            BackgroundTransparency=1,
-            ThemeTag={TextColor3="Text"},
-            TextTransparency=0.3,
-            ClearTextOnFocus=false,
-            FontFace=Font.new(aa.Font,Enum.FontWeight.Medium),
-            Parent=rightHolder,
-        })
-
-        aa.AddSignal(valueLabel.FocusLost,function(enterPressed)
-            local nums={}
-            for n in string.gmatch(valueLabel.Text,"[-+]?%d*%.?%d+") do
-                local num=tonumber(n)
-                if num then table.insert(nums,num) end
-            end
-            if #nums>=2 then
-                local l,u=nums[1],nums[2]
-                if l>u then l,u=u,l end
-                ai:Set({Min=l,Max=u})
-            elseif #nums==1 then
-                ai:Set({Min=nums[1],Max=currentUpper})
-            else
-                valueLabel.Text=FormatVal(currentLower).." - "..FormatVal(currentUpper)
-            end
-        end)
-
-        local function UpdateVisuals()
-            local lPct=math.clamp((currentLower-ai.Min)/(ai.Max-ai.Min),0,1)
-            local uPct=math.clamp((currentUpper-ai.Min)/(ai.Max-ai.Min),0,1)
-            ad(lowerKnob,0.06,{Position=UDim2.new(lPct,0,0.5,0)}):Play()
-            ad(upperKnob,0.06,{Position=UDim2.new(uPct,0,0.5,0)}):Play()
-            ad(fillFr,0.06,{Position=UDim2.new(lPct,0,0,0),Size=UDim2.new(math.max(0.001,uPct-lPct),0,1,0)}):Play()
-            valueLabel.Text=FormatVal(currentLower).." - "..FormatVal(currentUpper)
-        end
-
-        function ai.Set(self,valTable,triggerCb)
-            if not isLocked then return end
-            if type(valTable)=="table" then
-                local l=valTable.Min or valTable.min or valTable[1] or currentLower
-                local u=valTable.Max or valTable.max or valTable[2] or currentUpper
-                l=math.clamp(CalcVal(tonumber(l) or ai.Min),ai.Min,ai.Max)
-                u=math.clamp(CalcVal(tonumber(u) or ai.Max),l,ai.Max)
-                currentLower=l
-                currentUpper=u
-                ai.Value.Min=l
-                ai.Value.Max=u
-                UpdateVisuals()
-                if triggerCb~=false then
-                    aa.SafeCallback(ai.Callback,ai.Value)
-                end
-            end
-        end
-
-        local isDragging=false
-        local function StartDrag(inputObj)
-            if not isLocked or isDragging then return end
-            local scrollParent=ai.Frame.Parent:IsA("ScrollingFrame") and ai.Frame.Parent or (ai.Frame.Parent.Parent:IsA("ScrollingFrame") and ai.Frame.Parent.Parent or nil)
-            if scrollParent then scrollParent.ScrollingEnabled=false end
-            isDragging=true
-
-            local tPos=sliderFr.AbsolutePosition.X
-            local tSize=sliderFr.AbsoluteSize.X
-            local isTouch=(inputObj.UserInputType==Enum.UserInputType.Touch)
-            local startX=isTouch and inputObj.Position.X or game:GetService("UserInputService"):GetMouseLocation().X
-            local startAlpha=math.clamp((startX-tPos)/tSize,0,1)
-            local startVal=CalcVal(ai.Min+startAlpha*(ai.Max-ai.Min))
-
-            local distLower=math.abs(startVal-currentLower)
-            local distUpper=math.abs(startVal-currentUpper)
-            local dragTarget=distLower<=distUpper and"lower" or"upper"
-
-            local anyChanged=false
-            if dragTarget=="lower" then
-                local v=math.clamp(startVal,ai.Min,currentUpper)
-                if v~=currentLower then
-                    currentLower=v
-                    ai.Value.Min=v
-                    anyChanged=true
-                    UpdateVisuals()
-                end
-            else
-                local v=math.clamp(startVal,currentLower,ai.Max)
-                if v~=currentUpper then
-                    currentUpper=v
-                    ai.Value.Max=v
-                    anyChanged=true
-                    UpdateVisuals()
-                end
-            end
-
-            local moveConn,endConn
-            moveConn=game:GetService("RunService").RenderStepped:Connect(function()
-                local curX=isTouch and inputObj.Position.X or game:GetService("UserInputService"):GetMouseLocation().X
-                local p=math.clamp((curX-tPos)/tSize,0,1)
-                local v=CalcVal(ai.Min+p*(ai.Max-ai.Min))
-                local changed=false
-                if dragTarget=="lower" then
-                    v=math.clamp(v,ai.Min,currentUpper)
-                    if v~=currentLower then
-                        currentLower=v
-                        ai.Value.Min=v
-                        changed=true
-                    end
-                else
-                    v=math.clamp(v,currentLower,ai.Max)
-                    if v~=currentUpper then
-                        currentUpper=v
-                        ai.Value.Max=v
-                        changed=true
-                    end
-                end
-                if changed then
-                    anyChanged=true
-                    UpdateVisuals()
-                end
-            end)
-
-            endConn=game:GetService("UserInputService").InputEnded:Connect(function(endedInput)
-                if (endedInput.UserInputType==Enum.UserInputType.MouseButton1 or endedInput.UserInputType==Enum.UserInputType.Touch) and endedInput==inputObj then
-                    moveConn:Disconnect()
-                    endConn:Disconnect()
-                    isDragging=false
-                    if scrollParent then scrollParent.ScrollingEnabled=true end
-                    if anyChanged then
-                        aa.SafeCallback(ai.Callback,ai.Value)
-                    end
-                end
-            end)
-        end
-
-        aa.AddSignal(sliderFr.InputBegan,function(inp)
-            if (inp.UserInputType==Enum.UserInputType.MouseButton1 or inp.UserInputType==Enum.UserInputType.Touch) and isLocked then
-                StartDrag(inp)
-            end
-        end)
-
-        function ai.SetBoxMode(self,isBoxes)
-            local tw=isBoxes and 45 or 105
-            local vw=isBoxes and 40 or 68
-            local rw=tw+vw+(isBoxes and 6 or 8)
-            sliderFr.Size=UDim2.new(0,tw,0,4)
-            valueLabel.Size=UDim2.new(0,vw,0,18)
-            valueLabel.TextSize=isBoxes and 10 or 11
-            rightHolder.Size=UDim2.new(0,rw,1,0)
-            if ai.Frame and ai.Frame.SetTextOffset then
-                ai.Frame:SetTextOffset(rw+(isBoxes and 12 or 15))
-            end
-            if ai.SetRowBoxMode then
-                ai:SetRowBoxMode(isBoxes)
-            end
-        end
-
-        function ai.Lock(self)
-            ai.Locked=true
-            isLocked=false
-            return ai.Frame:Lock()
-        end
-        function ai.Unlock(self)
-            ai.Locked=false
-            isLocked=true
-            return ai.Frame:Unlock()
-        end
-        if ai.Locked then ai:Lock() end
-
-        return ai.__type,ai
+-- ToggleInput: Combines a boolean switch and an editable text box in a single row
+-- Поле ввода 150x36 (радиус 10) с подсветкой обводки при фокусе.
+-- Возвращает (контейнер, TextBox). Ширина — по умолчанию CTRL_W; на второй строке растягивается.
+local function AetheriaUI_CreateField(aa,ac,parent,placeholder,text)
+    local T=AetheriaUI_T
+    local outline=aa.NewRoundFrame(T.CTRL_R,"SquircleOutline",{
+        ThemeTag={ImageColor3="Outline"},
+        Size=UDim2.new(1,0,1,0),
+        ImageTransparency=.95,
+    })
+    local container=ac("Frame",{
+        Size=UDim2.new(0,T.CTRL_W,0,T.CTRL_H),
+        BackgroundTransparency=1,
+        LayoutOrder=1,
+        Parent=parent,
+    },{
+        aa.NewRoundFrame(T.CTRL_R,"Squircle",{
+            ThemeTag={ImageColor3="Accent"},
+            Size=UDim2.new(1,0,1,0),
+            ImageTransparency=.85,
+        }),
+        outline,
+    })
+    local textBox=ac("TextBox",{
+        Size=UDim2.new(1,-24,1,0),
+        Position=UDim2.new(0,12,0,0),
+        BackgroundTransparency=1,
+        Text=text or"",
+        PlaceholderText=placeholder or"...",
+        ClearTextOnFocus=false,
+        TextSize=14,
+        TextTruncate=Enum.TextTruncate.AtEnd,
+        TextXAlignment=Enum.TextXAlignment.Left,
+        ThemeTag={TextColor3="Text",PlaceholderColor3="Placeholder"},
+        FontFace=Font.new(aa.Font,Enum.FontWeight.Medium),
+        Parent=container,
+    })
+    -- фокус: обводка становится заметнее
+    aa.AddSignal(textBox.Focused,function()
+        aa.Tween(outline,0.12,{ImageTransparency=.55}):Play()
     end)
-    if AetheriaUI_ok then return AetheriaUI_resA,AetheriaUI_resB end
-    warn("[AetheriaUI] DualSlider failed: "..tostring(AetheriaUI_resA))
-    return"DualSlider",{__type="DualSlider",Title=AetheriaUI_ag.Title or"DualSlider"}
+    aa.AddSignal(textBox.FocusLost,function()
+        aa.Tween(outline,0.18,{ImageTransparency=.95}):Play()
+    end)
+    return container,textBox
 end
 
--- ToggleInput: Combines a boolean switch and an editable text box in a single row
+-- =========================================================================
+-- ToggleInput:  [заголовок ........ [поле 150x36] [переключатель]]
+-- =========================================================================
 local AetheriaUI_ToggleInput={}
 function AetheriaUI_ToggleInput.New(AetheriaUI_af,AetheriaUI_ag)
     local AetheriaUI_ok,AetheriaUI_resA,AetheriaUI_resB=pcall(function()
         local aa=a.load'a'
         local ac=aa.New
-        local ad=aa.Tween
         local createSwitch=a.load'B'.New
         local isLocked=not AetheriaUI_ag.Locked
+        local T=AetheriaUI_T
 
         local initToggle=false
         local initInput=""
@@ -10477,81 +10979,31 @@ function AetheriaUI_ToggleInput.New(AetheriaUI_af,AetheriaUI_ag)
         local currentInput=initInput
         ai.Value={Toggle=currentToggle,Input=currentInput}
 
-        local isBoxTogIn=(AetheriaUI_ag.Window and AetheriaUI_ag.Window.TabLayoutType=="Boxes")
-        local inputWidth=isBoxTogIn and 55 or 120
-        local switchWidth=isBoxTogIn and 36 or 42
-        local inputH=isBoxTogIn and 22 or 34
-        local rightWidth=inputWidth+switchWidth+(isBoxTogIn and 6 or 10)
+        local primaryW=T.SWITCH_W
+        local inlineW=T.CTRL_W+T.GAP+primaryW
 
         ai.Frame=a.load'y'{
             Title=ai.Title,
             Desc=ai.Desc,
             Window=AetheriaUI_ag.Window,
             Parent=AetheriaUI_ag.Parent,
-            TextOffset=rightWidth+15,
+            TextOffset=inlineW+T.TEXT_GAP,
             Hover=false,
             Tab=AetheriaUI_ag.Tab,
             Index=AetheriaUI_ag.Index,
             ElementTable=ai,
         }
 
-        local rightHolder=ac("Frame",{
-            Size=UDim2.new(0,rightWidth,1,0),
-            Position=UDim2.new(1,0,0.5,0),
-            AnchorPoint=Vector2.new(1,0.5),
-            BackgroundTransparency=1,
-            Parent=ai.Frame.UIElements.Main,
-        },{
-            ac("UIListLayout",{
-                FillDirection=Enum.FillDirection.Horizontal,
-                VerticalAlignment=Enum.VerticalAlignment.Center,
-                HorizontalAlignment=Enum.HorizontalAlignment.Right,
-                Padding=UDim.new(0,8),
-            }),
-        })
-
-        local AetheriaUI_TogInCorner=isBoxTogIn and 10 or 12
-        local inputContainer=ac("Frame",{
-            Size=UDim2.new(0,inputWidth,0,inputH),
-            BackgroundTransparency=1,
-            Parent=rightHolder,
-        },{
-            aa.NewRoundFrame(AetheriaUI_TogInCorner,"Squircle",{
-                ThemeTag={ImageColor3="Accent"},
-                Size=UDim2.new(1,0,1,0),
-                ImageTransparency=.85,
-            }),
-            aa.NewRoundFrame(AetheriaUI_TogInCorner,"SquircleOutline",{
-                ThemeTag={ImageColor3="Outline"},
-                Size=UDim2.new(1,0,1,0),
-                ImageTransparency=.95,
-            }),
-            ac("UIPadding",{
-                PaddingLeft=UDim.new(0,10),
-                PaddingRight=UDim.new(0,10),
-            }),
-        })
-
-        local textBox=ac("TextBox",{
-            Size=UDim2.new(1,0,1,0),
-            BackgroundTransparency=1,
-            Text=currentInput,
-            PlaceholderText=ai.Placeholder,
-            ClearTextOnFocus=false,
-            TextSize=isBoxTogIn and 11 or 13,
-            TextTruncate=Enum.TextTruncate.AtEnd,
-            TextXAlignment=Enum.TextXAlignment.Left,
-            ThemeTag={TextColor3="Text",PlaceholderColor3="Placeholder"},
-            FontFace=Font.new(aa.Font,Enum.FontWeight.Medium),
-            Parent=inputContainer,
-        })
+        local rightHolder=AetheriaUI_MakeHolder(ai.Frame,inlineW)
+        local inputContainer,textBox=AetheriaUI_CreateField(aa,ac,rightHolder,ai.Placeholder,currentInput)
         ai.UIElements.TextBox=textBox
 
         local switchBtn=ac("TextButton",{
-            Size=UDim2.new(0,switchWidth,0,inputH),
+            Size=UDim2.new(0,primaryW,0,T.CTRL_H),
             BackgroundTransparency=1,
             Text="",
             AutoButtonColor=false,
+            LayoutOrder=2,
             Parent=rightHolder,
         })
 
@@ -10561,7 +11013,7 @@ function AetheriaUI_ToggleInput.New(AetheriaUI_af,AetheriaUI_ag)
                 ai.Value.Toggle=st
                 aa.SafeCallback(ai.Callback,ai.Value)
             end
-        end,isBoxTogIn)
+        end,false)
         switchFr.Position=UDim2.new(0.5,0,0.5,0)
         switchFr.AnchorPoint=Vector2.new(0.5,0.5)
 
@@ -10595,31 +11047,8 @@ function AetheriaUI_ToggleInput.New(AetheriaUI_af,AetheriaUI_ag)
             end
         end
 
-        function ai.SetBoxMode(self,isBoxes)
-            isBoxTogIn=isBoxes
-            local inW=isBoxes and 55 or 120
-            local inH=isBoxes and 22 or 34
-            local sw=isBoxes and 36 or 42
-            local sh=isBoxes and 22 or 34
-            local rW=inW+sw+(isBoxes and 6 or 10)
-            rightHolder.Size=UDim2.new(0,rW,1,0)
-            inputContainer.Size=UDim2.new(0,inW,0,inH)
-            if switchBtn then
-                switchBtn.Size=UDim2.new(0,sw,0,sh)
-            end
-            if switchObj and switchObj.SetBoxMode then
-                switchObj:SetBoxMode(isBoxes)
-            end
-            if textBox then
-                textBox.TextSize=isBoxes and 11 or 13
-            end
-            if ai.Frame and ai.Frame.SetTextOffset then
-                ai.Frame:SetTextOffset(rW+(isBoxes and 12 or 15))
-            end
-            if ai.SetRowBoxMode then
-                ai:SetRowBoxMode(isBoxes)
-            end
-        end
+        -- Размеры в Boxes те же, что в Default: метод оставлен только для совместимости вызовов.
+        function ai.SetBoxMode(self,isBoxes) end
 
         function ai.Set(self,valTable,triggerCb)
             if type(valTable)=="table" then
@@ -10649,6 +11078,12 @@ function AetheriaUI_ToggleInput.New(AetheriaUI_af,AetheriaUI_ag)
         end
         if ai.Locked then ai:Lock() end
 
+        AetheriaUI_Stack(ai.Frame,rightHolder,inputContainer,{
+            inlineW=inlineW,
+            primaryW=primaryW,
+            wideInline=UDim2.new(0,T.CTRL_W,0,T.CTRL_H),
+        })
+
         return ai.__type,ai
     end)
     if AetheriaUI_ok then return AetheriaUI_resA,AetheriaUI_resB end
@@ -10656,16 +11091,82 @@ function AetheriaUI_ToggleInput.New(AetheriaUI_af,AetheriaUI_ag)
     return"ToggleInput",{__type="ToggleInput",Title=AetheriaUI_ag.Title or"ToggleInput"}
 end
 
--- ToggleKeybind: Combines a boolean switch and a keybind selector in a single row
+-- Чип клавиши 36px по высоте; ширина — по тексту (минимум KEY_MINW), поэтому «MouseLeft»
+-- больше не вылезает на заголовок: при смене текста вызывается onResize(ширина).
+local function AetheriaUI_MakeKeyChip(aa,ac,parent,keyName,onResize)
+    local T=AetheriaUI_T
+    local badge=a.load's'.New(keyName,nil,parent)
+    badge.LayoutOrder=1
+    local text=badge.Frame.Frame.TextLabel
+    text.TextXAlignment="Center"
+    text.TextYAlignment="Center"
+    text.TextSize=14
+    pcall(function()
+        badge.Frame.Frame.UIListLayout.HorizontalAlignment=Enum.HorizontalAlignment.Center
+        badge.Frame.Frame.UIPadding.PaddingLeft=UDim.new(0,10)
+        badge.Frame.Frame.UIPadding.PaddingRight=UDim.new(0,10)
+    end)
+    local function fit()
+        pcall(function()
+            local w=math.max(T.KEY_MINW,math.ceil(text.TextBounds.X)+20)
+            badge.Size=UDim2.new(0,w,0,T.CTRL_H)
+            if onResize then onResize(w) end
+        end)
+    end
+    fit()
+    aa.AddSignal(text:GetPropertyChangedSignal("TextBounds"),fit)
+    return badge,text
+end
+
+-- Захват клавиши: общий для ToggleKeybind и ButtonKeybind. onPicked(имя) вызывается после отпускания.
+local function AetheriaUI_CaptureKey(onPicked)
+    local uis=game:GetService("UserInputService")
+    local connA,connB
+    connA=uis.InputBegan:Connect(function(input)
+        local captured=nil
+        if input.UserInputType==Enum.UserInputType.Keyboard then
+            captured=input.KeyCode.Name
+        elseif input.UserInputType==Enum.UserInputType.MouseButton1 then
+            captured="MouseLeft"
+        elseif input.UserInputType==Enum.UserInputType.MouseButton2 then
+            captured="MouseRight"
+        end
+        if captured then
+            connB=uis.InputEnded:Connect(function(endedInput)
+                if (endedInput.UserInputType==Enum.UserInputType.Keyboard and endedInput.KeyCode.Name==captured) or
+                   (captured=="MouseLeft" and endedInput.UserInputType==Enum.UserInputType.MouseButton1) or
+                   (captured=="MouseRight" and endedInput.UserInputType==Enum.UserInputType.MouseButton2) then
+                    connA:Disconnect()
+                    connB:Disconnect()
+                    onPicked(captured)
+                end
+            end)
+        end
+    end)
+end
+
+local function AetheriaUI_KeyMatches(input,currentKey)
+    if input.UserInputType==Enum.UserInputType.Keyboard and input.KeyCode.Name==currentKey then
+        return true
+    elseif currentKey=="MouseLeft" and input.UserInputType==Enum.UserInputType.MouseButton1 then
+        return true
+    elseif currentKey=="MouseRight" and input.UserInputType==Enum.UserInputType.MouseButton2 then
+        return true
+    end
+    return false
+end
+
+-- =========================================================================
+-- ToggleKeybind:  [заголовок ........ [клавиша] [переключатель]]
+-- =========================================================================
 local AetheriaUI_ToggleKeybind={}
 function AetheriaUI_ToggleKeybind.New(AetheriaUI_af,AetheriaUI_ag)
     local AetheriaUI_ok,AetheriaUI_resA,AetheriaUI_resB=pcall(function()
         local aa=a.load'a'
         local ac=aa.New
-        local ad=aa.Tween
         local createSwitch=a.load'B'.New
-        local createKeyBadge=a.load's'.New
         local isLocked=not AetheriaUI_ag.Locked
+        local T=AetheriaUI_T
 
         local initToggle=false
         local initKey="F"
@@ -10693,97 +11194,36 @@ function AetheriaUI_ToggleKeybind.New(AetheriaUI_af,AetheriaUI_ag)
         local isPicking=false
         ai.Value={Toggle=currentToggle,Key=currentKey}
 
-        local isBoxTogKey=(AetheriaUI_ag.Window and AetheriaUI_ag.Window.TabLayoutType=="Boxes")
-        local swW=isBoxTogKey and 36 or 42
-        local boxH=isBoxTogKey and 22 or 34
-        local rightWidth=isBoxTogKey and 68 or 95
+        local primaryW=T.SWITCH_W
+        local startW=T.KEY_MINW+T.GAP+primaryW
 
         ai.Frame=a.load'y'{
             Title=ai.Title,
             Desc=ai.Desc,
             Window=AetheriaUI_ag.Window,
             Parent=AetheriaUI_ag.Parent,
-            TextOffset=rightWidth+(isBoxTogKey and 6 or 15),
+            TextOffset=startW+T.TEXT_GAP,
             Hover=false,
             Tab=AetheriaUI_ag.Tab,
             Index=AetheriaUI_ag.Index,
             ElementTable=ai,
         }
 
-        local rightHolder=ac("Frame",{
-            Size=UDim2.new(0,rightWidth,1,0),
-            Position=UDim2.new(1,0,0.5,0),
-            AnchorPoint=Vector2.new(1,0.5),
-            BackgroundTransparency=1,
-            Parent=ai.Frame.UIElements.Main,
-        },{
-            ac("UIListLayout",{
-                FillDirection=Enum.FillDirection.Horizontal,
-                VerticalAlignment=Enum.VerticalAlignment.Center,
-                HorizontalAlignment=Enum.HorizontalAlignment.Right,
-                Padding=UDim.new(0,6),
-            }),
-        })
+        local rightHolder=AetheriaUI_MakeHolder(ai.Frame,startW)
 
-        local keyBadge=createKeyBadge(currentKey,nil,rightHolder)
+        local keyBadge,keyText=AetheriaUI_MakeKeyChip(aa,ac,rightHolder,currentKey,function(w)
+            local total=w+T.GAP+primaryW
+            rightHolder.Size=UDim2.new(0,total,1,0)
+            ai.Frame:SetTextOffset(total+T.TEXT_GAP)
+        end)
         ai.UIElements.Keybind=keyBadge
 
-        local togKeyText=keyBadge.Frame.Frame.TextLabel
-        togKeyText.TextXAlignment="Center"
-        togKeyText.TextYAlignment="Center"
-        pcall(function()
-            keyBadge.Frame.Frame.UIListLayout.HorizontalAlignment=Enum.HorizontalAlignment.Center
-        end)
-
-        local togKeyScale=ac("UIScale",{Parent=keyBadge,Scale=1})
-
-        local function UpdateKeySize()
-            pcall(function()
-                local textWidth=togKeyText.TextBounds.X
-                togKeyText.TextSize=isBoxTogKey and 11 or 14
-                if isBoxTogKey then
-                    keyBadge.Frame.Frame.UIPadding.PaddingLeft=UDim.new(0,0)
-                    keyBadge.Frame.Frame.UIPadding.PaddingRight=UDim.new(0,0)
-                    keyBadge.Size=UDim2.new(0,math.max(24,textWidth+12),0,22)
-                    togKeyScale.Scale=1
-                else
-                    keyBadge.Frame.Frame.UIPadding.PaddingLeft=UDim.new(0,8)
-                    keyBadge.Frame.Frame.UIPadding.PaddingRight=UDim.new(0,8)
-                    keyBadge.Size=UDim2.new(0,math.max(34,textWidth+18),0,34)
-                    togKeyScale.Scale=1
-                end
-            end)
-        end
-        UpdateKeySize()
-
-        aa.AddSignal(togKeyText:GetPropertyChangedSignal("TextBounds"),UpdateKeySize)
-
-        function ai.SetBoxMode(self,isBoxes)
-            isBoxTogKey=isBoxes
-            local sw=isBoxes and 36 or 42
-            local bH=isBoxes and 22 or 34
-            rightWidth=isBoxes and 68 or 95
-            rightHolder.Size=UDim2.new(0,rightWidth,1,0)
-            if switchBtn then
-                switchBtn.Size=UDim2.new(0,sw,0,bH)
-            end
-            if switchObj and switchObj.SetBoxMode then
-                switchObj:SetBoxMode(isBoxes)
-            end
-            UpdateKeySize()
-            if ai.Frame and ai.Frame.SetTextOffset then
-                ai.Frame:SetTextOffset(rightWidth+(isBoxes and 6 or 15))
-            end
-            if ai.SetRowBoxMode then
-                ai:SetRowBoxMode(isBoxes)
-            end
-        end
-
         local switchBtn=ac("TextButton",{
-            Size=UDim2.new(0,swW,0,boxH),
+            Size=UDim2.new(0,primaryW,0,T.CTRL_H),
             BackgroundTransparency=1,
             Text="",
             AutoButtonColor=false,
+            LayoutOrder=2,
             Parent=rightHolder,
         })
 
@@ -10793,7 +11233,7 @@ function AetheriaUI_ToggleKeybind.New(AetheriaUI_af,AetheriaUI_ag)
                 ai.Value.Toggle=st
                 aa.SafeCallback(ai.Callback,ai.Value)
             end
-        end,isBoxTogKey)
+        end,false)
         switchFr.Position=UDim2.new(0.5,0,0.5,0)
         switchFr.AnchorPoint=Vector2.new(0.5,0.5)
 
@@ -10806,51 +11246,20 @@ function AetheriaUI_ToggleKeybind.New(AetheriaUI_af,AetheriaUI_ag)
         aa.AddSignal(keyBadge.MouseButton1Click,function()
             if not isLocked or isPicking then return end
             isPicking=true
-            keyBadge.Frame.Frame.TextLabel.Text="..."
-
+            keyText.Text="..."
             task.wait(0.15)
-            local uis=game:GetService("UserInputService")
-            local connA,connB
-            connA=uis.InputBegan:Connect(function(input)
-                local captured=nil
-                if input.UserInputType==Enum.UserInputType.Keyboard then
-                    captured=input.KeyCode.Name
-                elseif input.UserInputType==Enum.UserInputType.MouseButton1 then
-                    captured="MouseLeft"
-                elseif input.UserInputType==Enum.UserInputType.MouseButton2 then
-                    captured="MouseRight"
-                end
-                if captured then
-                    connB=uis.InputEnded:Connect(function(endedInput)
-                        if (endedInput.UserInputType==Enum.UserInputType.Keyboard and endedInput.KeyCode.Name==captured) or
-                           (captured=="MouseLeft" and endedInput.UserInputType==Enum.UserInputType.MouseButton1) or
-                           (captured=="MouseRight" and endedInput.UserInputType==Enum.UserInputType.MouseButton2) then
-                            connA:Disconnect()
-                            connB:Disconnect()
-                            isPicking=false
-                            currentKey=captured
-                            ai.Value.Key=captured
-                            keyBadge.Frame.Frame.TextLabel.Text=captured
-                            aa.SafeCallback(ai.Callback,ai.Value)
-                        end
-                    end)
-                end
+            AetheriaUI_CaptureKey(function(captured)
+                isPicking=false
+                currentKey=captured
+                ai.Value.Key=captured
+                keyText.Text=captured
+                aa.SafeCallback(ai.Callback,ai.Value)
             end)
         end)
 
         aa.AddSignal(game:GetService("UserInputService").InputBegan,function(input)
-            if isLocked and not isPicking then
-                local matches=false
-                if input.UserInputType==Enum.UserInputType.Keyboard and input.KeyCode.Name==currentKey then
-                    matches=true
-                elseif currentKey=="MouseLeft" and input.UserInputType==Enum.UserInputType.MouseButton1 then
-                    matches=true
-                elseif currentKey=="MouseRight" and input.UserInputType==Enum.UserInputType.MouseButton2 then
-                    matches=true
-                end
-                if matches then
-                    ai:SetToggle(not currentToggle)
-                end
+            if isLocked and not isPicking and AetheriaUI_KeyMatches(input,currentKey) then
+                ai:SetToggle(not currentToggle)
             end
         end)
 
@@ -10865,7 +11274,7 @@ function AetheriaUI_ToggleKeybind.New(AetheriaUI_af,AetheriaUI_ag)
             if not isLocked then return end
             currentKey=tostring(k)
             ai.Value.Key=currentKey
-            keyBadge.Frame.Frame.TextLabel.Text=currentKey
+            keyText.Text=currentKey
             if triggerCb~=false then
                 aa.SafeCallback(ai.Callback,ai.Value)
             end
@@ -10887,6 +11296,9 @@ function AetheriaUI_ToggleKeybind.New(AetheriaUI_af,AetheriaUI_ag)
             end
         end
 
+        -- Размеры в Boxes те же, что в Default: метод оставлен только для совместимости вызовов.
+        function ai.SetBoxMode(self,isBoxes) end
+
         function ai.Lock(self)
             ai.Locked=true
             isLocked=false
@@ -10906,54 +11318,146 @@ function AetheriaUI_ToggleKeybind.New(AetheriaUI_af,AetheriaUI_ag)
     return"ToggleKeybind",{__type="ToggleKeybind",Title=AetheriaUI_ag.Title or"ToggleKeybind"}
 end
 
+-- =========================================================================
+-- ButtonKeybind:  [заголовок ........ [клавиша] [кнопка]]
+-- =========================================================================
+local AetheriaUI_ButtonKeybind={}
+function AetheriaUI_ButtonKeybind.New(AetheriaUI_af,AetheriaUI_ag)
+    local ok,resA,resB=pcall(function()
+        local cfg = (type(AetheriaUI_ag)=="table" and AetheriaUI_ag) or (type(AetheriaUI_af)=="table" and AetheriaUI_af) or {}
+        local aa=a.load'a'
+        local ac=aa.New
+        local ad=aa.Tween
+        local isLocked=not cfg.Locked
+        local T=AetheriaUI_T
+
+        local initKey="F"
+        if type(cfg.Value)=="table" then
+            initKey=tostring(cfg.Value.Key or cfg.Value.key or cfg.Value[1] or"F")
+        elseif type(cfg.Value)=="string" then
+            initKey=cfg.Value
+        elseif cfg.Key or cfg.Bind then
+            initKey=tostring(cfg.Key or cfg.Bind)
+        end
+
+        local ai={
+            __type="ButtonKeybind",
+            Title=cfg.Title or"ButtonKeybind",
+            Desc=cfg.Desc or nil,
+            Locked=cfg.Locked or false,
+            Callback=cfg.Callback or function()end,
+            UIElements={},
+        }
+        local currentKey=initKey
+        local isPicking=false
+        ai.Value={Key=currentKey}
+
+        local btnText=tostring(cfg.ButtonText or"Action")
+        local primaryW=math.clamp(math.ceil(AetheriaUI_TextWidth(btnText,T.BTN_TEXT))+T.BTN_PADX*2,T.BTN_MINW,T.BTN_MAXW)
+        local startW=T.KEY_MINW+T.GAP+primaryW
+
+        ai.Frame=a.load'y'{
+            Title=ai.Title,
+            Desc=ai.Desc,
+            Window=cfg.Window,
+            Parent=cfg.Parent,
+            TextOffset=startW+T.TEXT_GAP,
+            Hover=false,
+            Tab=cfg.Tab,
+            Index=cfg.Index,
+            ElementTable=ai,
+        }
+
+        local rightHolder=AetheriaUI_MakeHolder(ai.Frame,startW)
+
+        local keyBadge,togKeyText=AetheriaUI_MakeKeyChip(aa,ac,rightHolder,currentKey,function(w)
+            local total=w+T.GAP+primaryW
+            rightHolder.Size=UDim2.new(0,total,1,0)
+            ai.Frame:SetTextOffset(total+T.TEXT_GAP)
+        end)
+        ai.UIElements.Keybind=keyBadge
+
+        local lastPick=0
+        aa.AddSignal(keyBadge.MouseButton1Click,function()
+            if not isLocked or isPicking then return end
+            local now=os.clock()
+            if now-lastPick<0.3 then return end
+            lastPick=now
+            isPicking=true
+            togKeyText.Text="..."
+            task.wait(0.15)
+            AetheriaUI_CaptureKey(function(captured)
+                isPicking=false
+                currentKey=captured
+                ai.Value.Key=captured
+                togKeyText.Text=captured
+                local cb=cfg.KeybindCallback or cfg.Callback
+                aa.SafeCallback(cb,ai.Value)
+            end)
+        end)
+
+        local lastKeyTrigger=0
+        aa.AddSignal(game:GetService("UserInputService").InputBegan,function(input)
+            if isLocked and not isPicking and AetheriaUI_KeyMatches(input,currentKey) then
+                local now=os.clock()
+                if now-lastKeyTrigger<0.2 then return end
+                lastKeyTrigger=now
+                local cb=cfg.ButtonCallback or cfg.ButtonClick or cfg.Callback
+                aa.SafeCallback(cb,ai.Value)
+            end
+        end)
+
+        local actionBtn,actionBtnLabel=AetheriaUI_CreateActionButton(aa,ac,ad,rightHolder,false,btnText,function()
+            if isLocked then
+                local cb=cfg.ButtonCallback or cfg.ButtonClick or cfg.Callback
+                aa.SafeCallback(cb,ai.Value)
+            end
+        end)
+
+        function ai.SetKey(self,key)
+            currentKey=tostring(key)
+            ai.Value.Key=currentKey
+            togKeyText.Text=currentKey
+        end
+        function ai.Set(self,v)
+            if type(v)=="table" then
+                local k=v.Key or v.key or v[1]
+                if k then ai:SetKey(k) end
+            else
+                ai:SetKey(v)
+            end
+        end
+        function ai.SetButtonText(self,txt) actionBtnLabel.Text=tostring(txt or "Action") end
+
+        -- Размеры в Boxes те же, что в Default: метод оставлен только для совместимости вызовов.
+        function ai.SetBoxMode(self,isBoxes) end
+
+        function ai.Lock(self)
+            ai.Locked=true
+            isLocked=false
+            return ai.Frame:Lock()
+        end
+        function ai.Unlock(self)
+            ai.Locked=false
+            isLocked=true
+            return ai.Frame:Unlock()
+        end
+        if ai.Locked then ai:Lock() end
+
+        return ai.__type,ai
+    end)
+    if ok then return resA,resB end
+    warn("[AetheriaUI] ButtonKeybind failed: "..tostring(resA))
+    return"ButtonKeybind",{__type="ButtonKeybind",Title=(AetheriaUI_ag and AetheriaUI_ag.Title) or (AetheriaUI_af and AetheriaUI_af.Title) or"ButtonKeybind"}
+end
 
 -- =========================================================================
 -- Action Button Helper for Composite Modules
 -- =========================================================================
-local function AetheriaUI_CreateActionButton(aa,ac,ad,parent,isBox,btnText,onClick)
-    local w=isBox and 46 or 70
-    local h=isBox and 22 or 34
-    local corner=isBox and 6 or 8
-    local btn=aa.NewRoundFrame(corner,"Squircle",{
-        Size=UDim2.new(0,w,0,h),
-        ImageTransparency=0.15,
-        ThemeTag={ImageColor3="Accent"},
-        Active=true,
-        Parent=parent,
-    },nil,true) -- Pass true so aa.NewRoundFrame creates an ImageButton!
-
-    local btnLabel=ac("TextLabel",{
-        Size=UDim2.new(1,0,1,0),
-        Text=tostring(btnText or"Action"),
-        TextSize=isBox and 11 or 14,
-        FontFace=Font.new(aa.Font,Enum.FontWeight.SemiBold),
-        TextColor3=Color3.fromRGB(255,255,255),
-        BackgroundTransparency=1,
-        TextXAlignment=Enum.TextXAlignment.Center,
-        TextYAlignment=Enum.TextYAlignment.Center,
-        TextTruncate=Enum.TextTruncate.AtEnd,
-        Active=false, -- Must be false so it does not sink mouse input
-        Parent=btn,
-    })
-    aa.AddSignal(btn.MouseEnter,function() ad(btn,0.08,{ImageTransparency=0}):Play() end)
-    aa.AddSignal(btn.MouseLeave,function() ad(btn,0.08,{ImageTransparency=0.15}):Play() end)
-    aa.AddSignal(btn.MouseButton1Down,function() ad(btn,0.05,{ImageTransparency=0.35}):Play() end)
-    aa.AddSignal(btn.MouseButton1Up,function() ad(btn,0.08,{ImageTransparency=0.15}):Play() end)
-    if onClick then
-        local lastClick=0
-        local function SafeClick()
-            local now=os.clock()
-            if now-lastClick<0.2 then return end
-            lastClick=now
-            onClick()
-        end
-        aa.AddSignal(btn.MouseButton1Click,SafeClick)
-    end
-    return btn,btnLabel
-end
-
 -- =========================================================================
 -- 1. ToggleDropdown & 2. ToggleMultiDropdown
+--    [заголовок ........ [дропдаун 150x36] [переключатель]]
+--    Если справа тесно — дропдаун уходит на вторую строку на всю ширину.
 -- =========================================================================
 local function AetheriaUI_CreateToggleDropdown(AetheriaUI_af,AetheriaUI_ag,isMulti)
     local cfg = (type(AetheriaUI_ag)=="table" and AetheriaUI_ag) or (type(AetheriaUI_af)=="table" and AetheriaUI_af) or {}
@@ -10962,6 +11466,7 @@ local function AetheriaUI_CreateToggleDropdown(AetheriaUI_af,AetheriaUI_ag,isMul
     local createSwitch=a.load'B'.New
     local dropModule=a.load'H'
     local isLocked=not cfg.Locked
+    local T=AetheriaUI_T
 
     local initToggle=false
     local initDrop=isMulti and {} or nil
@@ -11013,38 +11518,22 @@ local function AetheriaUI_CreateToggleDropdown(AetheriaUI_af,AetheriaUI_ag,isMul
     local currentDrop=initDrop
     ai.Value={Toggle=currentToggle,Dropdown=currentDrop}
 
-    local isBoxTogDrop=(cfg.Window and cfg.Window.TabLayoutType=="Boxes") or (cfg.Tab and cfg.Tab.TabLayoutType=="Boxes")
-    local dropW=isBoxTogDrop and 72 or 130
-    local swW=isBoxTogDrop and 36 or 42
-    local sH=isBoxTogDrop and 22 or 34
-    local rightWidth=dropW+swW+10
+    local primaryW=T.SWITCH_W
+    local inlineW=T.CTRL_W+T.GAP+primaryW
 
     ai.Frame=a.load'y'{
         Title=ai.Title,
         Desc=ai.Desc,
         Window=cfg.Window,
         Parent=cfg.Parent,
-        TextOffset=rightWidth+(isBoxTogDrop and 12 or 15),
+        TextOffset=inlineW+T.TEXT_GAP,
         Hover=false,
         Tab=cfg.Tab,
         Index=cfg.Index,
         ElementTable=ai,
     }
 
-    local rightHolder=ac("Frame",{
-        Size=UDim2.new(0,rightWidth,1,0),
-        Position=UDim2.new(1,0,0.5,0),
-        AnchorPoint=Vector2.new(1,0.5),
-        BackgroundTransparency=1,
-        Parent=ai.Frame.UIElements.Main,
-    },{
-        ac("UIListLayout",{
-            FillDirection=Enum.FillDirection.Horizontal,
-            VerticalAlignment=Enum.VerticalAlignment.Center,
-            HorizontalAlignment=Enum.HorizontalAlignment.Right,
-            Padding=UDim.new(0,6),
-        }),
-    })
+    local rightHolder=AetheriaUI_MakeHolder(ai.Frame,inlineW)
 
     local dummyFolder=Instance.new("Folder")
     local _,dropObj=dropModule.New(dummyFolder,{
@@ -11073,9 +11562,8 @@ local function AetheriaUI_CreateToggleDropdown(AetheriaUI_af,AetheriaUI_ag,isMul
 
     local dropBtn=dropObj.UIElements.Dropdown
     dropBtn.Parent=rightHolder
-    dropBtn.Size=UDim2.new(0,dropW,0,sH)
-    local dropLabel=dropBtn.Frame.Frame.TextLabel
-    dropLabel.TextSize=isBoxTogDrop and 11 or 13
+    dropBtn.LayoutOrder=1
+    dropBtn.Size=UDim2.new(0,T.CTRL_W,0,T.CTRL_H)
 
     if dropObj.DropdownFrame and dropObj.DropdownFrame.UIElements and dropObj.DropdownFrame.UIElements.Main then
         dropObj.DropdownFrame.UIElements.Main.Visible=false
@@ -11084,10 +11572,11 @@ local function AetheriaUI_CreateToggleDropdown(AetheriaUI_af,AetheriaUI_ag,isMul
     ai.UIElements.Dropdown=dropObj
 
     local switchBtn=ac("TextButton",{
-        Size=UDim2.new(0,swW,0,sH),
+        Size=UDim2.new(0,primaryW,0,T.CTRL_H),
         BackgroundTransparency=1,
         Text="",
         AutoButtonColor=false,
+        LayoutOrder=2,
         Parent=rightHolder,
     })
 
@@ -11098,7 +11587,7 @@ local function AetheriaUI_CreateToggleDropdown(AetheriaUI_af,AetheriaUI_ag,isMul
             local cb=cfg.ToggleCallback or cfg.Callback
             aa.SafeCallback(cb,ai.Value)
         end
-    end,isBoxTogDrop)
+    end,false)
     switchFr.Position=UDim2.new(0.5,0,0.5,0)
     switchFr.AnchorPoint=Vector2.new(0.5,0.5)
 
@@ -11150,33 +11639,8 @@ local function AetheriaUI_CreateToggleDropdown(AetheriaUI_af,AetheriaUI_ag,isMul
         end
     end
 
-    function ai.SetBoxMode(self,isBoxes)
-        isBoxTogDrop=isBoxes
-        local dW=isBoxes and 72 or 130
-        local sW=isBoxes and 36 or 42
-        local boxH=isBoxes and 22 or 34
-        local rW=dW+sW+10
-        rightHolder.Size=UDim2.new(0,rW,1,0)
-        dropBtn.Size=UDim2.new(0,dW,0,boxH)
-        dropLabel.TextSize=isBoxes and 11 or 13
-        if switchBtn then
-            switchBtn.Size=UDim2.new(0,sW,0,boxH)
-        end
-        if switchObj and switchObj.SetBoxMode then
-            switchObj:SetBoxMode(isBoxes)
-        end
-        local newOff=rW+(isBoxes and 12 or 15)
-        if ai.Frame then
-            ai.Frame.TextOffset=newOff
-            ai.Frame.BaseTextOffset=newOff
-            if ai.Frame.SetTextOffset then
-                ai.Frame:SetTextOffset(newOff)
-            end
-        end
-        if ai.SetRowBoxMode then
-            ai:SetRowBoxMode(isBoxes)
-        end
-    end
+    -- Размеры в Boxes те же, что в Default: метод оставлен только для совместимости вызовов.
+    function ai.SetBoxMode(self,isBoxes) end
 
     function ai.Lock(self)
         ai.Locked=true
@@ -11190,9 +11654,11 @@ local function AetheriaUI_CreateToggleDropdown(AetheriaUI_af,AetheriaUI_ag,isMul
     end
     if ai.Locked then ai:Lock() end
 
-    if isBoxTogDrop and ai.SetRowBoxMode then
-        ai:SetRowBoxMode(true)
-    end
+    AetheriaUI_Stack(ai.Frame,rightHolder,dropBtn,{
+        inlineW=inlineW,
+        primaryW=primaryW,
+        wideInline=UDim2.new(0,T.CTRL_W,0,T.CTRL_H),
+    })
 
     return ai.__type,ai
 end
@@ -11215,6 +11681,7 @@ end
 
 -- =========================================================================
 -- 3. ButtonDropdown & 4. ButtonMultiDropdown
+--    [заголовок ........ [дропдаун 150x36] [кнопка]]
 -- =========================================================================
 local function AetheriaUI_CreateButtonDropdown(AetheriaUI_af,AetheriaUI_ag,isMulti)
     local cfg = (type(AetheriaUI_ag)=="table" and AetheriaUI_ag) or (type(AetheriaUI_af)=="table" and AetheriaUI_af) or {}
@@ -11223,6 +11690,7 @@ local function AetheriaUI_CreateButtonDropdown(AetheriaUI_af,AetheriaUI_ag,isMul
     local ad=aa.Tween
     local dropModule=a.load'H'
     local isLocked=not cfg.Locked
+    local T=AetheriaUI_T
 
     local initDrop=isMulti and {} or nil
     if isMulti then
@@ -11270,38 +11738,24 @@ local function AetheriaUI_CreateButtonDropdown(AetheriaUI_af,AetheriaUI_ag,isMul
         end
     })
 
-    local isBoxBtnDrop=(cfg.Window and cfg.Window.TabLayoutType=="Boxes") or (cfg.Tab and cfg.Tab.TabLayoutType=="Boxes")
-    local dropW=isBoxBtnDrop and 72 or 130
-    local bW=isBoxBtnDrop and 46 or 70
-    local h=isBoxBtnDrop and 22 or 34
-    local rightWidth=dropW+bW+10
+    -- ширину кнопки задаёт текст (64..130), поэтому сначала измеряем её
+    local btnText=tostring(cfg.ButtonText or "Action")
+    local primaryW=math.clamp(math.ceil(AetheriaUI_TextWidth(btnText,T.BTN_TEXT))+T.BTN_PADX*2,T.BTN_MINW,T.BTN_MAXW)
+    local inlineW=T.CTRL_W+T.GAP+primaryW
 
     ai.Frame=a.load'y'{
         Title=ai.Title,
         Desc=ai.Desc,
         Window=cfg.Window,
         Parent=cfg.Parent,
-        TextOffset=rightWidth+(isBoxBtnDrop and 12 or 15),
+        TextOffset=inlineW+T.TEXT_GAP,
         Hover=false,
         Tab=cfg.Tab,
         Index=cfg.Index,
         ElementTable=ai,
     }
 
-    local rightHolder=ac("Frame",{
-        Size=UDim2.new(0,rightWidth,1,0),
-        Position=UDim2.new(1,0,0.5,0),
-        AnchorPoint=Vector2.new(1,0.5),
-        BackgroundTransparency=1,
-        Parent=ai.Frame.UIElements.Main,
-    },{
-        ac("UIListLayout",{
-            FillDirection=Enum.FillDirection.Horizontal,
-            VerticalAlignment=Enum.VerticalAlignment.Center,
-            HorizontalAlignment=Enum.HorizontalAlignment.Right,
-            Padding=UDim.new(0,6),
-        }),
-    })
+    local rightHolder=AetheriaUI_MakeHolder(ai.Frame,inlineW)
 
     local dummyFolder=Instance.new("Folder")
     local _,dropObj=dropModule.New(dummyFolder,{
@@ -11327,16 +11781,15 @@ local function AetheriaUI_CreateButtonDropdown(AetheriaUI_af,AetheriaUI_ag,isMul
 
     local dropBtn=dropObj.UIElements.Dropdown
     dropBtn.Parent=rightHolder
-    dropBtn.Size=UDim2.new(0,dropW,0,h)
-    local dropLabel=dropBtn.Frame.Frame.TextLabel
-    dropLabel.TextSize=isBoxBtnDrop and 11 or 13
+    dropBtn.LayoutOrder=1
+    dropBtn.Size=UDim2.new(0,T.CTRL_W,0,T.CTRL_H)
 
     if dropObj.DropdownFrame and dropObj.DropdownFrame.UIElements and dropObj.DropdownFrame.UIElements.Main then
         dropObj.DropdownFrame.UIElements.Main.Visible=false
     end
     ai.UIElements.Dropdown=dropObj
 
-    local actionBtn,actionBtnLabel=AetheriaUI_CreateActionButton(aa,ac,ad,rightHolder,isBoxBtnDrop,cfg.ButtonText,function()
+    local actionBtn,actionBtnLabel=AetheriaUI_CreateActionButton(aa,ac,ad,rightHolder,false,btnText,function()
         if isLocked then
             local cb=cfg.ButtonCallback or cfg.ButtonClick or cfg.Callback
             aa.SafeCallback(cb,ai.Value)
@@ -11362,29 +11815,8 @@ local function AetheriaUI_CreateButtonDropdown(AetheriaUI_af,AetheriaUI_ag,isMul
     function ai.Set(self,val) ai:SetDropdown(val) end
     function ai.SetButtonText(self,txt) actionBtnLabel.Text=tostring(txt or "Action") end
 
-    function ai.SetBoxMode(self,isBoxes)
-        isBoxBtnDrop=isBoxes
-        local dW=isBoxes and 72 or 130
-        local actW=isBoxes and 46 or 70
-        local boxH=isBoxes and 22 or 34
-        local rW=dW+actW+10
-        rightHolder.Size=UDim2.new(0,rW,1,0)
-        dropBtn.Size=UDim2.new(0,dW,0,boxH)
-        dropLabel.TextSize=isBoxes and 11 or 13
-        actionBtn.Size=UDim2.new(0,actW,0,boxH)
-        actionBtnLabel.TextSize=isBoxes and 11 or 14
-        local newOff=rW+(isBoxes and 12 or 15)
-        if ai.Frame then
-            ai.Frame.TextOffset=newOff
-            ai.Frame.BaseTextOffset=newOff
-            if ai.Frame.SetTextOffset then
-                ai.Frame:SetTextOffset(newOff)
-            end
-        end
-        if ai.SetRowBoxMode then
-            ai:SetRowBoxMode(isBoxes)
-        end
-    end
+    -- Размеры в Boxes те же, что в Default: метод оставлен только для совместимости вызовов.
+    function ai.SetBoxMode(self,isBoxes) end
 
     function ai.Lock(self)
         ai.Locked=true
@@ -11398,9 +11830,11 @@ local function AetheriaUI_CreateButtonDropdown(AetheriaUI_af,AetheriaUI_ag,isMul
     end
     if ai.Locked then ai:Lock() end
 
-    if isBoxBtnDrop and ai.SetRowBoxMode then
-        ai:SetRowBoxMode(true)
-    end
+    AetheriaUI_Stack(ai.Frame,rightHolder,dropBtn,{
+        inlineW=inlineW,
+        primaryW=primaryW,
+        wideInline=UDim2.new(0,T.CTRL_W,0,T.CTRL_H),
+    })
 
     return ai.__type,ai
 end
@@ -11422,694 +11856,7 @@ function AetheriaUI_ButtonMultiDropdown.New(AetheriaUI_af,AetheriaUI_ag)
 end
 
 -- =========================================================================
--- 5. ButtonColorPicker
--- =========================================================================
-local AetheriaUI_ButtonColorPicker={}
-function AetheriaUI_ButtonColorPicker.New(AetheriaUI_af,AetheriaUI_ag)
-    local ok,resA,resB=pcall(function()
-        local cfg = (type(AetheriaUI_ag)=="table" and AetheriaUI_ag) or (type(AetheriaUI_af)=="table" and AetheriaUI_af) or {}
-        local aa=a.load'a'
-        local ac=aa.New
-        local ad=aa.Tween
-        local colorpickerModule=a.load'L'
-
-        local initColor=Color3.fromRGB(255,255,255)
-        local initTransparency=0
-        if type(cfg.Value)=="table" then
-            if cfg.Value.Color or cfg.Value.color then
-                local c=cfg.Value.Color or cfg.Value.color
-                if typeof(c)=="string" then c=Color3.fromHex(c) end
-                initColor=c
-            end
-            if cfg.Value.Transparency or cfg.Value.transparency then
-                initTransparency=cfg.Value.Transparency or cfg.Value.transparency
-            end
-        elseif typeof(cfg.Value)=="Color3" then
-            initColor=cfg.Value
-        elseif type(cfg.Value)=="string" then
-            initColor=Color3.fromHex(cfg.Value)
-        end
-        if cfg.Default then initColor=cfg.Default end
-        if cfg.Transparency then initTransparency=cfg.Transparency end
-
-        local ai={
-            __type="ButtonColorPicker",
-            Title=cfg.Title or"ButtonColorPicker",
-            Desc=cfg.Desc or nil,
-            Locked=cfg.Locked or false,
-            Default=initColor,
-            Transparency=initTransparency,
-            Callback=cfg.Callback or function()end,
-            UIElements={},
-        }
-        ai.Value={Color=initColor,Transparency=initTransparency}
-
-        local isLocked=not ai.Locked
-        local currentColor=initColor
-        local currentTransparency=initTransparency
-
-        local isBoxBtnCol=(cfg.Window and cfg.Window.TabLayoutType=="Boxes") or (cfg.Tab and cfg.Tab.TabLayoutType=="Boxes")
-        local colW=isBoxBtnCol and 22 or 34
-        local btnW=isBoxBtnCol and 46 or 70
-        local rightWidth=colW+btnW+10
-
-        ai.Frame=a.load'y'{
-            Title=ai.Title,
-            Desc=ai.Desc,
-            Window=cfg.Window,
-            Parent=cfg.Parent,
-            TextOffset=rightWidth+(isBoxBtnCol and 12 or 15),
-            Hover=false,
-            Tab=cfg.Tab,
-            Index=cfg.Index,
-            ElementTable=ai,
-        }
-
-        local rightHolder=ac("Frame",{
-            Size=UDim2.new(0,rightWidth,1,0),
-            Position=UDim2.new(1,0,0.5,0),
-            AnchorPoint=Vector2.new(1,0.5),
-            BackgroundTransparency=1,
-            Parent=ai.Frame.UIElements.Main,
-        },{
-            ac("UIListLayout",{
-                FillDirection=Enum.FillDirection.Horizontal,
-                VerticalAlignment=Enum.VerticalAlignment.Center,
-                HorizontalAlignment=Enum.HorizontalAlignment.Right,
-                Padding=UDim.new(0,8),
-            }),
-        })
-
-        local colorBtn=aa.NewRoundFrame(isBoxBtnCol and 6 or 8,"Squircle",{
-            ImageTransparency=currentTransparency,
-            Active=true,
-            ImageColor3=currentColor,
-            Size=UDim2.new(0,colW,0,colW),
-            Parent=rightHolder,
-            ZIndex=2,
-        },nil,true)
-
-        local actionBtn,actionBtnLabel=AetheriaUI_CreateActionButton(aa,ac,ad,rightHolder,isBoxBtnCol,cfg.ButtonText,function()
-            if isLocked then
-                local cb=cfg.ButtonCallback or cfg.ButtonClick or cfg.Callback
-                aa.SafeCallback(cb,ai.Value)
-            end
-        end)
-
-        function ai.UpdateColor(self,col,trans)
-            if col then currentColor=col end
-            if trans~=nil then currentTransparency=trans end
-            colorBtn.ImageColor3=currentColor
-            colorBtn.ImageTransparency=currentTransparency
-            ai.Default=currentColor
-            ai.Transparency=currentTransparency
-            ai.Value.Color=currentColor
-            ai.Value.Transparency=currentTransparency
-            local cb=cfg.ColorCallback or cfg.Callback
-            aa.SafeCallback(cb,ai.Value)
-        end
-
-        ai.Update=ai.UpdateColor
-        ai.SetColor=ai.UpdateColor
-        ai.UIElements.Colorpicker=colorBtn
-        function ai.SetButtonText(self,txt) actionBtnLabel.Text=tostring(txt or "Action") end
-
-        function ai.Set(self,valTable)
-            if type(valTable)=="table" then
-                local c=valTable.Color or valTable.color or valTable[1]
-                if typeof(c)=="string" then c=Color3.fromHex(c) end
-                ai:UpdateColor(c,valTable.Transparency or valTable.transparency)
-            elseif typeof(valTable)=="Color3" then
-                ai:UpdateColor(valTable)
-            end
-        end
-
-        local lastColorToggle=0
-        local function ToggleOpenColorPicker()
-            if not isLocked then return end
-            local now=os.clock()
-            if now-lastColorToggle<0.25 then return end
-            lastColorToggle=now
-
-            if ai.ActiveColorpicker and ai.ActiveColorpicker.Opened then
-                pcall(function() ai.ActiveColorpicker.ColorpickerFrame:Close() end)
-                ai.ActiveColorpicker=nil
-                return
-            end
-
-            local win=cfg.Window or (cfg.Tab and cfg.Tab.Window) or (ai.Frame and ai.Frame.Window) or Window
-            local cp=colorpickerModule:Colorpicker(ai,win,function(newCol,newTrans)
-                ai:UpdateColor(newCol,newTrans)
-            end)
-            ai.ActiveColorpicker=cp
-            if cp and cp.ColorpickerFrame then
-                cp.ColorpickerFrame:Open()
-            end
-        end
-        aa.AddSignal(colorBtn.MouseButton1Click,ToggleOpenColorPicker)
-
-        aa.AddSignal(game:GetService("UserInputService").InputBegan,function(inp)
-            if not isLocked then return end
-            if inp.UserInputType==Enum.UserInputType.MouseButton1 or inp.UserInputType==Enum.UserInputType.Touch then
-                if ai.ActiveColorpicker and ai.ActiveColorpicker.Opened then
-                    local m=game.Players.LocalPlayer:GetMouse()
-                    local p=colorBtn.AbsolutePosition
-                    local s=colorBtn.AbsoluteSize
-                    if m.X>=p.X and m.X<=p.X+s.X and m.Y>=p.Y and m.Y<=p.Y+s.Y then
-                        local now=os.clock()
-                        if now-lastColorToggle>=0.2 then
-                            lastColorToggle=now
-                            pcall(function() ai.ActiveColorpicker.ColorpickerFrame:Close() end)
-                            ai.ActiveColorpicker=nil
-                        end
-                    end
-                end
-            end
-        end)
-
-        function ai.SetBoxMode(self,isBoxes)
-            isBoxBtnCol=isBoxes
-            local cW=isBoxes and 22 or 34
-            local bWidth=isBoxes and 46 or 70
-            local rW=cW+bWidth+10
-            rightHolder.Size=UDim2.new(0,rW,1,0)
-            colorBtn.Size=UDim2.new(0,cW,0,cW)
-            actionBtn.Size=UDim2.new(0,bWidth,0,cW)
-            actionBtnLabel.TextSize=isBoxes and 11 or 14
-            local newOff=rW+(isBoxes and 12 or 15)
-            if ai.Frame then
-                ai.Frame.TextOffset=newOff
-                ai.Frame.BaseTextOffset=newOff
-                if ai.Frame.SetTextOffset then
-                    ai.Frame:SetTextOffset(newOff)
-                end
-            end
-            if ai.SetRowBoxMode then
-                ai:SetRowBoxMode(isBoxes)
-            end
-        end
-
-        function ai.Lock(self)
-            ai.Locked=true
-            isLocked=false
-            return ai.Frame:Lock()
-        end
-        function ai.Unlock(self)
-            ai.Locked=false
-            isLocked=true
-            return ai.Frame:Unlock()
-        end
-        if ai.Locked then ai:Lock() end
-
-        if isBoxBtnCol and ai.SetRowBoxMode then
-            ai:SetRowBoxMode(true)
-        end
-
-        return ai.__type,ai
-    end)
-    if ok then return resA,resB end
-    warn("[AetheriaUI] ButtonColorPicker failed: "..tostring(resA))
-    return"ButtonColorPicker",{__type="ButtonColorPicker",Title=(AetheriaUI_ag and AetheriaUI_ag.Title) or (AetheriaUI_af and AetheriaUI_af.Title) or"ButtonColorPicker"}
-end
-
--- =========================================================================
--- 6. ButtonSlider
--- =========================================================================
-local AetheriaUI_ButtonSlider={}
-function AetheriaUI_ButtonSlider.New(AetheriaUI_af,AetheriaUI_ag)
-    local ok,resA,resB=pcall(function()
-        local cfg = (type(AetheriaUI_ag)=="table" and AetheriaUI_ag) or (type(AetheriaUI_af)=="table" and AetheriaUI_af) or {}
-        local aa=a.load'a'
-        local ac=aa.New
-        local ad=aa.Tween
-
-        local ai={
-            __type="ButtonSlider",
-            Title=cfg.Title or"ButtonSlider",
-            Desc=cfg.Desc or nil,
-            Locked=cfg.Locked or false,
-            Step=cfg.Step or 1,
-            Min=cfg.Min or(cfg.Value and cfg.Value.Min)or 0,
-            Max=cfg.Max or(cfg.Value and cfg.Value.Max)or 100,
-            Callback=cfg.Callback or function()end,
-            UIElements={},
-        }
-
-        local initSlider=ai.Min
-        if type(cfg.Value)=="table" then
-            initSlider=cfg.Value.Slider or cfg.Value.slider or cfg.Value[1] or ai.Min
-        elseif type(cfg.Value)=="number" then
-            initSlider=cfg.Value
-        end
-        ai.Value={Slider=initSlider}
-
-        local isLocked=not ai.Locked
-        local currentVal=initSlider
-
-        local isFloat=ai.Step%1~=0
-        local function FormatVal(v)
-            if isFloat then return string.format("%.2f",v) else return tostring(math.floor(v+0.5)) end
-        end
-        local function CalcVal(v)
-            return math.floor(v/ai.Step+0.5)*ai.Step
-        end
-
-        local isBoxBtnSl=(cfg.Window and cfg.Window.TabLayoutType=="Boxes") or (cfg.Tab and cfg.Tab.TabLayoutType=="Boxes")
-        local trackW=isBoxBtnSl and 38 or 90
-        local valW=isBoxBtnSl and 22 or 34
-        local btnW=isBoxBtnSl and 46 or 70
-        local h=isBoxBtnSl and 22 or 34
-        local rightWidth=trackW+valW+btnW+14
-
-        ai.Frame=a.load'y'{
-            Title=ai.Title,
-            Desc=ai.Desc,
-            Window=cfg.Window,
-            Parent=cfg.Parent,
-            TextOffset=rightWidth+(isBoxBtnSl and 12 or 15),
-            Hover=false,
-            Tab=cfg.Tab,
-            Index=cfg.Index,
-            ElementTable=ai,
-        }
-
-        local rightHolder=ac("Frame",{
-            Size=UDim2.new(0,rightWidth,1,0),
-            Position=UDim2.new(1,0,0.5,0),
-            AnchorPoint=Vector2.new(1,0.5),
-            BackgroundTransparency=1,
-            Parent=ai.Frame.UIElements.Main,
-        },{
-            ac("UIListLayout",{
-                FillDirection=Enum.FillDirection.Horizontal,
-                VerticalAlignment=Enum.VerticalAlignment.Center,
-                HorizontalAlignment=Enum.HorizontalAlignment.Right,
-                Padding=UDim.new(0,6),
-            }),
-        })
-
-        local sliderRow=ac("Frame",{
-            Size=UDim2.new(0,trackW+valW+6,0,h),
-            BackgroundTransparency=1,
-            Parent=rightHolder,
-        },{
-            ac("UIListLayout",{
-                FillDirection=Enum.FillDirection.Horizontal,
-                VerticalAlignment=Enum.VerticalAlignment.Center,
-                Padding=UDim.new(0,6),
-            }),
-        })
-
-        local valueLabel=ac("TextLabel",{
-            Size=UDim2.new(0,valW,0,isBoxBtnSl and 18 or 24),
-            Text=FormatVal(currentVal),
-            TextSize=isBoxBtnSl and 11 or 13,
-            FontFace=Font.new(aa.Font,Enum.FontWeight.Medium),
-            TextTransparency=0.3,
-            TextXAlignment=Enum.TextXAlignment.Center,
-            BackgroundTransparency=1,
-            ThemeTag={TextColor3="Text"},
-            Parent=sliderRow,
-        })
-
-        local sliderFr=ac("Frame",{
-            Size=UDim2.new(0,trackW,0,4),
-            BackgroundColor3=Color3.new(1,1,1),
-            BackgroundTransparency=0.88,
-            ThemeTag={BackgroundColor3="Text"},
-            AnchorPoint=Vector2.new(0,0.5),
-            Position=UDim2.new(0,0,0.5,0),
-            Parent=sliderRow,
-        },{
-            ac("UICorner",{CornerRadius=UDim.new(1,0)}),
-        })
-
-        local fillAlpha=math.clamp((currentVal-ai.Min)/(ai.Max-ai.Min),0,1)
-        local fillFr=ac("Frame",{
-            Size=UDim2.new(fillAlpha,0,1,0),
-            BackgroundColor3=Color3.new(1,1,1),
-            BackgroundTransparency=0,
-            ThemeTag={BackgroundColor3="Accent"},
-            Parent=sliderFr,
-        },{
-            ac("UICorner",{CornerRadius=UDim.new(1,0)}),
-            ac("Frame",{
-                Size=UDim2.new(0,12,0,12),
-                AnchorPoint=Vector2.new(0.5,0.5),
-                Position=UDim2.new(1,0,0.5,0),
-                BackgroundColor3=Color3.new(1,1,1),
-                ThemeTag={BackgroundColor3="Text"},
-                Parent=sliderFr,
-            },{
-                ac("UICorner",{CornerRadius=UDim.new(1,0)}),
-            }),
-        })
-
-        local function SetSliderPos(val,fireCb)
-            val=math.clamp(val,ai.Min,ai.Max)
-            val=CalcVal(val)
-            local pct=math.clamp((val-ai.Min)/(ai.Max-ai.Min),0,1)
-            currentVal=val
-            ai.Value.Slider=val
-            valueLabel.Text=FormatVal(val)
-            ad(fillFr,0.06,{Size=UDim2.new(pct,0,1,0)}):Play()
-            if fireCb~=false then
-                local cb=cfg.SliderCallback or cfg.Callback
-                aa.SafeCallback(cb,ai.Value)
-            end
-        end
-
-        local isDragging=false
-        local function StartDrag(inp)
-            isDragging=true
-            local conn
-            conn=game:GetService("RunService").RenderStepped:Connect(function()
-                if not isDragging then conn:Disconnect() return end
-                local mX=game:GetService("UserInputService"):GetMouseLocation().X
-                local sPos=sliderFr.AbsolutePosition.X
-                local sWidth=sliderFr.AbsoluteSize.X
-                local pct=math.clamp((mX-sPos)/sWidth,0,1)
-                SetSliderPos(ai.Min+pct*(ai.Max-ai.Min),true)
-            end)
-            local endConn
-            endConn=game:GetService("UserInputService").InputEnded:Connect(function(endInp)
-                if endInp.UserInputType==Enum.UserInputType.MouseButton1 or endInp.UserInputType==Enum.UserInputType.Touch then
-                    isDragging=false
-                    endConn:Disconnect()
-                end
-            end)
-        end
-
-        aa.AddSignal(sliderFr.InputBegan,function(inp)
-            if (inp.UserInputType==Enum.UserInputType.MouseButton1 or inp.UserInputType==Enum.UserInputType.Touch) and isLocked then
-                StartDrag(inp)
-            end
-        end)
-
-        local actionBtn,actionBtnLabel=AetheriaUI_CreateActionButton(aa,ac,ad,rightHolder,isBoxBtnSl,cfg.ButtonText,function()
-            if isLocked then
-                local cb=cfg.ButtonCallback or cfg.ButtonClick or cfg.Callback
-                aa.SafeCallback(cb,ai.Value)
-            end
-        end)
-
-        function ai.SetSlider(self,val,fireCb)
-            SetSliderPos(val,fireCb)
-        end
-        function ai.Set(self,v,fireCb)
-            if type(v)=="table" then
-                local sv=v.Slider ~= nil and v.Slider or v.slider or v[1]
-                if sv~=nil then SetSliderPos(sv,fireCb) end
-            elseif type(v)=="number" then
-                SetSliderPos(v,fireCb)
-            end
-        end
-        function ai.SetButtonText(self,txt) actionBtnLabel.Text=tostring(txt or "Action") end
-
-        function ai.SetBoxMode(self,isBoxes)
-            isBoxBtnSl=isBoxes
-            local trW=isBoxes and 38 or 90
-            local vW=isBoxes and 22 or 34
-            local bWidth=isBoxes and 46 or 70
-            local sh=isBoxes and 22 or 34
-            local rW=trW+vW+bWidth+14
-            rightHolder.Size=UDim2.new(0,rW,1,0)
-            sliderFr.Size=UDim2.new(0,trW,0,4)
-            valueLabel.Size=UDim2.new(0,vW,0,isBoxes and 18 or 24)
-            valueLabel.TextSize=isBoxes and 11 or 13
-            sliderRow.Size=UDim2.new(0,trW+vW+6,0,sh)
-            actionBtn.Size=UDim2.new(0,bWidth,0,sh)
-            actionBtnLabel.TextSize=isBoxes and 11 or 14
-            local newOff=rW+(isBoxes and 12 or 15)
-            if ai.Frame then
-                ai.Frame.TextOffset=newOff
-                ai.Frame.BaseTextOffset=newOff
-                if ai.Frame.SetTextOffset then
-                    ai.Frame:SetTextOffset(newOff)
-                end
-            end
-            if ai.SetRowBoxMode then
-                ai:SetRowBoxMode(isBoxes)
-            end
-        end
-
-        function ai.Lock(self)
-            ai.Locked=true
-            isLocked=false
-            return ai.Frame:Lock()
-        end
-        function ai.Unlock(self)
-            ai.Locked=false
-            isLocked=true
-            return ai.Frame:Unlock()
-        end
-        if ai.Locked then ai:Lock() end
-
-        if isBoxBtnSl and ai.SetRowBoxMode then
-            ai:SetRowBoxMode(true)
-        end
-
-        return ai.__type,ai
-    end)
-    if ok then return resA,resB end
-    warn("[AetheriaUI] ButtonSlider failed: "..tostring(resA))
-    return"ButtonSlider",{__type="ButtonSlider",Title=(AetheriaUI_ag and AetheriaUI_ag.Title) or (AetheriaUI_af and AetheriaUI_af.Title) or"ButtonSlider"}
-end
-
--- =========================================================================
--- 7. ButtonKeybind
--- =========================================================================
-local AetheriaUI_ButtonKeybind={}
-function AetheriaUI_ButtonKeybind.New(AetheriaUI_af,AetheriaUI_ag)
-    local ok,resA,resB=pcall(function()
-        local cfg = (type(AetheriaUI_ag)=="table" and AetheriaUI_ag) or (type(AetheriaUI_af)=="table" and AetheriaUI_af) or {}
-        local aa=a.load'a'
-        local ac=aa.New
-        local ad=aa.Tween
-        local createKeyBadge=a.load's'.New
-        local isLocked=not cfg.Locked
-
-        local initKey="F"
-        if type(cfg.Value)=="table" then
-            initKey=tostring(cfg.Value.Key or cfg.Value.key or cfg.Value[1] or"F")
-        elseif type(cfg.Value)=="string" then
-            initKey=cfg.Value
-        elseif cfg.Key or cfg.Bind then
-            initKey=tostring(cfg.Key or cfg.Bind)
-        end
-
-        local ai={
-            __type="ButtonKeybind",
-            Title=cfg.Title or"ButtonKeybind",
-            Desc=cfg.Desc or nil,
-            Locked=cfg.Locked or false,
-            Callback=cfg.Callback or function()end,
-            UIElements={},
-        }
-        local currentKey=initKey
-        local isPicking=false
-        ai.Value={Key=currentKey}
-
-        local isBoxBtnKey=(cfg.Window and cfg.Window.TabLayoutType=="Boxes") or (cfg.Tab and cfg.Tab.TabLayoutType=="Boxes")
-        local keyW=isBoxBtnKey and 26 or 34
-        local btnW=isBoxBtnKey and 46 or 70
-        local h=isBoxBtnKey and 22 or 34
-        local rightWidth=keyW+btnW+10
-
-        ai.Frame=a.load'y'{
-            Title=ai.Title,
-            Desc=ai.Desc,
-            Window=cfg.Window,
-            Parent=cfg.Parent,
-            TextOffset=rightWidth+(isBoxBtnKey and 12 or 15),
-            Hover=false,
-            Tab=cfg.Tab,
-            Index=cfg.Index,
-            ElementTable=ai,
-        }
-
-        local rightHolder=ac("Frame",{
-            Size=UDim2.new(0,rightWidth,1,0),
-            Position=UDim2.new(1,0,0.5,0),
-            AnchorPoint=Vector2.new(1,0.5),
-            BackgroundTransparency=1,
-            Parent=ai.Frame.UIElements.Main,
-        },{
-            ac("UIListLayout",{
-                FillDirection=Enum.FillDirection.Horizontal,
-                VerticalAlignment=Enum.VerticalAlignment.Center,
-                HorizontalAlignment=Enum.HorizontalAlignment.Right,
-                Padding=UDim.new(0,8),
-            }),
-        })
-
-        local keyBadge=createKeyBadge(currentKey,nil,rightHolder)
-        ai.UIElements.Keybind=keyBadge
-
-        local togKeyText=keyBadge.Frame.Frame.TextLabel
-        togKeyText.TextXAlignment="Center"
-        togKeyText.TextYAlignment="Center"
-        pcall(function()
-            keyBadge.Frame.Frame.UIListLayout.HorizontalAlignment=Enum.HorizontalAlignment.Center
-        end)
-
-        local togKeyScale=ac("UIScale",{Parent=keyBadge,Scale=1})
-
-        local function UpdateKeySize()
-            pcall(function()
-                local textWidth=togKeyText.TextBounds.X
-                togKeyText.TextSize=isBoxBtnKey and 11 or 14
-                if isBoxBtnKey then
-                    keyBadge.Frame.Frame.UIPadding.PaddingLeft=UDim.new(0,0)
-                    keyBadge.Frame.Frame.UIPadding.PaddingRight=UDim.new(0,0)
-                    keyBadge.Size=UDim2.new(0,math.max(24,textWidth+12),0,22)
-                    togKeyScale.Scale=1
-                else
-                    keyBadge.Frame.Frame.UIPadding.PaddingLeft=UDim.new(0,8)
-                    keyBadge.Frame.Frame.UIPadding.PaddingRight=UDim.new(0,8)
-                    keyBadge.Size=UDim2.new(0,math.max(34,textWidth+18),0,34)
-                    togKeyScale.Scale=1
-                end
-            end)
-        end
-        UpdateKeySize()
-        aa.AddSignal(togKeyText:GetPropertyChangedSignal("TextBounds"),UpdateKeySize)
-
-        local function PickKey()
-            if not isLocked or isPicking then return end
-            isPicking=true
-            togKeyText.Text="..."
-            task.wait(0.15)
-            local uis=game:GetService("UserInputService")
-            local connA,connB
-            connA=uis.InputBegan:Connect(function(input)
-                local captured=nil
-                if input.UserInputType==Enum.UserInputType.Keyboard then
-                    captured=input.KeyCode.Name
-                elseif input.UserInputType==Enum.UserInputType.MouseButton1 then
-                    captured="MouseLeft"
-                elseif input.UserInputType==Enum.UserInputType.MouseButton2 then
-                    captured="MouseRight"
-                end
-                if captured then
-                    connB=uis.InputEnded:Connect(function(endedInput)
-                        if (endedInput.UserInputType==Enum.UserInputType.Keyboard and endedInput.KeyCode.Name==captured) or
-                           (captured=="MouseLeft" and endedInput.UserInputType==Enum.UserInputType.MouseButton1) or
-                           (captured=="MouseRight" and endedInput.UserInputType==Enum.UserInputType.MouseButton2) then
-                            connA:Disconnect()
-                            connB:Disconnect()
-                            isPicking=false
-                            currentKey=captured
-                            ai.Value.Key=captured
-                            togKeyText.Text=captured
-                            local cb=cfg.KeybindCallback or cfg.Callback
-                            aa.SafeCallback(cb,ai.Value)
-                        end
-                    end)
-                end
-            end)
-        end
-        local lastPick=0
-        local function SafePickKey()
-            if not isLocked or isPicking then return end
-            local now=os.clock()
-            if now-lastPick<0.3 then return end
-            lastPick=now
-            PickKey()
-        end
-        aa.AddSignal(keyBadge.MouseButton1Click,SafePickKey)
-
-        local lastKeyTrigger=0
-        aa.AddSignal(game:GetService("UserInputService").InputBegan,function(input)
-            if isLocked and not isPicking then
-                local matches=false
-                if input.UserInputType==Enum.UserInputType.Keyboard and input.KeyCode.Name==currentKey then
-                    matches=true
-                elseif currentKey=="MouseLeft" and input.UserInputType==Enum.UserInputType.MouseButton1 then
-                    matches=true
-                elseif currentKey=="MouseRight" and input.UserInputType==Enum.UserInputType.MouseButton2 then
-                    matches=true
-                end
-                if matches then
-                    local now=os.clock()
-                    if now-lastKeyTrigger<0.2 then return end
-                    lastKeyTrigger=now
-                    local cb=cfg.ButtonCallback or cfg.ButtonClick or cfg.Callback
-                    aa.SafeCallback(cb,ai.Value)
-                end
-            end
-        end)
-
-        local actionBtn,actionBtnLabel=AetheriaUI_CreateActionButton(aa,ac,ad,rightHolder,isBoxBtnKey,cfg.ButtonText,function()
-            if isLocked then
-                local cb=cfg.ButtonCallback or cfg.ButtonClick or cfg.Callback
-                aa.SafeCallback(cb,ai.Value)
-            end
-        end)
-
-        function ai.SetKey(self,key)
-            currentKey=tostring(key)
-            ai.Value.Key=currentKey
-            togKeyText.Text=currentKey
-        end
-        function ai.Set(self,v)
-            if type(v)=="table" then
-                local k=v.Key or v.key or v[1]
-                if k then ai:SetKey(k) end
-            else
-                ai:SetKey(v)
-            end
-        end
-        function ai.SetButtonText(self,txt) actionBtnLabel.Text=tostring(txt or "Action") end
-
-        function ai.SetBoxMode(self,isBoxes)
-            isBoxBtnKey=isBoxes
-            local kW=isBoxes and 26 or 34
-            local bWidth=isBoxes and 46 or 70
-            local boxH=isBoxes and 22 or 34
-            local rW=kW+bWidth+10
-            rightHolder.Size=UDim2.new(0,rW,1,0)
-            actionBtn.Size=UDim2.new(0,bWidth,0,boxH)
-            actionBtnLabel.TextSize=isBoxes and 11 or 14
-            UpdateKeySize()
-            local newOff=rW+(isBoxes and 12 or 15)
-            if ai.Frame then
-                ai.Frame.TextOffset=newOff
-                ai.Frame.BaseTextOffset=newOff
-                if ai.Frame.SetTextOffset then
-                    ai.Frame:SetTextOffset(newOff)
-                end
-            end
-            if ai.SetRowBoxMode then
-                ai:SetRowBoxMode(isBoxes)
-            end
-        end
-
-        function ai.Lock(self)
-            ai.Locked=true
-            isLocked=false
-            return ai.Frame:Lock()
-        end
-        function ai.Unlock(self)
-            ai.Locked=false
-            isLocked=true
-            return ai.Frame:Unlock()
-        end
-        if ai.Locked then ai:Lock() end
-
-        if isBoxBtnKey and ai.SetRowBoxMode then
-            ai:SetRowBoxMode(true)
-        end
-
-        return ai.__type,ai
-    end)
-    if ok then return resA,resB end
-    warn("[AetheriaUI] ButtonKeybind failed: "..tostring(resA))
-    return"ButtonKeybind",{__type="ButtonKeybind",Title=(AetheriaUI_ag and AetheriaUI_ag.Title) or (AetheriaUI_af and AetheriaUI_af.Title) or"ButtonKeybind"}
-end
-
--- =========================================================================
--- 8. ButtonInput
+-- ButtonInput:  [заголовок ........ [поле 150x36] [кнопка]]
 -- =========================================================================
 local AetheriaUI_ButtonInput={}
 function AetheriaUI_ButtonInput.New(AetheriaUI_af,AetheriaUI_ag)
@@ -12119,6 +11866,7 @@ function AetheriaUI_ButtonInput.New(AetheriaUI_af,AetheriaUI_ag)
         local ac=aa.New
         local ad=aa.Tween
         local isLocked=not cfg.Locked
+        local T=AetheriaUI_T
 
         local initInput=""
         if type(cfg.Value)=="table" then
@@ -12140,70 +11888,25 @@ function AetheriaUI_ButtonInput.New(AetheriaUI_af,AetheriaUI_ag)
         local currentInput=initInput
         ai.Value={Input=currentInput}
 
-        local isBoxBtnIn=(cfg.Window and cfg.Window.TabLayoutType=="Boxes") or (cfg.Tab and cfg.Tab.TabLayoutType=="Boxes")
-        local inputW=isBoxBtnIn and 55 or 120
-        local btnW=isBoxBtnIn and 46 or 70
-        local h=isBoxBtnIn and 22 or 34
-        local rightWidth=inputW+btnW+10
+        local btnText=tostring(cfg.ButtonText or"Submit")
+        local primaryW=math.clamp(math.ceil(AetheriaUI_TextWidth(btnText,T.BTN_TEXT))+T.BTN_PADX*2,T.BTN_MINW,T.BTN_MAXW)
+        local inlineW=T.CTRL_W+T.GAP+primaryW
 
         ai.Frame=a.load'y'{
             Title=ai.Title,
             Desc=ai.Desc,
             Window=cfg.Window,
             Parent=cfg.Parent,
-            TextOffset=rightWidth+(isBoxBtnIn and 12 or 15),
+            TextOffset=inlineW+T.TEXT_GAP,
             Hover=false,
             Tab=cfg.Tab,
             Index=cfg.Index,
             ElementTable=ai,
         }
 
-        local rightHolder=ac("Frame",{
-            Size=UDim2.new(0,rightWidth,1,0),
-            Position=UDim2.new(1,0,0.5,0),
-            AnchorPoint=Vector2.new(1,0.5),
-            BackgroundTransparency=1,
-            Parent=ai.Frame.UIElements.Main,
-        },{
-            ac("UIListLayout",{
-                FillDirection=Enum.FillDirection.Horizontal,
-                VerticalAlignment=Enum.VerticalAlignment.Center,
-                HorizontalAlignment=Enum.HorizontalAlignment.Right,
-                Padding=UDim.new(0,8),
-            }),
-        })
-
-        local AetheriaUI_BtnInCorner=isBoxBtnIn and 10 or 12
-        local inputFr=ac("Frame",{
-            Size=UDim2.new(0,inputW,0,h),
-            BackgroundTransparency=1,
-            Parent=rightHolder,
-        },{
-            aa.NewRoundFrame(AetheriaUI_BtnInCorner,"Squircle",{
-                ThemeTag={ImageColor3="Accent"},
-                Size=UDim2.new(1,0,1,0),
-                ImageTransparency=.85,
-            }),
-            aa.NewRoundFrame(AetheriaUI_BtnInCorner,"SquircleOutline",{
-                ThemeTag={ImageColor3="Outline"},
-                Size=UDim2.new(1,0,1,0),
-                ImageTransparency=.95,
-            }),
-        })
-
-        local textBox=ac("TextBox",{
-            Size=UDim2.new(1,-16,1,0),
-            Position=UDim2.new(0,8,0,0),
-            Text=currentInput,
-            PlaceholderText=cfg.Placeholder or"...",
-            TextSize=isBoxBtnIn and 11 or 13,
-            FontFace=Font.new(aa.Font,Enum.FontWeight.Medium),
-            BackgroundTransparency=1,
-            TextXAlignment=Enum.TextXAlignment.Left,
-            TextTruncate=Enum.TextTruncate.AtEnd,
-            ThemeTag={TextColor3="Text",PlaceholderColor3="Placeholder"},
-            Parent=inputFr,
-        })
+        local rightHolder=AetheriaUI_MakeHolder(ai.Frame,inlineW)
+        local inputFr,textBox=AetheriaUI_CreateField(aa,ac,rightHolder,cfg.Placeholder or"...",currentInput)
+        ai.UIElements.TextBox=textBox
 
         aa.AddSignal(textBox.FocusLost,function()
             if isLocked then
@@ -12214,7 +11917,7 @@ function AetheriaUI_ButtonInput.New(AetheriaUI_af,AetheriaUI_ag)
             end
         end)
 
-        local actionBtn,actionBtnLabel=AetheriaUI_CreateActionButton(aa,ac,ad,rightHolder,isBoxBtnIn,cfg.ButtonText or"Submit",function()
+        local actionBtn,actionBtnLabel=AetheriaUI_CreateActionButton(aa,ac,ad,rightHolder,false,btnText,function()
             if isLocked then
                 currentInput=textBox.Text
                 ai.Value.Input=currentInput
@@ -12238,29 +11941,8 @@ function AetheriaUI_ButtonInput.New(AetheriaUI_af,AetheriaUI_ag)
         end
         function ai.SetButtonText(self,txt) actionBtnLabel.Text=tostring(txt or "Action") end
 
-        function ai.SetBoxMode(self,isBoxes)
-            isBoxBtnIn=isBoxes
-            local inW=isBoxes and 55 or 120
-            local bWidth=isBoxes and 46 or 70
-            local boxH=isBoxes and 22 or 34
-            local rW=inW+bWidth+10
-            rightHolder.Size=UDim2.new(0,rW,1,0)
-            inputFr.Size=UDim2.new(0,inW,0,boxH)
-            textBox.TextSize=isBoxes and 11 or 13
-            actionBtn.Size=UDim2.new(0,bWidth,0,boxH)
-            actionBtnLabel.TextSize=isBoxes and 11 or 14
-            local newOff=rW+(isBoxes and 12 or 15)
-            if ai.Frame then
-                ai.Frame.TextOffset=newOff
-                ai.Frame.BaseTextOffset=newOff
-                if ai.Frame.SetTextOffset then
-                    ai.Frame:SetTextOffset(newOff)
-                end
-            end
-            if ai.SetRowBoxMode then
-                ai:SetRowBoxMode(isBoxes)
-            end
-        end
+        -- Размеры в Boxes те же, что в Default: метод оставлен только для совместимости вызовов.
+        function ai.SetBoxMode(self,isBoxes) end
 
         function ai.Lock(self)
             ai.Locked=true
@@ -12274,9 +11956,11 @@ function AetheriaUI_ButtonInput.New(AetheriaUI_af,AetheriaUI_ag)
         end
         if ai.Locked then ai:Lock() end
 
-        if isBoxBtnIn and ai.SetRowBoxMode then
-            ai:SetRowBoxMode(true)
-        end
+        AetheriaUI_Stack(ai.Frame,rightHolder,inputFr,{
+            inlineW=inlineW,
+            primaryW=primaryW,
+            wideInline=UDim2.new(0,T.CTRL_W,0,T.CTRL_H),
+        })
 
         return ai.__type,ai
     end)
@@ -12284,7 +11968,6 @@ function AetheriaUI_ButtonInput.New(AetheriaUI_af,AetheriaUI_ag)
     warn("[AetheriaUI] ButtonInput failed: "..tostring(resA))
     return"ButtonInput",{__type="ButtonInput",Title=(AetheriaUI_ag and AetheriaUI_ag.Title) or (AetheriaUI_af and AetheriaUI_af.Title) or"ButtonInput"}
 end
-
 
 return{
 Elements={
@@ -12431,19 +12114,8 @@ aq:SetBoxMode(isBoxes)
 end
 end
 
-if af.TabLayoutType=="Boxes" then
-task.defer(function()
-pcall(function()
-if ap.SetBoxMode then
-ap:SetBoxMode(true)
-elseif ap.SetRowBoxMode then
-ap:SetRowBoxMode(true)
-elseif aq and aq.SetBoxMode then
-aq:SetBoxMode(true)
-end
-end)
-end)
-end
+-- AetheriaUI_: раньше здесь новые элементы в Boxes-табе принудительно переводились в компактный
+-- режим (SetBoxMode(true)) со своими размерами. Теперь у Boxes размеры те же, что в Default.
 
 aa:UpdateAllElementShapes(aa)
 
@@ -13013,9 +12685,9 @@ for _,elem in ipairs(al.Elements) do
 if type(elem)=="table" then
 pcall(function()
 if elem.SetBoxMode then
-elem:SetBoxMode(isBoxes)
+elem:SetBoxMode(false) -- AetheriaUI_: у Boxes нет своих размеров элементов
 elseif elem.SetRowBoxMode then
-elem:SetRowBoxMode(isBoxes)
+elem:SetRowBoxMode(false)
 end
 end)
 end
@@ -16129,9 +15801,9 @@ for _,elem in ipairs(ao.AllElements) do
 if type(elem)=="table" then
 pcall(function()
 if elem.SetBoxMode then
-elem:SetBoxMode(isBoxes)
+elem:SetBoxMode(false) -- AetheriaUI_: у Boxes нет своих размеров элементов
 elseif elem.SetRowBoxMode then
-elem:SetRowBoxMode(isBoxes)
+elem:SetRowBoxMode(false)
 end
 end)
 end
